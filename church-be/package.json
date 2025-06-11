@@ -26,6 +26,7 @@
     "morgan": "^1.10.0",
     "pg": "^8.16.0",
     "reflect-metadata": "^0.2.2",
+    "sequelize": "^6.37.7",
     "typeorm": "^0.3.24"
   },
   "devDependencies": {
