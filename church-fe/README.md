@@ -1,29 +1,26 @@
-# Church Management React App
-
-This is a React + TypeScript Vite app for church management. It includes:
-
-- **Authentication**: Login and signup pages (email & password fields)
-- **Dashboard Layout**: Header, sidebar, and main content area
-- **Sidebar Navigation**: Dashboard, People, Groups, Follow Ups, Settings (each loads a page in the main section)
+# Lama Dev School Management Dashboard
 
 ## Getting Started
 
-1. Install dependencies:
-   ```sh
-   npm install
-   ```
-2. Start the development server:
-   ```sh
-   npm run dev
-   ```
+First, run the development server:
 
-## Project Structure
-- `src/pages/` — Login, Signup, Dashboard, People, Groups, FollowUps, Settings
-- `src/components/` — Header, Sidebar, MainSection
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
-## Customization
-- Update styles in `src/components/*.css` and `src/auth.css` as needed.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
----
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project was bootstrapped with Vite + React + TypeScript.
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Lama Dev Youtube Channel](https://youtube.com/lamadev) 
+- [Next.js](https://nextjs.org/learn)
