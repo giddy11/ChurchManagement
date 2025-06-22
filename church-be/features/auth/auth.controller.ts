@@ -12,12 +12,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
             statusCode: 201,
             message: "User registered successfully",
             data: {
-                user: {
-                    id: result.user.id,
-                    email: result.user.email,
-                    // username: result.user.username,
-                    // role: result.user.role
-                },
+                user: result.user, // Return all user info
                 token: result.token
             }
         });

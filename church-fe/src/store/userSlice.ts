@@ -4,6 +4,9 @@ export interface UserInfo {
   id: string;
   email: string;
   token: string;
+  churchName: string;
+  role: string;
+  [key: string]: any; // for any extra fields
 }
 
 export interface UserState {

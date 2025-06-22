@@ -8,7 +8,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"; // In production
 export class AuthService {
     private readonly userRepository = AppDataSource.getRepository(User);
 
-    async register(email: string, churchName: string, password: string): Promise<{ user: User; token: string }> {
+    async register(email: string, churchName: string, password: string): Promise<{ user: Omit<User, "password">; token: string }> {
         // Check if user already exists
         const existingUser = await this.userRepository.findOne({
             where: [
@@ -28,15 +28,22 @@ export class AuthService {
             password,
         });
 
-        user.role = UserRole.ADMIN
+        user.role = UserRole.ADMIN;
 
         // Save user to database
         await this.userRepository.save(user);
 
+        // Remove password before returning user object
+        const { password: _, ...userWithoutPassword } = user as any;
+
+        // Attach required methods to satisfy Omit<User, "password">
+        (userWithoutPassword as any).hashPassword = user.hashPassword;
+        (userWithoutPassword as any).validatePassword = user.validatePassword;
+
         // Generate JWT token
         const token = this.generateToken(user);
 
-        return { user, token };
+        return { user: userWithoutPassword as Omit<User, "password">, token };
     }
 
     private generateToken(user: User): string {

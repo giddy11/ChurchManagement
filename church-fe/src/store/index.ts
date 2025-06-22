@@ -2,14 +2,10 @@ import { configureStore } from '@reduxjs/toolkit';
 import userReducer from './userSlice';
 
 // Only access localStorage in the browser
+import type { UserState } from './userSlice';
+
 type PersistedState = {
-  user: {
-    user: {
-      id: string;
-      email: string;
-      token: string;
-    } | null;
-  };
+  user: UserState;
 };
 
 const loadState = (): PersistedState | undefined => {

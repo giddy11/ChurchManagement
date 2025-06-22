@@ -30,25 +30,16 @@ function SignupPage() {
     }
     setLoading(true);
     try {
-      const data = await registerUser({
-        email: form.email,
-        churchName: form.churchName,
-        password: form.password,
-      });
-
-      // console.log("Registration response:", data);
-      console.log("Registration response user:", data.user);
-      // console.log("Registration response:", data);
+      // Create a copy of form and remove confirmPassword before sending
+      const { confirmPassword, ...payload } = form;
+      const data = await registerUser(payload);
 
       if (data?.user && data?.token) {
-        console.log("dispatch enter:", data.user)
         dispatch(setUser({
-          id: data.user.id,
-          email: data.user.email,
+          ...data.user,
           token: data.token,
         }));
       }
-      console.log("dispatch exit:", data.user)
       // router.push("/dashboard/admin");
     } catch (err: any) {
       setError(err.message);
