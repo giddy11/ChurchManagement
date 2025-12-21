@@ -1,28 +1,32 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/auth/AuthProvider';
 import Sidebar from './Sidebar';
 import MobileSidebar from './MobileSidebar';
 import AdminDashboard from '../dashboard/AdminDashboard';
+import PeopleManagement from '../dashboard/PeopleManagement';
 
 interface MainLayoutProps {
   children?: React.ReactNode;
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
-  const [activeSection, setActiveSection] = useState('dashboard');
+  const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
+
+  const activeSection = location.pathname.substring(1) || 'dashboard';
+
+  const handleSectionChange = (section: string) => {
+    navigate(`/${section}`);
+  };
 
   const renderContent = () => {
     switch (activeSection) {
       case 'dashboard':
         return <AdminDashboard />;
       case 'people':
-        return (
-          <div className="p-4 md:p-6">
-            <h2 className="text-xl md:text-2xl font-bold mb-4">People Management</h2>
-            <p className="text-gray-600">People management features will be implemented here.</p>
-          </div>
-        );
+        return <PeopleManagement />;
       case 'groups':
         return (
           <div className="p-4 md:p-6">
@@ -165,7 +169,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     <div className="flex h-screen bg-gray-50">
       {/* Desktop Sidebar */}
       <div className="hidden md:block">
-        <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+        <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
       </div>
       
       {/* Main Content Area */}
@@ -173,7 +177,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         {/* Mobile Header */}
         <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <MobileSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+            <MobileSidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
             <div>
               <h1 className="text-lg font-bold text-gray-900">Church Management</h1>
               {user && (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -145,6 +145,14 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
     { id: 'organisations', label: 'Organisations', icon: Building }
   ];
 
+  const isContributionActive = contributionItems.some(item => item.id === activeSection);
+
+  useEffect(() => {
+    if (isContributionActive) {
+      setContributionsOpen(true);
+    }
+  }, [activeSection, isContributionActive]);
+
   const bottomMenuItems = [
     {
       id: 'users-roles',
@@ -227,7 +235,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
           {canViewAnalytics && (
             <div className="mb-1">
               <Button
-                variant={activeSection.startsWith('contributions') ? "secondary" : "ghost"}
+                variant={isContributionActive ? "secondary" : "ghost"}
                 className="w-full justify-start h-9"
                 onClick={() => setContributionsOpen(!contributionsOpen)}
               >
