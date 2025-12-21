@@ -6,8 +6,12 @@ import { LoginForm } from '@/components/auth/LoginForm';
 import { RegisterForm } from '@/components/auth/RegisterForm';
 
 export default function IndexPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const [isLoginMode, setIsLoginMode] = useState(true);
+
+  if (isLoading) {
+    return null; // Or a loading spinner
+  }
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;

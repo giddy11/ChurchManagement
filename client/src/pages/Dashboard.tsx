@@ -5,7 +5,11 @@ import MainLayout from '@/components/layout/MainLayout';
 import MemberLayout from '@/components/layout/MemberLayout';
 
 const DashboardPage: React.FC = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return null; // Or a loading spinner
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
