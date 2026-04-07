@@ -11,6 +11,7 @@ import { errorHandler } from './middleware/error_handler.middleware';
 import { AppDataSource } from './config/database';
 import { Logger } from './utils/logger';
 import { setupMiddleware } from './middleware';
+import { initializeSocket } from './services/socket.service';
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ const httpServer = createServer(app);
 const logger = new Logger({ level: 'info' });
 
 setupMiddleware(app);
+initializeSocket(httpServer);
 
 app.use('/api/user', userRoutes);
 app.use('/api/auth', authRoutes);

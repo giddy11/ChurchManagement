@@ -48,9 +48,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
   if (!user) return null;
 
   const getRoleIcon = () => {
-    if (user.systemRole === 'super_admin') {
-      return <Crown className="h-4 w-4 text-yellow-600" />;
-    }
     switch (effectiveRole) {
       case 'super_admin':
         return <Crown className="h-4 w-4 text-yellow-600" />;
@@ -63,7 +60,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
 
   const canViewAnalytics = effectiveRole === 'super_admin' || effectiveRole === 'admin';
   const canManageUsers = effectiveRole === 'super_admin' || effectiveRole === 'admin';
-  const isSuperAdmin = user.systemRole === 'super_admin';
+  const isSuperAdmin = effectiveRole === 'super_admin';
 
   const menuItems = [
     {
@@ -202,7 +199,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
       <div className="px-4 py-3 border-b border-gray-200">
         <div className="flex items-center gap-2">
           {getRoleIcon()}
-          <span className="font-semibold text-sm text-gray-900">{user.firstName}</span>
+          <span className="font-semibold text-sm text-gray-900">{user.full_name?.split(' ')[0] || user.email}</span>
           <Badge variant="secondary" className="text-xs">
             {effectiveRole}
           </Badge>

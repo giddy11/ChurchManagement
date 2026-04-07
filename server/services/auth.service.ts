@@ -1,213 +1,236 @@
 import { User } from "../models/user.model";
 import { AppDataSource } from "../config/database";
-import * as jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import * as speakeasy from "speakeasy";
 import { sendPasswordResetOtpEmail } from "../email/sendPasswordResetOtpEmail";
 import { Role } from "../models/role-permission/role.model";
+import { TokenService } from "./token.service";
+import { GoogleAuthService, GoogleProfile } from "./google-auth.service";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 type UserResponse = Omit<
   User,
   "password_hash" | "otp_hash" | "hashPassword" | "validatePassword"
 >;
 
+interface AuthTokens {
+  accessToken: string;
+  refreshToken: string;
+}
+
 export class AuthService {
   private readonly userRepository = AppDataSource.getRepository(User);
+  private readonly tokenService = new TokenService();
+  private readonly googleAuthService = new GoogleAuthService();
+
   private async isFirstUser(): Promise<boolean> {
-  const userRepo = AppDataSource.getRepository(User);
-  const userCount = await userRepo.count();
-  return userCount === 0;
-}
+    const userCount = await this.userRepository.count();
+    return userCount === 0;
+  }
+
+  private stripSensitiveFields(user: User): UserResponse {
+    const {
+      password_hash: _,
+      otp_hash: __,
+      otp_secret: ___,
+      reset_password_token: ____,
+      refresh_token_hash: _____,
+      ...safe
+    } = user;
+    return safe as UserResponse;
+  }
+
+  private async saveRefreshToken(user: User, refreshToken: string): Promise<void> {
+    user.refresh_token_hash = this.tokenService.hashToken(refreshToken);
+    await this.userRepository.save(user);
+  }
+
+  private async findUserWithRelations(where: Record<string, any>): Promise<User | null> {
+    try {
+      return await this.userRepository.findOne({
+        where,
+        relations: ["role", "role.permissions", "groups", "groups.permissions", "permissions", "department"],
+      });
+    } catch (error: any) {
+      if (error?.code === "42P01" || error?.message?.includes("user_groups")) {
+        return await this.userRepository.findOne({
+          where,
+          relations: ["role", "role.permissions", "permissions", "department"],
+        });
+      }
+      throw error;
+    }
+  }
 
 
   async register(
     email: string,
     full_name: string,
     password: string
-  ): Promise<{ user: UserResponse; token: string }> {
-    try {
-      // Validate input
-      if (!email || !full_name || !password) {
-        throw new Error("All fields are required");
-      }
-
-      if (password.length < 6) {
-        throw new Error("Password must be at least 6 characters long");
-      }
-
-      const existingUser = await this.userRepository.findOne({
-        where: [{ email }],
-        relations: ["role"]
-      });
-
-      if (existingUser) {
-        throw new Error("User with this email already exists");
-      }
-
-      const isAdmin = await this.isFirstUser();
-      const roleRepository = AppDataSource.getRepository(Role);
-
-      // For first user, they must be admin. Find admin role with permissions.
-      // Admin role should be seeded before first user registration.
-      const roleName = "admin"; // First user is always admin
-      let role = await roleRepository.findOne({ 
-        where: { name: roleName },
-        relations: ["permissions"]
-      });
-
-      if (!role) {
-        throw new Error("Admin role not found. Please run seed scripts (npm run seed:permissions && npm run seed:roles) before creating the first user.");
-      }
-
-      // Ensure role has permissions
-      if (!role.permissions || role.permissions.length === 0) {
-        throw new Error("Admin role exists but has no permissions. Please run seed:roles to assign permissions.");
-      }
-
-      // Hash password
-      const passwordHash = await bcrypt.hash(password, 10);
-
-      // Create user entity with admin role
-      const user = this.userRepository.create({
-        email: email.toLowerCase().trim(),
-        full_name: full_name.trim(),
-        password_hash: passwordHash,
-        role: role,
-      });
-
-      // Save user to database
-      const savedUser = await this.userRepository.save(user);
-
-      // Fetch the complete user data with all relations
-      // Note: groups relation is optional - table may not exist yet
-      let completeUser: User | null;
-      try {
-        // Try to load with groups first
-        completeUser = await this.userRepository.findOne({
-          where: { id: savedUser.id },
-          relations: ["role", "role.permissions", "groups", "groups.permissions", "permissions", "department"]
-        });
-      } catch (error: any) {
-        // If groups table doesn't exist, load without groups
-        if (error?.code === '42P01' || error?.message?.includes('user_groups')) {
-          console.log("Groups table not available, loading user without groups relation");
-          completeUser = await this.userRepository.findOne({
-            where: { id: savedUser.id },
-            relations: ["role", "role.permissions", "permissions", "department"]
-          });
-        } else {
-          throw error;
-        }
-      }
-
-      if (!completeUser) {
-        throw new Error("Failed to fetch complete user data");
-      }
-
-      const {
-        password_hash: _,
-        otp_hash: __,
-        otp_secret: ___,
-        reset_password_token: ____,
-        ...userWithoutSensitive
-      } = completeUser;
-
-      const token = this.generateToken(savedUser);
-
-      return { user: userWithoutSensitive as UserResponse, token };
-    } catch (error) {
-      console.error("Registration error:", error);
-      throw error;
+  ): Promise<{ user: UserResponse; tokens: AuthTokens }> {
+    if (!email || !full_name || !password) {
+      throw new Error("All fields are required");
     }
+    if (password.length < 6) {
+      throw new Error("Password must be at least 6 characters long");
+    }
+
+    const existingUser = await this.userRepository.findOne({
+      where: [{ email }],
+      relations: ["role"],
+    });
+    if (existingUser) {
+      throw new Error("User with this email already exists");
+    }
+
+    const role = await this.findAdminRole();
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const user = this.userRepository.create({
+      email: email.toLowerCase().trim(),
+      full_name: full_name.trim(),
+      password_hash: passwordHash,
+      role,
+    });
+
+    const savedUser = await this.userRepository.save(user);
+    const completeUser = await this.findUserWithRelations({ id: savedUser.id });
+    if (!completeUser) throw new Error("Failed to fetch complete user data");
+
+    const tokens = this.tokenService.generateTokenPair(completeUser);
+    await this.saveRefreshToken(completeUser, tokens.refreshToken);
+
+    return { user: this.stripSensitiveFields(completeUser), tokens };
+  }
+
+  private async findAdminRole(): Promise<Role> {
+    const roleRepository = AppDataSource.getRepository(Role);
+    const role = await roleRepository.findOne({
+      where: { name: "admin" },
+      relations: ["permissions"],
+    });
+    if (!role) {
+      throw new Error("Admin role not found. Please run seed scripts first.");
+    }
+    if (!role.permissions || role.permissions.length === 0) {
+      throw new Error("Admin role has no permissions. Run seed:roles.");
+    }
+    return role;
   }
 
   async login(
     email: string,
     password: string
-  ): Promise<{ user: User; token: string }> {
-    // Try to load with groups, but fallback if table doesn't exist
-    let user: User | null;
-    try {
-      // Try to load with groups first
-      user = await this.userRepository.findOne({ 
-        where: { email },
-        relations: ["role", "role.permissions", "groups", "groups.permissions", "permissions", "department"]
-      });
-    } catch (error: any) {
-      // If groups table doesn't exist, load without groups
-      if (error?.code === '42P01' || error?.message?.includes('user_groups')) {
-        console.log("Groups table not available, loading user without groups relation");
-        user = await this.userRepository.findOne({ 
-          where: { email },
-          relations: ["role", "role.permissions", "permissions", "department"]
-        });
-      } else {
-        throw error;
+  ): Promise<{ user: UserResponse; tokens: AuthTokens }> {
+    const user = await this.findUserWithRelations({ email });
+    if (!user) throw new Error("Invalid email or password.");
+    if (!user.password_hash) throw new Error("Password not set for this account.");
+
+    const isValidPassword = await user.validatePassword(password);
+    if (!isValidPassword) throw new Error("Invalid email or password");
+    if (!user.is_active) throw new Error("Account is deactivated. Please contact an administrator.");
+
+    const tokens = this.tokenService.generateTokenPair(user);
+    await this.saveRefreshToken(user, tokens.refreshToken);
+
+    return { user: this.stripSensitiveFields(user), tokens };
+  }
+
+  async googleSignIn(
+    idToken: string
+  ): Promise<{ user: UserResponse; tokens: AuthTokens; isNewUser: boolean }> {
+    const profile = await this.googleAuthService.verifyIdToken(idToken);
+    let user = await this.findUserWithRelations({ google_id: profile.googleId });
+    let isNewUser = false;
+
+    if (!user) {
+      user = await this.findUserWithRelations({ email: profile.email });
+      if (user) {
+        user.google_id = profile.googleId;
+        if (!user.profile_img && profile.profileImg) {
+          user.profile_img = profile.profileImg;
+        }
+        await this.userRepository.save(user);
       }
     }
-    console.log("user: ", user);
+
     if (!user) {
-      throw new Error("Invalid email or password.");
+      user = await this.createGoogleUser(profile);
+      isNewUser = true;
     }
 
-    if (!user.password_hash) {
-      throw new Error("Password not set for this account.");
-    }
-    const isValidPassword = await user.validatePassword(password);
-    if (!isValidPassword) {
-      throw new Error("Invalid email or password");
+    if (!user.is_active) throw new Error("Account is deactivated.");
+
+    const tokens = this.tokenService.generateTokenPair(user);
+    await this.saveRefreshToken(user, tokens.refreshToken);
+
+    return { user: this.stripSensitiveFields(user), tokens, isNewUser };
+  }
+
+  private async createGoogleUser(profile: GoogleProfile): Promise<User> {
+    const newUser = this.userRepository.create({
+      email: profile.email.toLowerCase().trim(),
+      full_name: profile.fullName,
+      first_name: profile.firstName,
+      last_name: profile.lastName,
+      google_id: profile.googleId,
+      profile_img: profile.profileImg,
+      is_active: true,
+    });
+    const savedUser = await this.userRepository.save(newUser);
+    return (await this.findUserWithRelations({ id: savedUser.id }))!;
+  }
+
+  async refreshTokens(
+    refreshToken: string
+  ): Promise<{ user: UserResponse; tokens: AuthTokens }> {
+    const payload = this.tokenService.verifyRefreshToken(refreshToken);
+    const user = await this.findUserWithRelations({ id: payload.id });
+    if (!user) throw new Error("User not found");
+    if (!user.is_active) throw new Error("Account is deactivated.");
+
+    const tokenHash = this.tokenService.hashToken(refreshToken);
+    if (user.refresh_token_hash !== tokenHash) {
+      throw new Error("Invalid refresh token");
     }
 
-    // Check if user is active
-    if (!user.is_active) {
-      throw new Error("Account is deactivated. Please contact an administrator.");
+    const tokens = this.tokenService.generateTokenPair(user);
+    await this.saveRefreshToken(user, tokens.refreshToken);
+
+    return { user: this.stripSensitiveFields(user), tokens };
+  }
+
+  async revokeRefreshToken(userId: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (user) {
+      user.refresh_token_hash = "";
+      await this.userRepository.save(user);
     }
-
-    const token = this.generateToken(user);
-
-    return { user, token };
   }
 
   async verifyTwoFactorCode(
     email: string,
     code: string
-  ): Promise<{ token: string; user: UserResponse }> {
+  ): Promise<{ tokens: AuthTokens; user: UserResponse }> {
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user || !user.two_factor_code) {
       throw new Error("Invalid email or no 2FA code requested.");
     }
-
     if (new Date() > user.two_factor_code_expires_at!) {
       throw new Error("2FA code has expired.");
     }
 
     const isValid = await bcrypt.compare(code, user.two_factor_code);
-    if (!isValid) {
-      throw new Error("Invalid 2FA code.");
-    }
+    if (!isValid) throw new Error("Invalid 2FA code.");
+    if (!user.is_active) throw new Error("Account is deactivated.");
 
-    // Check if user is active
-    if (!user.is_active) {
-      throw new Error("Account is deactivated. Please contact an administrator.");
-    }
-
-    // Clear 2FA code after successful verification
     user.two_factor_code = null;
     user.two_factor_code_expires_at = null;
     await this.userRepository.save(user);
 
-    const token = this.generateToken(user);
-    const {
-      password_hash: password,
-      otp_hash: otp_hash,
-      ...userWithoutSensitiveData
-    } = user;
+    const tokens = this.tokenService.generateTokenPair(user);
+    await this.saveRefreshToken(user, tokens.refreshToken);
 
-    return {
-      token,
-      user: userWithoutSensitiveData,
-    };
+    return { tokens, user: this.stripSensitiveFields(user) };
   }
 
   async initiatePasswordReset(email: string): Promise<{ otpSent: boolean }> {
@@ -281,20 +304,6 @@ export class AuthService {
     };
   }
 
-  private generateToken(user: User): string {
-    return jwt.sign(
-      {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-      },
-      JWT_SECRET,
-      { expiresIn: "2400h" }
-    );
-  }
-  /**
-   * Set a new password for a user after OTP verification
-   */
   async setNewPassword(email: string, newPassword: string): Promise<{ success: boolean }> {
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {

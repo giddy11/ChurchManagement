@@ -184,6 +184,13 @@ export class User {
   @Column({ nullable: true })
   otp_hash: string;
 
+  @Column({ nullable: true, unique: true })
+  google_id: string;
+
+  @Exclude()
+  @Column({ nullable: true })
+  refresh_token_hash: string;
+
   @CreateDateColumn({type: "timestamp"})
   createdAt: Date;
 

@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LogOut, Church, Users, Calendar, Shield, Crown, Settings, BarChart3 } from 'lucide-react';
+import { LogOut, Church, Users, Calendar, Shield, Crown, Settings, BarChart3, Terminal } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { useNavigate } from 'react-router-dom';
 import { AttendanceTracker } from './AttendanceTracker';
 import { MemberProfile } from './MemberProfile';
 import { UserManagement } from './UserManagement';
@@ -11,6 +12,7 @@ import AdminDashboard from './AdminDashboard';
 
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const handleLogout = () => {
@@ -63,14 +65,27 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
             
-            <Button
-              variant="outline"
-              onClick={handleLogout}
-              className="flex items-center gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
+            <div className="flex items-center gap-2">
+              {user.role === 'super_admin' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/superadmin')}
+                  className="flex items-center gap-2"
+                >
+                  <Terminal className="h-4 w-4" />
+                  Dev Console
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={handleLogout}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </Button>
+            </div>
           </div>
         </div>
       </header>

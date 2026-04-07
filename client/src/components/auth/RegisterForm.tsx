@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from './AuthProvider';
-import { registerUser } from '../../lib/auth';
+import { useRegister } from '@/hooks/useAuthQuery';
 
 interface RegisterFormProps {
   onSwitchToLogin: () => void;
@@ -25,9 +25,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     role: (allowedRoles?.[0] || 'member') as 'super_admin' | 'admin' | 'member'
   });
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [isSelectOpen, setIsSelectOpen] = useState(false);
-  const { login } = useAuth();
+  const { loginWithResponse } = useAuth();
+  const registerMutation = useRegister();
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -36,48 +36,34 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
 
-    // Validation
     if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
       setError('Please fill in all required fields');
-      setIsLoading(false);
       return;
     }
-
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
-      setIsLoading(false);
       return;
     }
-
     if (formData.password.length < 6) {
       setError('Password must be at least 6 characters long');
-      setIsLoading(false);
       return;
     }
 
-    const result = registerUser({
-      email: formData.email,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      phone: formData.phone,
-      role: formData.role
-    }, createdBy);
-    
-    if (result.success && result.user) {
-      if (!createdBy) {
-        // Self-registration, log them in
-        login(result.user);
-      } else {
-        // Admin creating account, show success and reset form
-        onSuccess?.();
+    const fullName = `${formData.firstName} ${formData.lastName}`;
+    registerMutation.mutate(
+      { email: formData.email, full_name: fullName, password: formData.password },
+      {
+        onSuccess: (data) => {
+          if (!createdBy) {
+            loginWithResponse(data);
+          } else {
+            onSuccess?.();
+          }
+        },
+        onError: (err) => setError(err.message),
       }
-    } else {
-      setError(result.message);
-    }
-    
-    setIsLoading(false);
+    );
   };
 
   const getAvailableRoles = () => {
@@ -216,11 +202,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
             type="submit" 
             style={{
               ...styles.button,
-              ...(isLoading ? styles.buttonDisabled : {})
+              ...(registerMutation.isPending ? styles.buttonDisabled : {})
             }}
-            disabled={isLoading}
+            disabled={registerMutation.isPending}
           >
-            {isLoading ? 'Creating Account...' : 'Create Account'}
+            {registerMutation.isPending ? 'Creating Account...' : 'Create Account'}
           </button>
           
           {!isCreatingForOthers && (

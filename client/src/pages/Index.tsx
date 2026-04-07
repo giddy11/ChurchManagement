@@ -136,13 +136,16 @@ import { Church } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
 import { LoginForm } from '../components/auth/LoginForm';
 import { RegisterForm } from '../components/auth/RegisterForm';
+import { ForgotPasswordForm } from '../components/auth/ForgotPasswordForm';
 import { ChurchRegistrationForm } from '../components/church/ChurchRegistrationForm';
+
+type AuthMode = 'login' | 'register' | 'register-church' | 'forgot-password';
 
 export default function IndexPage() {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
-  const initialMode = location.pathname === '/register-church' ? 'register-church' : 'login';
-  const [mode, setMode] = useState<'login' | 'register' | 'register-church'>(initialMode);
+  const initialMode: AuthMode = location.pathname === '/register-church' ? 'register-church' : 'login';
+  const [mode, setMode] = useState<AuthMode>(initialMode);
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
@@ -150,7 +153,6 @@ export default function IndexPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 p-6">
-      {/* Header */}
       <div className="text-center mb-8 animate-in fade-in slide-in-from-top duration-700">
         <div className="flex items-center justify-center gap-3 mb-4">
           <Church className="h-12 w-12 text-blue-600" />
@@ -163,11 +165,13 @@ export default function IndexPage() {
         </p>
       </div>
 
-      {/* Auth Forms */}
       <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom duration-700 delay-200">
-        {mode === 'login' ? (
+        {mode === 'login' && (
           <>
-            <LoginForm onSwitchToRegister={() => setMode('register')} />
+            <LoginForm
+              onSwitchToRegister={() => setMode('register')}
+              onSwitchToForgotPassword={() => setMode('forgot-password')}
+            />
             <div className="mt-4 text-center">
               <p className="text-sm text-muted-foreground">
                 Want to register your church?{' '}
@@ -180,16 +184,20 @@ export default function IndexPage() {
               </p>
             </div>
           </>
-        ) : mode === 'register' ? (
+        )}
+        {mode === 'register' && (
           <RegisterForm onSwitchToLogin={() => setMode('login')} />
-        ) : (
+        )}
+        {mode === 'register-church' && (
           <ChurchRegistrationForm onSwitchToLogin={() => setMode('login')} />
+        )}
+        {mode === 'forgot-password' && (
+          <ForgotPasswordForm onSwitchToLogin={() => setMode('login')} />
         )}
       </div>
 
-      {/* Footer */}
       <div className="mt-8 text-center text-sm text-muted-foreground animate-in fade-in delay-500 duration-700">
-        <p>Built with ❤️ for our church community</p>
+        <p>Built with love for our church community</p>
       </div>
     </div>
   );

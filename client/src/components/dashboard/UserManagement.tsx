@@ -92,10 +92,10 @@ export const UserManagement: React.FC = () => {
 
   const getCreatableRoles = (): Array<'admin' | 'member'> => {
     if (!user) return [];
-    
-    if (user.systemRole === 'super_admin') {
+    const roleName = user.role?.name || '';
+    if (roleName === 'super_admin') {
       return ['admin', 'member'];
-    } else if (user.role === 'admin') {
+    } else if (roleName === 'admin') {
       return ['member'];
     }
     
@@ -105,7 +105,8 @@ export const UserManagement: React.FC = () => {
   const canCreateUsers = user && getCreatableRoles().length > 0;
   const canDeleteUser = (targetUser: UserType) => {
     if (!user) return false;
-    return user.systemRole === 'super_admin' || (user.role === 'admin' && targetUser.role === 'member');
+    const roleName = user.role?.name || '';
+    return roleName === 'super_admin' || (roleName === 'admin' && targetUser.role === 'member');
   };
 
   if (!user) return null;

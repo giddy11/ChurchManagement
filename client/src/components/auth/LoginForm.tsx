@@ -1,55 +1,48 @@
 import React, { useState } from 'react';
 import { useAuth } from './AuthProvider';
-import { loginUser } from '../../lib/auth';
+import { useLogin } from '../../hooks/useAuthQuery';
+import { GoogleSignInButton } from './GoogleSignInButton';
+
 interface LoginFormProps {
   onSwitchToRegister: () => void;
+  onSwitchToForgotPassword?: () => void;
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({
+  onSwitchToRegister,
+  onSwitchToForgotPassword,
+}) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { loginWithResponse } = useAuth();
+  const loginMutation = useLogin();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setIsLoading(true);
+    if (!email || !password) return;
 
-    if (!email || !password) {
-      setError('Please fill in all fields');
-      setIsLoading(false);
-      return;
-    }
-
-    const result = loginUser(email, password);
-    
-    if (result.success && result.user) {
-      login(result.user);
-    } else {
-      setError(result.message);
-    }
-    
-    setIsLoading(false);
+    loginMutation.mutate(
+      { email, password },
+      {
+        onSuccess: (data) => loginWithResponse(data),
+      }
+    );
   };
 
   return (
     <div style={styles.card}>
       <div style={styles.cardHeader}>
         <h2 style={styles.cardTitle}>Welcome Back</h2>
-        <p style={styles.cardDescription}>
-          Sign in to your church account
-        </p>
+        <p style={styles.cardDescription}>Sign in to your church account</p>
       </div>
       <div style={styles.cardContent}>
         <form onSubmit={handleSubmit} style={styles.form}>
-          {error && (
+          {loginMutation.error && (
             <div style={styles.alert}>
-              <p style={styles.alertText}>{error}</p>
+              <p style={styles.alertText}>{loginMutation.error.message}</p>
             </div>
           )}
-          
+
           <div style={styles.formGroup}>
             <label htmlFor="email" style={styles.label}>Email</label>
             <input
@@ -62,7 +55,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
               style={styles.input}
             />
           </div>
-          
+
           <div style={styles.formGroup}>
             <label htmlFor="password" style={styles.label}>Password</label>
             <input
@@ -75,25 +68,39 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
               style={styles.input}
             />
           </div>
-          
-          <button 
-            type="submit" 
+
+          {onSwitchToForgotPassword && (
+            <div style={{ textAlign: 'right' as const }}>
+              <button
+                type="button"
+                style={styles.link}
+                onClick={onSwitchToForgotPassword}
+              >
+                Forgot password?
+              </button>
+            </div>
+          )}
+
+          <button
+            type="submit"
             style={{
               ...styles.button,
-              ...(isLoading ? styles.buttonDisabled : {})
+              ...(loginMutation.isPending ? styles.buttonDisabled : {}),
             }}
-            disabled={isLoading}
+            disabled={loginMutation.isPending}
           >
-            {isLoading ? 'Signing in...' : 'Sign In'}
+            {loginMutation.isPending ? 'Signing in...' : 'Sign In'}
           </button>
-          
+
+          <div style={styles.divider}>
+            <span style={styles.dividerText}>or</span>
+          </div>
+
+          <GoogleSignInButton />
+
           <div style={styles.footer}>
             <span style={styles.footerText}>Don't have an account? </span>
-            <button
-              type="button"
-              style={styles.link}
-              onClick={onSwitchToRegister}
-            >
+            <button type="button" style={styles.link} onClick={onSwitchToRegister}>
               Register here
             </button>
           </div>
@@ -201,5 +208,17 @@ const styles = {
     fontWeight: 'normal',
     cursor: 'pointer',
     textDecoration: 'underline',
+  },
+  divider: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  dividerText: {
+    flex: '1 1 0',
+    textAlign: 'center' as const,
+    fontSize: '13px',
+    color: '#94a3b8',
+    position: 'relative' as const,
   },
 };

@@ -36,10 +36,9 @@ const MemberSidebar: React.FC<MemberSidebarProps> = ({ activeSection, onSectionC
   if (!user) return null;
 
   const getRoleIcon = () => {
-    if (user.systemRole === 'super_admin') {
-      return <Church className="h-4 w-4 text-yellow-600" />;
-    }
     switch (effectiveRole) {
+      case 'super_admin':
+        return <Church className="h-4 w-4 text-yellow-600" />;
       case 'admin':
         return <Shield className="h-4 w-4 text-red-600" />;
       default:
@@ -104,7 +103,7 @@ const MemberSidebar: React.FC<MemberSidebarProps> = ({ activeSection, onSectionC
         <div className="flex items-center gap-2">
           {getRoleIcon()}
           <div>
-            <span className="font-medium text-sm text-gray-900">{user.firstName} {user.lastName}</span>
+            <span className="font-medium text-sm text-gray-900">{user.full_name || user.email}</span>
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="text-xs">
                 {effectiveRole}

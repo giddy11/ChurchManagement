@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import type { Church, Branch, ChurchMembership } from '@/types/church';
-import { getChurchById, getChurches, getBranchesByChurch } from '@/lib/church';
+import type { Church, Branch } from '@/types/church';
+import { getChurches, getBranchesByChurch } from '@/lib/church';
 import { useAuth } from '@/components/auth/AuthProvider';
 
 interface ChurchContextType {
@@ -47,17 +47,17 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
       return;
     }
 
-    // Super admin sees all churches
-    if (user.systemRole === 'super_admin') {
+    // Derive role from backend user role
+    const roleName = user.role?.name || '';
+    const isAdmin = roleName === 'admin' || roleName === 'super_admin';
+
+    if (isAdmin) {
       const allChurches = getChurches();
       setUserChurches(allChurches);
     } else {
-      // Regular users see only churches they belong to
-      const memberships = user.churchMemberships || [];
-      const churches = memberships
-        .map((m: ChurchMembership) => getChurchById(m.churchId))
-        .filter((c: Church | undefined): c is Church => c !== undefined);
-      setUserChurches(churches);
+      // For non-admin users, show all churches (will be server-managed later)
+      const allChurches = getChurches();
+      setUserChurches(allChurches);
     }
   };
 
@@ -128,15 +128,13 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
     loadUserChurches();
   };
 
-  // Derive effective role
+  // Derive effective role from backend user role
   let effectiveRole: 'super_admin' | 'admin' | 'member' = 'member';
-  if (user?.systemRole === 'super_admin') {
+  const roleName = user?.role?.name || '';
+  if (roleName === 'super_admin') {
     effectiveRole = 'super_admin';
-  } else if (user && currentChurch) {
-    const membership = (user.churchMemberships || []).find(
-      (m: ChurchMembership) => m.churchId === currentChurch.id
-    );
-    effectiveRole = membership?.role || 'member';
+  } else if (roleName === 'admin') {
+    effectiveRole = 'admin';
   }
 
   const value: ChurchContextType = {

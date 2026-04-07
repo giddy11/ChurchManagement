@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { registerChurchWithAdmin } from '@/lib/auth';
+import { useRegister } from '@/hooks/useAuthQuery';
+import { createChurch, createBranch } from '@/lib/church';
 
 interface ChurchRegistrationFormProps {
   onSwitchToLogin: () => void;
@@ -19,8 +20,8 @@ export const ChurchRegistrationForm: React.FC<ChurchRegistrationFormProps> = ({ 
     confirmPassword: '',
   });
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { loginWithResponse } = useAuth();
+  const registerMutation = useRegister();
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -39,44 +40,41 @@ export const ChurchRegistrationForm: React.FC<ChurchRegistrationFormProps> = ({ 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
 
     if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
       setError('Please fill in all required fields');
-      setIsLoading(false);
       return;
     }
-
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
-      setIsLoading(false);
       return;
     }
-
     if (formData.password.length < 6) {
       setError('Password must be at least 6 characters');
-      setIsLoading(false);
       return;
     }
 
-    const result = registerChurchWithAdmin(
-      { name: formData.churchName, description: formData.churchDescription },
+    const fullName = `${formData.firstName} ${formData.lastName}`;
+    registerMutation.mutate(
+      { email: formData.email, full_name: fullName, password: formData.password },
       {
-        email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        phone: formData.phone,
-        password: formData.password,
+        onSuccess: (data) => {
+          // Create church locally (will be server-managed later)
+          const church = createChurch({
+            name: formData.churchName,
+            description: formData.churchDescription,
+            createdBy: data.user.id,
+          });
+          createBranch({
+            churchId: church.id,
+            name: 'Main Branch',
+            isHeadquarters: true,
+          });
+          loginWithResponse(data);
+        },
+        onError: (err) => setError(err.message),
       }
     );
-
-    if (result.success && result.user) {
-      login(result.user);
-    } else {
-      setError(result.message);
-    }
-
-    setIsLoading(false);
   };
 
   return (
@@ -238,10 +236,10 @@ export const ChurchRegistrationForm: React.FC<ChurchRegistrationFormProps> = ({ 
               </button>
               <button
                 type="submit"
-                style={{ ...styles.button, ...(isLoading ? styles.buttonDisabled : {}), flex: 1 }}
-                disabled={isLoading}
+                style={{ ...styles.button, ...(registerMutation.isPending ? styles.buttonDisabled : {}), flex: 1 }}
+                disabled={registerMutation.isPending}
               >
-                {isLoading ? 'Creating...' : 'Register Church'}
+                {registerMutation.isPending ? 'Creating...' : 'Register Church'}
               </button>
             </div>
 

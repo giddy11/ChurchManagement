@@ -1,9 +1,11 @@
 import { Request, Response, NextFunction, RequestHandler } from "express";
-import jwt from "jsonwebtoken";
 import { UserService } from "../services/user.service";
+import { TokenService } from "../services/token.service";
 import dotenv from "dotenv";
 import { Role } from "../models/role-permission/role.model";
 dotenv.config();
+
+const tokenService = new TokenService();
 
 
 export interface AuthRequest extends Request {
@@ -38,7 +40,7 @@ export const authMiddleware = (userService: UserService) => {
                 return;
             }
 
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as any;
+            const decoded = tokenService.verifyAccessToken(token);
             const user = await userService.getUserById(decoded.id);
 
             if (!user) {
