@@ -3,6 +3,7 @@ import {
   login,
   forgotPassword,
   register,
+  firebaseLogin,
   verifyResetOtp,
   setNewPassword,
   changePassword,
@@ -17,6 +18,7 @@ const router = Router();
 
 router.post("/signup", register);
 router.post("/login", login);
+router.post("/firebase-login", firebaseLogin);
 router.post("/google", googleSignIn);
 router.post("/refresh-token", refreshToken);
 router.post(

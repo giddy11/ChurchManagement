@@ -10,8 +10,8 @@ interface ChurchRegistrationFormProps {
 export const ChurchRegistrationForm: React.FC<ChurchRegistrationFormProps> = ({ onSwitchToLogin }) => {
   const [step, setStep] = useState<1 | 2>(1);
   const [formData, setFormData] = useState({
-    churchName: '',
-    churchDescription: '',
+    denominationName: '',
+    denominationDescription: '',
     firstName: '',
     lastName: '',
     email: '',
@@ -30,8 +30,8 @@ export const ChurchRegistrationForm: React.FC<ChurchRegistrationFormProps> = ({ 
   const handleStep1 = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!formData.churchName.trim()) {
-      setError('Church name is required');
+    if (!formData.denominationName.trim()) {
+      setError('Denomination name is required');
       return;
     }
     setStep(2);
@@ -59,15 +59,15 @@ export const ChurchRegistrationForm: React.FC<ChurchRegistrationFormProps> = ({ 
       { email: formData.email, full_name: fullName, password: formData.password },
       {
         onSuccess: (data) => {
-          // Create church locally (will be server-managed later)
+          // Create denomination locally (will be server-managed later)
           const church = createChurch({
-            name: formData.churchName,
-            description: formData.churchDescription,
+            name: formData.denominationName,
+            description: formData.denominationDescription,
             createdBy: data.user.id,
           });
           createBranch({
             churchId: church.id,
-            name: 'Main Branch',
+            name: 'Main Church',
             isHeadquarters: true,
           });
           loginWithResponse(data);
@@ -80,10 +80,10 @@ export const ChurchRegistrationForm: React.FC<ChurchRegistrationFormProps> = ({ 
   return (
     <div style={styles.card}>
       <div style={styles.cardHeader}>
-        <h2 style={styles.cardTitle}>Register Your Church</h2>
+        <h2 style={styles.cardTitle}>Register Your Denomination</h2>
         <p style={styles.cardDescription}>
           {step === 1
-            ? 'Tell us about your church'
+            ? 'Tell us about your denomination'
             : 'Create your admin account'}
         </p>
         {/* Step indicator */}
@@ -103,24 +103,24 @@ export const ChurchRegistrationForm: React.FC<ChurchRegistrationFormProps> = ({ 
             )}
 
             <div style={styles.formGroup}>
-              <label htmlFor="churchName" style={styles.label}>Church Name *</label>
+              <label htmlFor="denominationName" style={styles.label}>Denomination Name *</label>
               <input
-                id="churchName"
+                id="denominationName"
                 placeholder="e.g. Salvation Ministry"
-                value={formData.churchName}
-                onChange={(e) => handleInputChange('churchName', e.target.value)}
+                value={formData.denominationName}
+                onChange={(e) => handleInputChange('denominationName', e.target.value)}
                 required
                 style={styles.input}
               />
             </div>
 
             <div style={styles.formGroup}>
-              <label htmlFor="churchDescription" style={styles.label}>Description</label>
+              <label htmlFor="denominationDescription" style={styles.label}>Description</label>
               <textarea
-                id="churchDescription"
-                placeholder="A brief description of your church..."
-                value={formData.churchDescription}
-                onChange={(e) => handleInputChange('churchDescription', e.target.value)}
+                id="denominationDescription"
+                placeholder="A brief description of your denomination..."
+                value={formData.denominationDescription}
+                onChange={(e) => handleInputChange('denominationDescription', e.target.value)}
                 style={{ ...styles.input, minHeight: '80px', resize: 'vertical' as const }}
                 rows={3}
               />
@@ -147,7 +147,7 @@ export const ChurchRegistrationForm: React.FC<ChurchRegistrationFormProps> = ({ 
 
             <div style={styles.churchBadge}>
               <span style={styles.churchBadgeIcon}>⛪</span>
-              <span style={styles.churchBadgeText}>{formData.churchName}</span>
+              <span style={styles.churchBadgeText}>{formData.denominationName}</span>
             </div>
 
             <div style={styles.gridRow}>
@@ -239,7 +239,7 @@ export const ChurchRegistrationForm: React.FC<ChurchRegistrationFormProps> = ({ 
                 style={{ ...styles.button, ...(registerMutation.isPending ? styles.buttonDisabled : {}), flex: 1 }}
                 disabled={registerMutation.isPending}
               >
-                {registerMutation.isPending ? 'Creating...' : 'Register Church'}
+                {registerMutation.isPending ? 'Creating...' : 'Register Denomination'}
               </button>
             </div>
 

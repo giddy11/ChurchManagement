@@ -2,9 +2,7 @@ import React, { createContext, useContext, useEffect, useCallback, type ReactNod
 import { useQueryClient } from '@tanstack/react-query';
 import { useProfile } from '@/hooks/useAuthQuery';
 import {
-  getAccessToken,
   clearTokens,
-  setTokens,
   type AuthResponse,
 } from '@/services/auth.service';
 import { disconnectSocket } from '@/services/socket.service';
@@ -15,9 +13,7 @@ export interface AuthUser {
   full_name: string;
   profile_img?: string;
   role?: any;
-  groups?: any[];
   permissions?: any[];
-  effectivePermissions?: string[];
 }
 
 interface AuthContextType {
@@ -44,13 +40,17 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const queryClient = useQueryClient();
-  const hasToken = !!getAccessToken();
   const { data: profile, isLoading } = useProfile();
 
   const loginWithResponse = useCallback(
     (data: AuthResponse) => {
-      setTokens(data.accessToken, data.refreshToken);
-      queryClient.setQueryData(['auth', 'profile'], data.user);
+      // Tokens are in HttpOnly cookies set by the server — nothing to store here.
+      // Just cache user/role/permissions so the UI updates immediately.
+      queryClient.setQueryData(['auth', 'profile'], {
+        ...data.user,
+        role: data.role,
+        permissions: data.permissions,
+      });
     },
     [queryClient]
   );
@@ -59,6 +59,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     clearTokens();
     disconnectSocket();
     queryClient.clear();
+    window.location.replace('/login');
   }, [queryClient]);
 
   useEffect(() => {
@@ -74,9 +75,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         full_name: profile.full_name,
         profile_img: profile.profile_img,
         role: profile.role,
-        groups: profile.groups,
         permissions: profile.permissions,
-        effectivePermissions: profile.effectivePermissions,
       }
     : null;
 
@@ -84,8 +83,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     loginWithResponse,
     logout,
-    isAuthenticated: !!user || hasToken,
-    isLoading: hasToken && isLoading,
+    isAuthenticated: !!user,
+    isLoading: isLoading,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

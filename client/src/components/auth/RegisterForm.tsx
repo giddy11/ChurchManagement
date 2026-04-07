@@ -1,18 +1,13 @@
 import React, { useState } from 'react';
-import { useAuth } from './AuthProvider';
 import { useRegister } from '@/hooks/useAuthQuery';
 
 interface RegisterFormProps {
   onSwitchToLogin: () => void;
-  createdBy?: string;
-  allowedRoles?: Array<'admin' | 'member'>;
   onSuccess?: () => void;
 }
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({ 
-  onSwitchToLogin, 
-  createdBy, 
-  allowedRoles,
+  onSwitchToLogin,
   onSuccess 
 }) => {
   const [formData, setFormData] = useState({
@@ -21,12 +16,15 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
     confirmPassword: '',
     firstName: '',
     lastName: '',
-    phone: '',
-    role: (allowedRoles?.[0] || 'member') as 'super_admin' | 'admin' | 'member'
+    denomination_name: '',
+    description: '',
+    location: '',
+    state: '',
+    country: '',
+    address: '',
   });
   const [error, setError] = useState('');
-  const [isSelectOpen, setIsSelectOpen] = useState(false);
-  const { loginWithResponse } = useAuth();
+  const [success, setSuccess] = useState('');
   const registerMutation = useRegister();
 
   const handleInputChange = (field: string, value: string) => {
@@ -36,9 +34,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
 
     if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
       setError('Please fill in all required fields');
+      return;
+    }
+    if (!formData.denomination_name) {
+      setError('Church denomination name is required');
       return;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -52,49 +55,34 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
 
     const fullName = `${formData.firstName} ${formData.lastName}`;
     registerMutation.mutate(
-      { email: formData.email, full_name: fullName, password: formData.password },
       {
-        onSuccess: (data) => {
-          if (!createdBy) {
-            loginWithResponse(data);
-          } else {
-            onSuccess?.();
-          }
+        email: formData.email,
+        full_name: fullName,
+        password: formData.password,
+        church: {
+          denomination_name: formData.denomination_name,
+          description: formData.description || undefined,
+          location: formData.location || undefined,
+          state: formData.state || undefined,
+          country: formData.country || undefined,
+          address: formData.address || undefined,
+        },
+      },
+      {
+        onSuccess: () => {
+          setSuccess('Registration successful! Please sign in.');
+          onSuccess?.();
         },
         onError: (err) => setError(err.message),
       }
     );
   };
 
-  const getAvailableRoles = () => {
-    if (allowedRoles) {
-      return allowedRoles.map(role => ({
-        value: role,
-        label: role.charAt(0).toUpperCase() + role.slice(1)
-      }));
-    }
-    
-    // Default roles for self-registration
-    return [
-      { value: 'member', label: 'Member' }
-    ];
-  };
-
-  const isCreatingForOthers = !!createdBy;
-  const availableRoles = getAvailableRoles();
-
   return (
     <div style={styles.card}>
       <div style={styles.cardHeader}>
-        <h2 style={styles.cardTitle}>
-          {isCreatingForOthers ? 'Create New Account' : 'Join Our Church'}
-        </h2>
-        <p style={styles.cardDescription}>
-          {isCreatingForOthers 
-            ? 'Create an account for a new church member'
-            : 'Create your account to get started'
-          }
-        </p>
+        <h2 style={styles.cardTitle}>Register Your Church</h2>
+        <p style={styles.cardDescription}>Create your church admin account to get started</p>
       </div>
       <div style={styles.cardContent}>
         <form onSubmit={handleSubmit} style={styles.form}>
@@ -103,7 +91,14 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               <p style={styles.alertText}>{error}</p>
             </div>
           )}
-          
+          {success && (
+            <div style={{ ...styles.alert, backgroundColor: '#f0fdf4', borderColor: '#86efac' }}>
+              <p style={{ ...styles.alertText, color: '#166534' }}>{success}</p>
+            </div>
+          )}
+
+          <p style={styles.sectionTitle}>Admin Account</p>
+
           <div style={styles.gridRow}>
             <div style={styles.formGroup}>
               <label htmlFor="firstName" style={styles.label}>First Name *</label>
@@ -128,7 +123,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               />
             </div>
           </div>
-          
+
           <div style={styles.formGroup}>
             <label htmlFor="email" style={styles.label}>Email *</label>
             <input
@@ -141,65 +136,106 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               style={styles.input}
             />
           </div>
-          
-          <div style={styles.formGroup}>
-            <label htmlFor="phone" style={styles.label}>Phone Number</label>
-            <input
-              id="phone"
-              type="tel"
-              placeholder="(555) 123-4567"
-              value={formData.phone}
-              onChange={(e) => handleInputChange('phone', e.target.value)}
-              style={styles.input}
-            />
-          </div>
-          
-          <div style={styles.formGroup}>
-            <label htmlFor="role" style={styles.label}>Role</label>
-            <div style={styles.selectWrapper}>
-              <select
-                id="role"
-                value={formData.role}
-                onChange={(e) => handleInputChange('role', e.target.value)}
-                style={styles.select}
-              >
-                {availableRoles.map(role => (
-                  <option key={role.value} value={role.value}>
-                    {role.label}
-                  </option>
-                ))}
-              </select>
+
+          <div style={styles.gridRow}>
+            <div style={styles.formGroup}>
+              <label htmlFor="password" style={styles.label}>Password *</label>
+              <input
+                id="password"
+                type="password"
+                placeholder="At least 6 characters"
+                value={formData.password}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+                required
+                style={styles.input}
+              />
+            </div>
+            <div style={styles.formGroup}>
+              <label htmlFor="confirmPassword" style={styles.label}>Confirm Password *</label>
+              <input
+                id="confirmPassword"
+                type="password"
+                placeholder="Confirm your password"
+                value={formData.confirmPassword}
+                onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                required
+                style={styles.input}
+              />
             </div>
           </div>
-          
+
+          <p style={styles.sectionTitle}>Church Details</p>
+
           <div style={styles.formGroup}>
-            <label htmlFor="password" style={styles.label}>Password *</label>
+            <label htmlFor="denomination_name" style={styles.label}>Denomination / Church Name *</label>
             <input
-              id="password"
-              type="password"
-              placeholder="At least 6 characters"
-              value={formData.password}
-              onChange={(e) => handleInputChange('password', e.target.value)}
+              id="denomination_name"
+              placeholder="e.g. Grace Baptist Church"
+              value={formData.denomination_name}
+              onChange={(e) => handleInputChange('denomination_name', e.target.value)}
               required
               style={styles.input}
             />
           </div>
-          
+
           <div style={styles.formGroup}>
-            <label htmlFor="confirmPassword" style={styles.label}>Confirm Password *</label>
+            <label htmlFor="description" style={styles.label}>Description</label>
             <input
-              id="confirmPassword"
-              type="password"
-              placeholder="Confirm your password"
-              value={formData.confirmPassword}
-              onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-              required
+              id="description"
+              placeholder="Brief description of your church"
+              value={formData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
               style={styles.input}
             />
           </div>
-          
-          <button 
-            type="submit" 
+
+          <div style={styles.formGroup}>
+            <label htmlFor="address" style={styles.label}>Address</label>
+            <input
+              id="address"
+              placeholder="123 Church Street"
+              value={formData.address}
+              onChange={(e) => handleInputChange('address', e.target.value)}
+              style={styles.input}
+            />
+          </div>
+
+          <div style={styles.gridRow}>
+            <div style={styles.formGroup}>
+              <label htmlFor="location" style={styles.label}>City / Location</label>
+              <input
+                id="location"
+                placeholder="City"
+                value={formData.location}
+                onChange={(e) => handleInputChange('location', e.target.value)}
+                style={styles.input}
+              />
+            </div>
+            <div style={styles.formGroup}>
+              <label htmlFor="state" style={styles.label}>State</label>
+              <input
+                id="state"
+                placeholder="State"
+                value={formData.state}
+                onChange={(e) => handleInputChange('state', e.target.value)}
+                style={styles.input}
+              />
+            </div>
+          </div>
+
+          <div style={styles.formGroup}>
+            <label htmlFor="country" style={styles.label}>Country</label>
+            <input
+              id="country"
+              placeholder="Country"
+              value={formData.country}
+              onChange={(e) => handleInputChange('country', e.target.value)}
+              style={styles.input}
+            />
+          </div>
+
+          <button
+            type="submit"
             style={{
               ...styles.button,
               ...(registerMutation.isPending ? styles.buttonDisabled : {})
@@ -208,19 +244,17 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
           >
             {registerMutation.isPending ? 'Creating Account...' : 'Create Account'}
           </button>
-          
-          {!isCreatingForOthers && (
-            <div style={styles.footer}>
-              <span style={styles.footerText}>Already have an account? </span>
-              <button
-                type="button"
-                style={styles.link}
-                onClick={onSwitchToLogin}
-              >
-                Sign in here
-              </button>
-            </div>
-          )}
+
+          <div style={styles.footer}>
+            <span style={styles.footerText}>Already have an account? </span>
+            <button
+              type="button"
+              style={styles.link}
+              onClick={onSwitchToLogin}
+            >
+              Sign in here
+            </button>
+          </div>
         </form>
       </div>
     </div>
@@ -252,6 +286,16 @@ const styles = {
     color: '#64748b',
     fontSize: '14px',
     margin: 0,
+  },
+  sectionTitle: {
+    fontSize: '13px',
+    fontWeight: '600' as const,
+    color: '#475569',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.05em',
+    margin: '4px 0 0 0',
+    borderBottom: '1px solid #e2e8f0',
+    paddingBottom: '6px',
   },
   cardContent: {
     padding: '24px',

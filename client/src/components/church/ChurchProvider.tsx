@@ -47,8 +47,9 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
       return;
     }
 
-    // Derive role from backend user role
-    const roleName = user.role?.name || '';
+    // Derive role from backend user role (string or { name })
+    const rawRole = user.role;
+    const roleName = typeof rawRole === 'string' ? rawRole : (rawRole?.name || '');
     const isAdmin = roleName === 'admin' || roleName === 'super_admin';
 
     if (isAdmin) {
@@ -128,9 +129,10 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
     loadUserChurches();
   };
 
-  // Derive effective role from backend user role
+  // Derive effective role from backend user — role can be a string or { name: string }
   let effectiveRole: 'super_admin' | 'admin' | 'member' = 'member';
-  const roleName = user?.role?.name || '';
+  const rawRole = user?.role;
+  const roleName = typeof rawRole === 'string' ? rawRole : (rawRole?.name || '');
   if (roleName === 'super_admin') {
     effectiveRole = 'super_admin';
   } else if (roleName === 'admin') {

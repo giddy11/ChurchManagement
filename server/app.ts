@@ -12,6 +12,7 @@ import { AppDataSource } from './config/database';
 import { Logger } from './utils/logger';
 import { setupMiddleware } from './middleware';
 import { initializeSocket } from './services/socket.service';
+import { config } from './config';
 
 dotenv.config();
 
@@ -34,11 +35,12 @@ app.get('/health', (req, res) => {
 
 app.use(errorHandler);
 
-httpServer.listen(7777, async () => {
+const PORT = config.port;
+httpServer.listen(PORT, async () => {
   try {
     await AppDataSource.initialize();
     logger.info('Database connected');
-    logger.info('Server is running on port 7777');
+    logger.info(`Server is running on port ${PORT}`);
   } catch (error) {
     logger.error('Failed to connect to database:', error);
     process.exit(1);

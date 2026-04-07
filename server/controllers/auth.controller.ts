@@ -2,17 +2,38 @@ import { Request, Response } from "express";
 import { AuthService } from "../services/auth.service";
 import asyncHandler from "../utils/asyncHandler";
 import { AuthRequest } from "../middleware/auth.middleware";
-import { AppDataSource } from "../config/database";
-import { User } from "../models/user.model";
+import { getPermissionsForRole } from "../utils/roles";
 
 const authService = new AuthService();
 
+const IS_PROD = process.env.NODE_ENV === 'development';
+
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: IS_PROD,
+  sameSite: IS_PROD ? ('none' as const) : ('lax' as const),
+  path: '/',
+};
+
+function setAuthCookies(res: Response, accessToken: string, refreshToken: string) {
+  res.cookie('access_token', accessToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: 15 * 60 * 1000, // 15 minutes
+  });
+  res.cookie('refresh_token', refreshToken, {
+    ...COOKIE_OPTIONS,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+}
+
+function clearAuthCookies(res: Response) {
+  res.clearCookie('access_token', COOKIE_OPTIONS);
+  res.clearCookie('refresh_token', COOKIE_OPTIONS);
+}
+
 function buildAuthResponse(result: { user: any; tokens: any }) {
-  const rolePermissions = result.user.role?.permissions || [];
-  const groupPermissions = (result.user.groups || []).flatMap(
-    (g: any) => g.permissions || []
-  );
-  const individualPermissions = result.user.permissions || [];
+  const roleName = result.user.role || 'member';
+  const permissions = getPermissionsForRole(roleName);
 
   return {
     user: {
@@ -21,47 +42,82 @@ function buildAuthResponse(result: { user: any; tokens: any }) {
       full_name: result.user.full_name,
       profile_img: result.user.profile_img,
     },
-    accessToken: result.tokens.accessToken,
-    refreshToken: result.tokens.refreshToken,
-    role: result.user.role,
-    groups: result.user.groups || [],
-    permissions: individualPermissions,
-    effectivePermissions: [
-      ...rolePermissions.map((p: any) => p.name || p.id),
-      ...groupPermissions.map((p: any) => p.name || p.id),
-      ...individualPermissions.map((p: any) => p.name || p.id),
-    ],
+    role: { name: roleName },
+    permissions,
   };
 }
 
 export const register = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const userRepository = AppDataSource.getRepository(User);
-    const userCount = await userRepository.count();
-
-    if (userCount > 0) {
-      res.status(403).json({
-        status: 403,
-        message: "Public registration is disabled. Contact your administrator.",
-      });
-      return;
-    }
-
-    const { email, full_name, password } = req.body;
-    if (!email || !full_name || !password) {
+    const { idToken, full_name, denomination_name, description, location, state, country, address } = req.body;
+    if (!idToken || !full_name) {
       res.status(400).json({
         status: 400,
-        message: "All fields are required: email, full_name, password",
+        message: "All fields are required: idToken, full_name",
+      });
+      return;
+    }
+    if (!denomination_name) {
+      res.status(400).json({
+        status: 400,
+        message: "Church denomination name is required",
       });
       return;
     }
 
-    const result = await authService.register(email, full_name, password);
+    const result = await authService.register(idToken, full_name, {
+      denomination_name,
+      description,
+      location,
+      state,
+      country,
+      address,
+    });
+
+    const roleName = result.user.role || 'admin';
+    const permissions = getPermissionsForRole(roleName as string);
 
     res.status(201).json({
-      data: buildAuthResponse(result),
+      data: {
+        user: {
+          id: result.user.id,
+          email: result.user.email,
+          full_name: result.user.full_name,
+          profile_img: result.user.profile_img,
+        },
+        church: {
+          id: result.church.id,
+          denomination_name: result.church.denomination_name,
+          description: result.church.description,
+          location: result.church.location,
+          state: result.church.state,
+          country: result.church.country,
+          address: result.church.address,
+        },
+        role: { name: roleName },
+        permissions,
+      },
       status: 201,
-      message: "Admin account created successfully.",
+      message: "Registration successful.",
+    });
+  }
+);
+
+export const firebaseLogin = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { idToken } = req.body;
+    if (!idToken) {
+      res.status(400).json({ status: 400, message: "Firebase ID token is required" });
+      return;
+    }
+
+    const result = await authService.firebaseLogin(idToken);
+    setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
+
+    res.status(200).json({
+      data: buildAuthResponse(result),
+      status: 200,
+      message: "Login successful",
     });
   }
 );
@@ -78,6 +134,7 @@ export const login = asyncHandler(
     }
 
     const result = await authService.login(email, password);
+    setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
 
     res.status(200).json({
       data: buildAuthResponse(result),
@@ -99,6 +156,7 @@ export const googleSignIn = asyncHandler(
     }
 
     const result = await authService.googleSignIn(idToken);
+    setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
 
     res.status(200).json({
       data: { ...buildAuthResponse(result), isNewUser: result.isNewUser },
@@ -112,8 +170,8 @@ export const googleSignIn = asyncHandler(
 
 export const refreshToken = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const { refreshToken } = req.body;
-    if (!refreshToken) {
+    const token = req.cookies?.refresh_token || req.body?.refreshToken;
+    if (!token) {
       res.status(400).json({
         status: 400,
         message: "Refresh token is required",
@@ -121,7 +179,8 @@ export const refreshToken = asyncHandler(
       return;
     }
 
-    const result = await authService.refreshTokens(refreshToken);
+    const result = await authService.refreshTokens(token);
+    setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
 
     res.status(200).json({
       data: buildAuthResponse(result),
@@ -137,6 +196,7 @@ export const logout = asyncHandler(
     if (userId) {
       await authService.revokeRefreshToken(userId);
     }
+    clearAuthCookies(res);
     res.status(200).json({ status: 200, message: "Logged out successfully" });
   }
 );

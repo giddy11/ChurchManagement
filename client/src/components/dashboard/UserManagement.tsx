@@ -7,17 +7,15 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Users, Plus, Trash2, Crown, Shield, User, UserCheck } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { RegisterForm } from '@/components/auth/RegisterForm';
-import { getAllUsers, deleteUser, canCreateRole } from '@/lib/auth';
+import { fetchUsers, deleteUserById } from '@/lib/api';
 
-// Define UserType if not already imported
 type UserType = {
   id: string;
-  firstName: string;
-  lastName: string;
+  full_name?: string;
   email: string;
-  role: 'super_admin' | 'admin' | 'member';
-  systemRole?: 'super_admin';
-  joinDate: string;
+  role: string;
+  is_active?: boolean;
+  createdAt?: string;
 };
 
 export const UserManagement: React.FC = () => {
@@ -33,26 +31,25 @@ export const UserManagement: React.FC = () => {
     }
   }, [user]);
 
-  const loadUsers = () => {
-    if (!user) return;
-    const allUsers = getAllUsers(user.id);
-    setUsers(allUsers);
+  const loadUsers = async () => {
+    try {
+      const res = await fetchUsers();
+      setUsers(res.data || []);
+    } catch {
+      setUsers([]);
+    }
   };
 
   const handleDeleteUser = async (targetUserId: string) => {
-    if (!user) return;
-    
-    const result = deleteUser(user.id, targetUserId);
-    
-    if (result.success) {
+    try {
+      await deleteUserById(targetUserId);
       setMessage('User deleted successfully');
       setMessageType('success');
       loadUsers();
-    } else {
-      setMessage(result.message);
+    } catch (err: any) {
+      setMessage(err.message || 'Failed to delete user');
       setMessageType('error');
     }
-    
     setTimeout(() => setMessage(''), 3000);
   };
 
@@ -163,13 +160,13 @@ export const UserManagement: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center p-4 bg-yellow-50 rounded-lg">
               <div className="text-2xl font-bold text-yellow-600">
-                {users.filter(u => u.systemRole === 'super_admin').length}
+                {users.filter(u => u.role === 'super_admin').length}
               </div>
               <div className="text-sm text-yellow-600">Super Admins</div>
             </div>
             <div className="text-center p-4 bg-red-50 rounded-lg">
               <div className="text-2xl font-bold text-red-600">
-                {users.filter(u => u.role === 'admin' && !u.systemRole).length}
+                {users.filter(u => u.role === 'admin').length}
               </div>
               <div className="text-sm text-red-600">Church Admins</div>
             </div>
@@ -200,10 +197,10 @@ export const UserManagement: React.FC = () => {
               >
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    {getRoleIcon(userItem.role)}
+                    {getRoleIcon(userItem.role as any)}
                     <div>
                       <div className="font-semibold">
-                        {userItem.firstName} {userItem.lastName}
+                        {userItem.full_name || userItem.email}
                         {userItem.id === user.id && (
                           <span className="text-sm text-muted-foreground ml-2">(You)</span>
                         )}
@@ -214,12 +211,12 @@ export const UserManagement: React.FC = () => {
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  <Badge className={getRoleBadgeColor(userItem.role)}>
+                  <Badge className={getRoleBadgeColor(userItem.role as any)}>
                     {userItem.role.charAt(0).toUpperCase() + userItem.role.slice(1)}
                   </Badge>
                   
                   <div className="text-sm text-muted-foreground">
-                    Joined {new Date(userItem.joinDate).toLocaleDateString()}
+                    {userItem.createdAt ? `Joined ${new Date(userItem.createdAt).toLocaleDateString()}` : ''}
                   </div>
                   
                   {canDeleteUser(userItem) && userItem.id !== user.id && (

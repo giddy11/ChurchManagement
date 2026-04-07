@@ -174,12 +174,12 @@ export default function IndexPage() {
             />
             <div className="mt-4 text-center">
               <p className="text-sm text-muted-foreground">
-                Want to register your church?{' '}
+                Want to register your denomination?{' '}
                 <button
                   className="text-blue-600 hover:underline font-medium"
                   onClick={() => setMode('register-church')}
                 >
-                  Register Church
+                  Register Denomination
                 </button>
               </p>
             </div>

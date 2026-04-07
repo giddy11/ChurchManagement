@@ -1,7 +1,16 @@
+import {
+  createUserWithEmailAndPassword,
+} from "firebase/auth";
+import { firebaseAuth } from "@/lib/firebase";
+
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:7777/api";
 
-const ACCESS_TOKEN_KEY = "access_token";
-const REFRESH_TOKEN_KEY = "refresh_token";
+// Tokens are stored in HttpOnly cookies set by the server.
+// We only track lightweight flags in memory.
+let sessionActive = false;
+// Set to true after an explicit logout or session expiry — prevents the
+// useProfile query from re-firing and causing an infinite refresh loop.
+let sessionInvalidated = false;
 
 export interface AuthResponse {
   user: {
@@ -10,89 +19,98 @@ export interface AuthResponse {
     full_name: string;
     profile_img?: string;
   };
-  accessToken: string;
-  refreshToken: string;
   role: any;
-  groups: any[];
   permissions: any[];
-  effectivePermissions: string[];
   isNewUser?: boolean;
 }
 
+export interface RegisterResponse {
+  user: {
+    id: string;
+    email: string;
+    full_name: string;
+    profile_img?: string;
+  };
+  church: {
+    id: string;
+    denomination_name: string;
+    description?: string;
+    location?: string;
+    state?: string;
+    country?: string;
+    address?: string;
+  };
+  role: any;
+  permissions: any[];
+}
+
+/** Called after a successful login to mark the session as active. */
+export function setTokens(_accessToken: string, _refreshToken: string): void {
+  sessionActive = true;
+}
+
+/** Returns true if the session is active (used for react-query enabled flag). */
 export function getAccessToken(): string | null {
-  return localStorage.getItem(ACCESS_TOKEN_KEY);
-}
-
-export function getRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
-}
-
-export function setTokens(accessToken: string, refreshToken: string): void {
-  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  // Cookies are HttpOnly — not readable from JS.
+  // We use sessionActive to track state in memory.
+  // On a fresh page load, attempt a profile fetch; a 401 means no session.
+  return sessionActive ? 'cookie' : null;
 }
 
 export function clearTokens(): void {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  sessionActive = false;
+  sessionInvalidated = true;
+  // Remove legacy localStorage tokens if present from old version
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
 }
 
 let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
+let refreshSubscribers: (() => void)[] = [];
 
-function onTokenRefreshed(token: string) {
-  refreshSubscribers.forEach((cb) => cb(token));
+function onTokenRefreshed() {
+  refreshSubscribers.forEach((cb) => cb());
   refreshSubscribers = [];
 }
 
-function addRefreshSubscriber(callback: (token: string) => void) {
-  refreshSubscribers.push(callback);
-}
-
-async function refreshAccessToken(): Promise<string> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) throw new Error("No refresh token");
-
+async function refreshAccessToken(): Promise<void> {
+  // The refresh_token cookie is sent automatically with credentials: 'include'
   const res = await fetch(`${API_BASE}/auth/refresh-token`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken }),
   });
 
   if (!res.ok) {
     clearTokens();
-    throw new Error("Refresh token expired");
+    throw new Error("Session expired");
   }
-
-  const body = await res.json();
-  const data = body.data as AuthResponse;
-  setTokens(data.accessToken, data.refreshToken);
-  return data.accessToken;
+  sessionActive = true;
+  sessionInvalidated = false;
 }
 
 export async function authFetch(
   endpoint: string,
   options?: RequestInit
 ): Promise<Response> {
-  const accessToken = getAccessToken();
   const headers: HeadersInit = {
     "Content-Type": "application/json",
-    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     ...options?.headers,
   };
 
-  let res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+  let res = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers,
+    credentials: "include",
+  });
 
-  if (res.status === 401 && getRefreshToken()) {
-    const newToken = await handleTokenRefresh();
-    if (newToken) {
-      const retryHeaders: HeadersInit = {
-        ...headers,
-        Authorization: `Bearer ${newToken}`,
-      };
+  if (res.status === 401) {
+    const refreshed = await handleTokenRefresh();
+    if (refreshed) {
       res = await fetch(`${API_BASE}${endpoint}`, {
         ...options,
-        headers: retryHeaders,
+        headers,
+        credentials: "include",
       });
     }
   }
@@ -100,22 +118,22 @@ export async function authFetch(
   return res;
 }
 
-async function handleTokenRefresh(): Promise<string | null> {
+async function handleTokenRefresh(): Promise<boolean> {
   if (isRefreshing) {
     return new Promise((resolve) => {
-      addRefreshSubscriber(resolve);
+      refreshSubscribers.push(() => resolve(true));
     });
   }
 
   isRefreshing = true;
   try {
-    const newToken = await refreshAccessToken();
-    onTokenRefreshed(newToken);
-    return newToken;
+    await refreshAccessToken();
+    onTokenRefreshed();
+    return true;
   } catch {
     clearTokens();
     window.dispatchEvent(new CustomEvent("auth:session-expired"));
-    return null;
+    return false;
   } finally {
     isRefreshing = false;
   }
@@ -127,11 +145,14 @@ export async function apiLogin(
 ): Promise<AuthResponse> {
   const res = await fetch(`${API_BASE}/auth/login`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
   const body = await res.json();
   if (!res.ok) throw new Error(body.message || "Login failed");
+  sessionActive = true;
+  sessionInvalidated = false;
   return body.data;
 }
 
@@ -140,65 +161,77 @@ export async function apiGoogleSignIn(
 ): Promise<AuthResponse> {
   const res = await fetch(`${API_BASE}/auth/google`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ idToken }),
   });
   const body = await res.json();
   if (!res.ok) throw new Error(body.message || "Google sign-in failed");
+  sessionActive = true;
+  sessionInvalidated = false;
   return body.data;
 }
 
 export async function apiRegister(
   email: string,
   full_name: string,
-  password: string
-): Promise<AuthResponse> {
+  password: string,
+  church: {
+    denomination_name: string;
+    description?: string;
+    location?: string;
+    state?: string;
+    country?: string;
+    address?: string;
+  }
+): Promise<RegisterResponse> {
+  const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+  const idToken = await credential.user.getIdToken();
+
   const res = await fetch(`${API_BASE}/auth/signup`, {
     method: "POST",
+    credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, full_name, password }),
+    body: JSON.stringify({ idToken, full_name, ...church }),
   });
   const body = await res.json();
-  if (!res.ok) throw new Error(body.message || "Registration failed");
+  if (!res.ok) {
+    await credential.user.delete();
+    throw new Error(body.message || "Registration failed");
+  }
   return body.data;
 }
 
-export async function apiForgotPassword(email: string): Promise<boolean> {
+export async function apiForgotPassword(email: string): Promise<{ otpSent: boolean }> {
   const res = await fetch(`${API_BASE}/auth/forgot-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
   });
   const body = await res.json();
-  if (!res.ok) throw new Error(body.message || "Failed to send OTP");
-  return body.data?.otpSent ?? true;
+  if (!res.ok) throw new Error(body.message || "Failed to send reset code");
+  return body.data;
 }
 
-export async function apiVerifyOtp(
-  email: string,
-  otp: string
-): Promise<boolean> {
+export async function apiVerifyResetOtp(email: string, otp: string): Promise<{ isValid: boolean }> {
   const res = await fetch(`${API_BASE}/auth/verify-reset-otp`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, otp }),
   });
   const body = await res.json();
-  if (!res.ok) throw new Error(body.message || "OTP verification failed");
-  return body.data?.isValid ?? false;
+  if (!res.ok) throw new Error(body.message || "Invalid code");
+  return body.data;
 }
 
-export async function apiSetNewPassword(
-  email: string,
-  newPassword: string
-): Promise<void> {
+export async function apiSetNewPassword(email: string, newPassword: string): Promise<void> {
   const res = await fetch(`${API_BASE}/auth/set-new-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, newPassword }),
   });
   const body = await res.json();
-  if (!res.ok) throw new Error(body.message || "Failed to reset password");
+  if (!res.ok) throw new Error(body.message || "Failed to set password");
 }
 
 export async function apiLogout(): Promise<void> {
@@ -210,8 +243,24 @@ export async function apiLogout(): Promise<void> {
 }
 
 export async function apiFetchProfile(): Promise<any> {
-  const res = await authFetch("/user/profile");
+  // If the session was explicitly invalidated (logout / expired), return null
+  // immediately without making a network call. This prevents the infinite loop:
+  // queryClient.clear() → refetch → 401 → refresh → fail → clear() → repeat.
+  if (sessionInvalidated) return null;
+
+  // Use a plain fetch (not authFetch) so a 401 here is treated as "no session"
+  // rather than triggering an access-token refresh cycle.
+  const res = await fetch(`${API_BASE}/user/profile`, {
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  if (res.status === 401) return null;
   const body = await res.json();
   if (!res.ok) throw new Error(body.message || "Failed to fetch profile");
+  sessionActive = true;
   return body.data;
 }
+
+
+

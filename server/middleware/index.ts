@@ -3,6 +3,7 @@ import express, { Express } from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import { config } from '../config';
 import { Logger } from '../utils/logger';
 import path from 'path';
@@ -17,6 +18,7 @@ export const setupMiddleware = (app: Express) => {
     exposedHeaders: ['Authorization'],
   }));
 
+  app.use(cookieParser());
   app.use('/public', express.static(path.join(__dirname, '../public')));
   app.use(express.json({ limit: '10mb' }));
   app.use(helmet());

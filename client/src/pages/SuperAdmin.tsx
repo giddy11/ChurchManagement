@@ -19,7 +19,6 @@ import {
   getBackendToken,
   setBackendToken,
 } from '@/lib/api';
-import { getAllUsers } from '@/lib/auth';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { format } from 'date-fns';
 import {
@@ -51,15 +50,6 @@ interface BackendUser {
   is_active: boolean;
   createdAt?: string;
   phone_number?: string;
-}
-
-interface LocalUser {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  joinDate: string;
 }
 
 interface DisplayUser {
@@ -156,17 +146,8 @@ const SuperAdmin = () => {
 
   // ─── Load local users always ─────────────────────────────────────────────
   const loadLocalUsers = useCallback(() => {
-    const localUsers: LocalUser[] = getAllUsers(currentUser?.id ?? '');
-    return localUsers.map<DisplayUser>((u) => ({
-      id: u.id,
-      email: u.email,
-      name: `${u.firstName} ${u.lastName}`.trim() || u.email,
-      role: u.role,
-      status: 'active',
-      joinDate: u.joinDate,
-      source: 'local',
-    }));
-  }, [currentUser?.id]);
+    return [] as DisplayUser[];
+  }, []);
 
   // ─── Backend data fetch ──────────────────────────────────────────────────
   const loadBackendData = useCallback(async () => {
@@ -270,8 +251,7 @@ const SuperAdmin = () => {
     setRoles([]);
     setStats(null);
     setHealth(null);
-    // Restore local users
-    setDisplayUsers(loadLocalUsers());
+    setDisplayUsers([]);
   };
 
   // ─── Derived data ───────────────────────────────────────────────────────

@@ -195,7 +195,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </h1>
               {user && (
                 <p className="text-sm text-gray-600">
-                  {user.firstName} ({user.role})
+                  {user.full_name} ({user.role?.name ?? user.role})
                 </p>
               )}
             </div>

@@ -72,3 +72,7 @@ export const fetchHealth = () =>
   fetch(
     `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:7777'}/health`
   ).then((r) => r.json());
+
+// Delete user
+export const deleteUserById = (id: string) =>
+  request<{ status: number; message: string }>(`/user/${id}`, { method: 'DELETE' });

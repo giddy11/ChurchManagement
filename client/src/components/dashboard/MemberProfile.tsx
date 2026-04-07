@@ -56,8 +56,8 @@ export const MemberProfile: React.FC = () => {
                 <h2 className="text-2xl font-bold">
                   {user.firstName} {user.lastName}
                 </h2>
-                <Badge className={getRoleBadgeColor(user.role)}>
-                  {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                <Badge className={getRoleBadgeColor(user.role?.name ?? user.role)}>
+                  {((user.role?.name ?? user.role) as string).charAt(0).toUpperCase() + ((user.role?.name ?? user.role) as string).slice(1)}
                 </Badge>
               </div>
               

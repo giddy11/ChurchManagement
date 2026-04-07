@@ -22,7 +22,6 @@ import {
   Building,
 } from 'lucide-react';
 import { getChurches, createChurch, deleteChurch } from '@/lib/church';
-import { getChurchMembers } from '@/lib/auth';
 import { getBranchesByChurch } from '@/lib/church';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useChurch } from '@/components/church/ChurchProvider';
@@ -161,7 +160,7 @@ const ChurchManagement: React.FC = () => {
             </div>
             <div>
               <p className="text-2xl font-bold">
-                {churches.reduce((sum, c) => sum + getChurchMembers(c.id).length, 0)}
+                0
               </p>
               <p className="text-xs text-gray-500">Total Members</p>
             </div>
@@ -181,7 +180,7 @@ const ChurchManagement: React.FC = () => {
           </Card>
         ) : (
           filtered.map(church => {
-            const memberCount = getChurchMembers(church.id).length;
+            const memberCount = 0;
             const branchCount = getBranchesByChurch(church.id).length;
             return (
               <Card key={church.id} className="hover:shadow-md transition-shadow">

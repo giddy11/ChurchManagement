@@ -4,14 +4,13 @@ import {
   apiRegister,
   apiGoogleSignIn,
   apiForgotPassword,
-  apiVerifyOtp,
+  apiVerifyResetOtp,
   apiSetNewPassword,
   apiLogout,
   apiFetchProfile,
-  setTokens,
   clearTokens,
-  getAccessToken,
   type AuthResponse,
+  type RegisterResponse,
 } from "../services/auth.service";
 
 const AUTH_KEYS = {
@@ -23,7 +22,7 @@ export function useProfile() {
   return useQuery({
     queryKey: AUTH_KEYS.profile,
     queryFn: apiFetchProfile,
-    enabled: !!getAccessToken(),
+    enabled: true, // cookies are HttpOnly; server returns null/401 if not logged in
     staleTime: 5 * 60 * 1000,
     retry: false,
   });
@@ -33,8 +32,11 @@ function handleAuthSuccess(
   data: AuthResponse,
   queryClient: ReturnType<typeof useQueryClient>
 ) {
-  setTokens(data.accessToken, data.refreshToken);
-  queryClient.setQueryData(AUTH_KEYS.profile, data.user);
+  queryClient.setQueryData(AUTH_KEYS.profile, {
+    ...data.user,
+    role: data.role,
+    permissions: data.permissions,
+  });
 }
 
 export function useLogin() {
@@ -48,15 +50,21 @@ export function useLogin() {
 }
 
 export function useRegister() {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (vars: {
       email: string;
       full_name: string;
       password: string;
-    }) => apiRegister(vars.email, vars.full_name, vars.password),
-    onSuccess: (data) => handleAuthSuccess(data, queryClient),
+      church: {
+        denomination_name: string;
+        description?: string;
+        location?: string;
+        state?: string;
+        country?: string;
+        address?: string;
+      };
+    }): Promise<RegisterResponse> =>
+      apiRegister(vars.email, vars.full_name, vars.password, vars.church),
   });
 }
 
@@ -87,21 +95,16 @@ export function useForgotPassword() {
   });
 }
 
-export function useVerifyOtp() {
+export function useVerifyResetOtp() {
   return useMutation({
     mutationFn: ({ email, otp }: { email: string; otp: string }) =>
-      apiVerifyOtp(email, otp),
+      apiVerifyResetOtp(email, otp),
   });
 }
 
 export function useSetNewPassword() {
   return useMutation({
-    mutationFn: ({
-      email,
-      newPassword,
-    }: {
-      email: string;
-      newPassword: string;
-    }) => apiSetNewPassword(email, newPassword),
+    mutationFn: ({ email, newPassword }: { email: string; newPassword: string }) =>
+      apiSetNewPassword(email, newPassword),
   });
 }

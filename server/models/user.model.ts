@@ -15,9 +15,7 @@ import {
 import * as bcrypt from "bcrypt";
 import { Exclude } from "class-transformer";
 import { Gender, UserSettings } from "../types/user";
-import { Role } from "./role-permission/role.model";
 import { Department } from "./catalogs/department.model";
-import { Permission } from "./role-permission/permission.model";
 import { Group } from "./role-permission/group.model";
 
 @Entity("users")
@@ -133,9 +131,8 @@ export class User {
   @Column({ nullable: true })
   password_hash: string;
 
-  @ManyToOne(() => Role, { eager: true, nullable: true, onDelete: "SET NULL" })
-  @JoinColumn()
-  role: Role;
+  @Column({ nullable: true, default: 'member' })
+  role: string;
 
   @ManyToMany(() => Group, (group) => group.users)
   @JoinTable({
@@ -144,14 +141,6 @@ export class User {
     inverseJoinColumn: { name: "group_id", referencedColumnName: "id" },
   })
   groups: Group[];
-
-  @ManyToMany(() => Permission)
-  @JoinTable({
-    name: "user_permissions",
-    joinColumn: { name: "user_id", referencedColumnName: "id" },
-    inverseJoinColumn: { name: "permission_id", referencedColumnName: "id" },
-  })
-  permissions: Permission[];
 
   @Column({
     type: "boolean",

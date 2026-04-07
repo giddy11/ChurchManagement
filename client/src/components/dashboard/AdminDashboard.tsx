@@ -17,44 +17,39 @@ import {
   Target
 } from 'lucide-react';
 
-// Mock data - in a real app, this would come from your backend
+// Mock data - replace with backend API data when endpoints are available
 const mockData = {
-  totalMembers: 245,
-  totalFamilies: 78,
-  totalUsers: 312,
-  totalGroups: 12,
-  newMembersThisMonth: 8,
-  birthdaysToday: 3,
-  anniversariesToday: 1,
-  pendingFollowUps: 15,
-  pendingFollowUpsThisMonth: 42,
-  doneFollowUps: 128,
-  totalEvents: 6,
-  contributionsLastWeek: 12450,
-  upcomingEvents: [
-    { id: 1, name: 'Sunday Service', date: '2025-09-08', time: '10:00 AM', attendees: 180 },
-    { id: 2, name: 'Bible Study', date: '2025-09-10', time: '7:00 PM', attendees: 45 },
-    { id: 3, name: 'Youth Meeting', date: '2025-09-12', time: '6:00 PM', attendees: 32 },
-    { id: 4, name: 'Prayer Meeting', date: '2025-09-14', time: '7:30 PM', attendees: 28 }
-  ],
-  attendanceLast30Days: [
-    { date: '2025-08-08', count: 185 },
-    { date: '2025-08-15', count: 192 },
-    { date: '2025-08-22', count: 178 },
-    { date: '2025-08-29', count: 201 },
-    { date: '2025-09-05', count: 188 }
-  ]
+  totalMembers: 0,
+  totalFamilies: 0,
+  totalUsers: 0,
+  totalGroups: 0,
+  newMembersThisMonth: 0,
+  birthdaysToday: 0,
+  anniversariesToday: 0,
+  pendingFollowUps: 0,
+  pendingFollowUpsThisMonth: 0,
+  doneFollowUps: 0,
+  totalEvents: 0,
+  contributionsLastWeek: 0,
+  upcomingEvents: [] as { id: number; name: string; date: string; time: string; attendees: number }[],
+  attendanceLast30Days: [] as { date: string; count: number }[],
 };
 
 const AdminDashboard: React.FC = () => {
-  const averageAttendance = Math.round(
-    mockData.attendanceLast30Days.reduce((sum, day) => sum + day.count, 0) / 
-    mockData.attendanceLast30Days.length
-  );
+  const averageAttendance =
+    mockData.attendanceLast30Days.length > 0
+      ? Math.round(
+          mockData.attendanceLast30Days.reduce((sum, day) => sum + day.count, 0) /
+            mockData.attendanceLast30Days.length
+        )
+      : 0;
 
-  const followUpProgress = Math.round(
-    (mockData.doneFollowUps / (mockData.doneFollowUps + mockData.pendingFollowUps)) * 100
-  );
+  const followUpProgress =
+    mockData.doneFollowUps + mockData.pendingFollowUps > 0
+      ? Math.round(
+          (mockData.doneFollowUps / (mockData.doneFollowUps + mockData.pendingFollowUps)) * 100
+        )
+      : 0;
 
   return (
     <div className="space-y-4 md:space-y-6 p-4 md:p-6">

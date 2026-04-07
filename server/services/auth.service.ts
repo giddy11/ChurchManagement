@@ -1,9 +1,10 @@
 import { User } from "../models/user.model";
+import { Church } from "../models/church.model";
 import { AppDataSource } from "../config/database";
+import { firebaseAuth } from "../config/firebase.admin";
 import bcrypt from "bcrypt";
 import * as speakeasy from "speakeasy";
 import { sendPasswordResetOtpEmail } from "../email/sendPasswordResetOtpEmail";
-import { Role } from "../models/role-permission/role.model";
 import { TokenService } from "./token.service";
 import { GoogleAuthService, GoogleProfile } from "./google-auth.service";
 
@@ -17,8 +18,18 @@ interface AuthTokens {
   refreshToken: string;
 }
 
+interface ChurchFields {
+  denomination_name: string;
+  description?: string;
+  location?: string;
+  state?: string;
+  country?: string;
+  address?: string;
+}
+
 export class AuthService {
   private readonly userRepository = AppDataSource.getRepository(User);
+  private readonly churchRepository = AppDataSource.getRepository(Church);
   private readonly tokenService = new TokenService();
   private readonly googleAuthService = new GoogleAuthService();
 
@@ -48,73 +59,74 @@ export class AuthService {
     try {
       return await this.userRepository.findOne({
         where,
-        relations: ["role", "role.permissions", "groups", "groups.permissions", "permissions", "department"],
+        relations: ["groups", "department"],
       });
     } catch (error: any) {
-      if (error?.code === "42P01" || error?.message?.includes("user_groups")) {
-        return await this.userRepository.findOne({
-          where,
-          relations: ["role", "role.permissions", "permissions", "department"],
-        });
-      }
-      throw error;
+      return await this.userRepository.findOne({ where });
     }
   }
 
 
   async register(
-    email: string,
+    idToken: string,
     full_name: string,
-    password: string
-  ): Promise<{ user: UserResponse; tokens: AuthTokens }> {
-    if (!email || !full_name || !password) {
+    church: ChurchFields
+  ): Promise<{ user: UserResponse; church: Church }> {
+    if (!idToken || !full_name) {
       throw new Error("All fields are required");
     }
-    if (password.length < 6) {
-      throw new Error("Password must be at least 6 characters long");
-    }
 
-    const existingUser = await this.userRepository.findOne({
-      where: [{ email }],
-      relations: ["role"],
-    });
+    // Verify Firebase ID token to get email
+    const decoded = await firebaseAuth.verifyIdToken(idToken);
+    const email = decoded.email;
+    if (!email) throw new Error("Firebase token missing email");
+
+    const existingUser = await this.userRepository.findOne({ where: { email } });
     if (existingUser) {
       throw new Error("User with this email already exists");
     }
 
-    const role = await this.findAdminRole();
-    const passwordHash = await bcrypt.hash(password, 10);
+    const isFirst = await this.isFirstUser();
 
     const user = this.userRepository.create({
       email: email.toLowerCase().trim(),
       full_name: full_name.trim(),
-      password_hash: passwordHash,
-      role,
+      role: isFirst ? 'super_admin' : 'admin',
     });
 
     const savedUser = await this.userRepository.save(user);
     const completeUser = await this.findUserWithRelations({ id: savedUser.id });
     if (!completeUser) throw new Error("Failed to fetch complete user data");
 
-    const tokens = this.tokenService.generateTokenPair(completeUser);
-    await this.saveRefreshToken(completeUser, tokens.refreshToken);
+    const newChurch = this.churchRepository.create({
+      denomination_name: church.denomination_name.trim(),
+      description: church.description?.trim(),
+      location: church.location?.trim(),
+      state: church.state?.trim(),
+      country: church.country?.trim(),
+      address: church.address?.trim(),
+      admin_id: savedUser.id,
+    });
+    const savedChurch = await this.churchRepository.save(newChurch);
 
-    return { user: this.stripSensitiveFields(completeUser), tokens };
+    return { user: this.stripSensitiveFields(completeUser), church: savedChurch };
   }
 
-  private async findAdminRole(): Promise<Role> {
-    const roleRepository = AppDataSource.getRepository(Role);
-    const role = await roleRepository.findOne({
-      where: { name: "admin" },
-      relations: ["permissions"],
-    });
-    if (!role) {
-      throw new Error("Admin role not found. Please run seed scripts first.");
-    }
-    if (!role.permissions || role.permissions.length === 0) {
-      throw new Error("Admin role has no permissions. Run seed:roles.");
-    }
-    return role;
+  async firebaseLogin(
+    idToken: string
+  ): Promise<{ user: UserResponse; tokens: AuthTokens }> {
+    const decoded = await firebaseAuth.verifyIdToken(idToken);
+    const email = decoded.email;
+    if (!email) throw new Error("Firebase token missing email");
+
+    const user = await this.findUserWithRelations({ email });
+    if (!user) throw new Error("No account found for this email. Please register first.");
+    if (!user.is_active) throw new Error("Account is deactivated. Please contact an administrator.");
+
+    const tokens = this.tokenService.generateTokenPair(user);
+    await this.saveRefreshToken(user, tokens.refreshToken);
+
+    return { user: this.stripSensitiveFields(user), tokens };
   }
 
   async login(
@@ -167,6 +179,7 @@ export class AuthService {
   }
 
   private async createGoogleUser(profile: GoogleProfile): Promise<User> {
+    const isFirst = await this.isFirstUser();
     const newUser = this.userRepository.create({
       email: profile.email.toLowerCase().trim(),
       full_name: profile.fullName,
@@ -175,6 +188,7 @@ export class AuthService {
       google_id: profile.googleId,
       profile_img: profile.profileImg,
       is_active: true,
+      role: isFirst ? 'super_admin' : 'member',
     });
     const savedUser = await this.userRepository.save(newUser);
     return (await this.findUserWithRelations({ id: savedUser.id }))!;

@@ -40,7 +40,7 @@ export class UserController {
             EntityType.USER,
             user.id,
             `User "${user.full_name || user.email}" created`,
-            { userName: user.full_name, userEmail: user.email, role: user.role?.name }
+            { userName: user.full_name, userEmail: user.email, role: user.role }
           );
         }
         res.status(201).json({
@@ -183,7 +183,7 @@ export class UserController {
   updateUserInfo = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { id } = req.params;
-      const { full_name, role, is_active, departmentId, groupIds, permissionIds } = req.body;
+      const { full_name, role, is_active, departmentId, groupIds } = req.body;
       const userService = new UserService();
       try {
       const updatedUser = await userService.updateUserInfo(
@@ -194,7 +194,6 @@ export class UserController {
           is_active,
             departmentId,
             groupIds,
-            permissionIds
         }
       );
       if (!updatedUser) {
@@ -210,8 +209,8 @@ export class UserController {
       
       const oldStatus = existingUser?.is_active;
       const newStatus = updatedUser.is_active;
-      const oldRole = existingUser?.role?.name;
-      const newRole = updatedUser.role?.name;
+      const oldRole = existingUser?.role;
+      const newRole = updatedUser.role;
       
       if (oldStatus !== undefined && oldStatus !== newStatus) {
         await logActivity(
@@ -355,8 +354,10 @@ export class UserController {
   );
 
   getAllPermissions = asyncHandler(
-    async (req: Request, res: Response): Promise<void> => {
-      const permissions = await this.userService.getAllPermissions();
+    async (_req: Request, res: Response): Promise<void> => {
+      const { getAllRoles } = await import('../utils/roles');
+      const roles = getAllRoles();
+      const permissions = [...new Set(roles.flatMap(r => r.permissions))].map(name => ({ name }));
 
       res.status(200).json({
         data: permissions,
@@ -468,46 +469,12 @@ export class UserController {
 
   updateUserPermissions = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const { id } = req.params;
-      const { permissionIds } = req.body;
-
-      if (!Array.isArray(permissionIds)) {
-        res.status(400).json({
-          data: null,
-          status: 400,
-          message: "permissionIds must be an array",
-        });
-        return;
-      }
-
-      const updatedUser = await this.userService.updateUserPermissions(
-        id,
-        permissionIds
-      );
-
-      if (!updatedUser) {
-        res.status(404).json({
-          data: null,
-          status: 404,
-          message: "User not found",
-        });
-        return;
-      }
-
-      const userId = (req as any).user?.id;
-      await logActivity(
-        userId,
-        ActivityAction.UPDATE,
-        EntityType.USER,
-        id,
-        `User "${updatedUser.full_name || updatedUser.email}" permissions updated`,
-        { userName: updatedUser.full_name, userEmail: updatedUser.email, permissionCount: permissionIds.length }
-      );
-
-      res.status(200).json({
-        data: classToPlain(updatedUser),
-        status: 200,
-        message: "User permissions updated successfully",
+      // Per-user permission overrides are no longer stored in DB.
+      // Permissions are derived from role via the static roles utility.
+      res.status(410).json({
+        data: null,
+        status: 410,
+        message: "Per-user permission overrides have been removed. Use role assignment instead.",
       });
     }
   );

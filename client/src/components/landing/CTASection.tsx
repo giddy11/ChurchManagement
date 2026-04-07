@@ -31,7 +31,7 @@ const CTASection: React.FC<CTASectionProps> = ({ onGetStarted }) => {
             </h2>
 
             <p className="mt-5 text-lg text-blue-100 leading-relaxed max-w-xl mx-auto">
-              Start for free today. Register your church, add your members, and experience
+              Start for free today. Register your denomination, add your members, and experience
               the difference a modern management platform makes.
             </p>
 
@@ -41,7 +41,7 @@ const CTASection: React.FC<CTASectionProps> = ({ onGetStarted }) => {
                 className="px-8 py-6 text-base font-semibold bg-white text-blue-700 hover:bg-gray-100 shadow-lg"
                 onClick={onGetStarted}
               >
-                Register Your Church Free
+                Register Your Denomination Free
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>

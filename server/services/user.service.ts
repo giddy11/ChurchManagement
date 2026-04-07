@@ -2,16 +2,12 @@ import { classToPlain } from "class-transformer";
 import { AppDataSource } from "../config/database";
 import { User } from "../models/user.model";
 import { UserSettings } from "../types/user";
-import { Role } from "../models/role-permission/role.model";
 import emailService from "../email/email.service";
-import { Department } from "../models/catalogs/department.model";
-import { Permission } from "../models/role-permission/permission.model";
+
 import { In } from "typeorm";
 
 export class UserService {
   private readonly userRepository = AppDataSource.getRepository(User);
-  private readonly departmentRepository = AppDataSource.getRepository(Department);
-  private readonly permissionRepository = AppDataSource.getRepository(Permission);
 
   async createUserWithGeneratedPassword(
     email: string,
@@ -30,21 +26,13 @@ export class UserService {
     const bcrypt = require("bcrypt");
     const password_hash = await bcrypt.hash(generatedPassword, 10);
 
-    // Find or create role
-    const roleRepo = AppDataSource.getRepository(Role);
-    let role = await roleRepo.findOne({ where: { name: roleName } });
-    if (!role) {
-      role = roleRepo.create({ name: roleName });
-      await roleRepo.save(role);
-    }
-
     // Create user
     const user = this.userRepository.create({
       first_name,
       last_name,
       email,
       password_hash,
-      role,
+      role: roleName,
       is_active: true,
       phone_number,
       username
@@ -109,23 +97,23 @@ export class UserService {
 
   async getAllUsers(): Promise<User[]> {
     return this.userRepository.find({
-      relations: ["role", "role.permissions", "groups", "groups.permissions", "permissions", "department"],
+      relations: ["groups", "department"],
       order: { createdAt: "DESC" },
     });
   }
 
   async getUsersByRole(roleName: string): Promise<User[]> {
     return this.userRepository.find({
-      where: { role: { name: roleName } },
-      relations: ["role", "role.permissions", "groups", "groups.permissions", "permissions", "department"],
+      where: { role: roleName },
+      relations: ["groups", "department"],
       order: { createdAt: "DESC" },
     });
   }
 
   async getUserById(id: string): Promise<any> {
-    const user = await this.userRepository.findOne({ 
+    const user = await this.userRepository.findOne({
       where: { id },
-      relations: ["role", "role.permissions", "groups", "groups.permissions", "permissions", "department"]
+      relations: ["groups", "department"]
     });
     return user ? classToPlain(user) : null;
   }
@@ -184,75 +172,19 @@ export class UserService {
       is_active?: boolean;
       departmentId?: number;
       groupIds?: string[];
-      permissionIds?: string[];
     }
   ): Promise<Omit<User, "password"> | null> {
     const user = await this.userRepository.findOne({
       where: { id },
-      relations: ["role", "groups", "permissions"],
+      relations: ["groups", "department"],
     });
     if (!user) return null;
 
-    // first check if the department id exist
-    if (data.departmentId !== undefined) {
-    const department = await this.departmentRepository.findOne({
-      where: { id: data.departmentId },
-    });
-      if (!department) {
-      throw new Error("Department not found");
-      }
-      user.departmentId = data.departmentId;
-    }
-
     if (data.full_name !== undefined) user.full_name = data.full_name;
     if (data.is_active !== undefined) user.is_active = data.is_active;
-
-    if (data.role) {
-      const roleRepo = AppDataSource.getRepository(Role);
-      let role: Role | null = await roleRepo.findOne({
-        where: { name: data.role },
-      });
-      if (!role) {
-        role = roleRepo.create({ name: data.role });
-        await roleRepo.save(role);
-      }
-      user.role = role as Role;
-    }
-
-    // Update groups if provided
-    // if (data.groupIds !== undefined) {
-    //   // Filter out empty strings, invalid values, and validate UUID format
-    //   const validGroupIds = data.groupIds.filter((id: any) => {
-    //     if (!id || typeof id !== 'string') return false;
-    //     const trimmed = id.trim();
-    //     // UUID format validation (8-4-4-4-12 hex pattern)
-    //     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    //     return trimmed !== '' && trimmed !== 'none' && uuidRegex.test(trimmed);
-    //   });
-    //   const groups = validGroupIds.length > 0
-    //     ? (await this.groupRepository.find({ where: { id: In(validGroupIds) } })) as Group[]
-    //     : [];
-    //   user.groups = groups;
-    // }
-
-    // Update permissions if provided
-    if (data.permissionIds !== undefined) {
-      // Filter out empty strings, invalid values, and validate UUID format
-      const validPermissionIds = data.permissionIds.filter((id: any) => {
-        if (!id || typeof id !== 'string') return false;
-        const trimmed = id.trim();
-        // UUID format validation (8-4-4-4-12 hex pattern)
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        return trimmed !== '' && trimmed !== 'none' && uuidRegex.test(trimmed);
-      });
-      const permissions = validPermissionIds.length > 0
-        ? (await this.permissionRepository.find({ where: { id: In(validPermissionIds) } })) as Permission[]
-        : [];
-      user.permissions = permissions;
-    }
+    if (data.role !== undefined) user.role = data.role;
 
     const savedUser = await this.userRepository.save(user);
-
     const { password, ...userWithoutPassword } = classToPlain(savedUser) as any;
     return userWithoutPassword;
   }
@@ -307,24 +239,18 @@ export class UserService {
     inactiveUsers: number;
     usersByRole: { role: string; count: number }[];
   }> {
-    const allUsers = await this.userRepository.find({
-      relations: ["role"],
-    });
+    const allUsers = await this.userRepository.find();
 
     const activeUsers = allUsers.filter((u) => u.is_active === true);
     const inactiveUsers = allUsers.filter((u) => u.is_active === false);
 
-    // Count users by role
     const roleCount: { [key: string]: number } = {};
     allUsers.forEach((u) => {
-      const roleName = u.role?.name || "Unassigned";
+      const roleName = u.role || "Unassigned";
       roleCount[roleName] = (roleCount[roleName] || 0) + 1;
     });
 
-    const usersByRole = Object.entries(roleCount).map(([role, count]) => ({
-      role,
-      count,
-    }));
+    const usersByRole = Object.entries(roleCount).map(([role, count]) => ({ role, count }));
 
     return {
       totalUsers: allUsers.length,
@@ -334,56 +260,16 @@ export class UserService {
     };
   }
 
-  async getAllPermissions(): Promise<Permission[]> {
-    return this.permissionRepository.find({
-      order: { category: "ASC", name: "ASC" },
-    });
+  getUserPermissions(userId: string): string[] {
+    // Permissions are derived from the user's role via the static roles utility
+    // Import done inline to avoid circular deps
+    const { getPermissionsForRole } = require('../utils/roles');
+    return getPermissionsForRole(userId); // caller should pass role name, kept for compat
   }
 
-  async getPermissionsByCategory(category: string): Promise<Permission[]> {
-    return this.permissionRepository.find({
-      where: { category },
-      order: { name: "ASC" },
-    });
-  }
-
-  async getUserPermissions(userId: string): Promise<Permission[]> {
-    const user = await this.userRepository.findOne({
-      where: { id: userId },
-      relations: ["role", "role.permissions", "permissions"],
-    });
-
-    if (!user) {
-      return [];
-    }
-
-    // Combine role permissions and user-specific permissions
-    const allPermissions = new Map<string, Permission>();
-
-    if (user.role?.permissions) {
-      user.role.permissions.forEach((p) => {
-        allPermissions.set(p.id, p);
-      });
-    }
-
-    if (user.permissions) {
-      user.permissions.forEach((p) => {
-        allPermissions.set(p.id, p);
-      });
-    }
-
-    return Array.from(allPermissions.values());
-  }
-
-  async updateUserStatus(
-    id: string,
-    is_active: boolean
-  ): Promise<User | null> {
+  async updateUserStatus(id: string, is_active: boolean): Promise<User | null> {
     const user = await this.userRepository.findOne({ where: { id } });
-    if (!user) {
-      return null;
-    }
-
+    if (!user) return null;
     user.is_active = is_active;
     return await this.userRepository.save(user);
   }
@@ -392,52 +278,9 @@ export class UserService {
     id: string,
     roleName: string
   ): Promise<User | null> {
-    const user = await this.userRepository.findOne({
-      where: { id },
-      relations: ["role"],
-    });
-
-    if (!user) {
-      return null;
-    }
-
-    const roleRepo = AppDataSource.getRepository(Role);
-    const role = await roleRepo.findOne({ where: { name: roleName } });
-
-    if (!role) {
-      throw new Error("Role not found");
-    }
-
-    user.role = role;
-    return await this.userRepository.save(user);
-  }
-
-  async updateUserPermissions(
-    id: string,
-    permissionIds: string[]
-  ): Promise<User | null> {
-    const user = await this.userRepository.findOne({
-      where: { id },
-      relations: ["permissions"],
-    });
-
-    if (!user) {
-      return null;
-    }
-
-    // Validate permission IDs
-    const validPermissionIds = permissionIds.filter((id: any) => {
-      if (!id || typeof id !== "string") return false;
-      const trimmed = id.trim();
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      return trimmed !== "" && trimmed !== "none" && uuidRegex.test(trimmed);
-    });
-
-    const permissions = await this.permissionRepository.find({
-      where: { id: In(validPermissionIds) },
-    });
-
-    user.permissions = permissions;
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) return null;
+    user.role = roleName;
     return await this.userRepository.save(user);
   }
 }

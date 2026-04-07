@@ -22,7 +22,8 @@ const Dashboard: React.FC = () => {
   if (!user) return null;
 
   const getRoleIcon = () => {
-    switch (user.role) {
+    const roleName = user.role?.name ?? user.role;
+    switch (roleName) {
       case 'owner':
         return <Crown className="h-5 w-5 text-yellow-600" />;
       case 'admin':
@@ -33,7 +34,8 @@ const Dashboard: React.FC = () => {
   };
 
   const getRoleColor = () => {
-    switch (user.role) {
+    const roleName = user.role?.name ?? user.role;
+    switch (roleName) {
       case 'owner':
         return 'text-yellow-600';
       case 'admin':
@@ -43,8 +45,8 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const canManageUsers = user.role === 'owner' || user.role === 'admin';
-  const canViewAnalytics = user.role === 'owner' || user.role === 'admin';
+  const canManageUsers = (user.role?.name ?? user.role) === 'owner' || (user.role?.name ?? user.role) === 'admin';
+  const canViewAnalytics = (user.role?.name ?? user.role) === 'owner' || (user.role?.name ?? user.role) === 'admin';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -57,16 +59,16 @@ const Dashboard: React.FC = () => {
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Church Management</h1>
                 <p className="text-sm text-gray-600">
-                  Welcome back, {user.firstName}! 
+                  Welcome back, {user.full_name}! 
                   <span className={`ml-1 font-medium ${getRoleColor()}`}>
-                    ({user.role.charAt(0).toUpperCase() + user.role.slice(1)})
+                    {(() => { const r = (user.role?.name ?? user.role) as string; return '(' + r.charAt(0).toUpperCase() + r.slice(1) + ')'; })()}
                   </span>
                 </p>
               </div>
             </div>
             
             <div className="flex items-center gap-2">
-              {user.role === 'super_admin' && (
+              {(user.role?.name ?? user.role) === 'super_admin' && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -100,8 +102,8 @@ const Dashboard: React.FC = () => {
                 Welcome to Your Church Dashboard
               </CardTitle>
               <CardDescription>
-                {user.role === 'member' && 'As a church member, you can track your attendance and participate in church activities.'}
-                {user.role === 'user' && 'Welcome to our church community! Track your attendance and stay connected.'}
+                {(user.role?.name ?? user.role) === 'member' && 'As a church member, you can track your attendance and participate in church activities.'}
+                {(user.role?.name ?? user.role) === 'user' && 'Welcome to our church community! Track your attendance and stay connected.'}
               </CardDescription>
             </CardHeader>
             <CardContent>
