@@ -22,7 +22,7 @@ const ChurchSelector: React.FC = () => {
   if (!user) return null;
 
   // Super admin without any churches
-  if (user.systemRole === 'super_admin' && userChurches.length === 0) {
+  if (effectiveRole === 'super_admin' && userChurches.length === 0) {
     return (
       <div className="p-3 border-b border-gray-200">
         <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -56,7 +56,7 @@ const ChurchSelector: React.FC = () => {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900 truncate">
-            {currentChurch.name}
+            {currentChurch.denomination_name}
           </p>
           <div className="flex items-center gap-1.5">
             {currentBranch && (
@@ -96,7 +96,7 @@ const ChurchSelector: React.FC = () => {
                   }}
                 >
                   <Church className="h-3.5 w-3.5" />
-                  <span className="flex-1 text-left truncate">{church.name}</span>
+                  <span className="flex-1 text-left truncate">{church.denomination_name}</span>
                   {currentChurch.id === church.id && (
                     <Check className="h-3.5 w-3.5 text-blue-600" />
                   )}
@@ -145,7 +145,7 @@ const ChurchSelector: React.FC = () => {
                     >
                       <MapPin className="h-3 w-3" />
                       <span className="flex-1 text-left truncate">{branch.name}</span>
-                      {branch.isHeadquarters && (
+                      {branch.is_headquarters && (
                         <Badge variant="outline" className="text-[10px] px-1 py-0">HQ</Badge>
                       )}
                       {currentBranch?.id === branch.id && (
@@ -159,7 +159,7 @@ const ChurchSelector: React.FC = () => {
           )}
 
           {/* Manage Churches link for super admin */}
-          {user?.systemRole === 'super_admin' && (
+          {effectiveRole === 'super_admin' && (
             <div className="p-2 border-t border-gray-100">
               <Button
                 variant="ghost"

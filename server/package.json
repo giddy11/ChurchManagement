@@ -1,5 +1,5 @@
 {
-  "name": "ferncot-mo",
+  "name": "churchflow-mo",
   "version": "1.0.0",
   "main": "dist/server.js",
   "scripts": {
@@ -12,13 +12,8 @@
     "migration:revert": "npm run typeorm migration:revert -- -d ./config/database.ts",
     "dev:watch": "concurrently \"tsc -w\" \"nodemon dist/server.js\"",
     "typeorm": "typeorm-ts-node-commonjs",
-    "seed:permissions": "ts-node scripts/seedPermissions.ts",
-    "seed:roles": "ts-node scripts/seedRoles.ts",
     "seed:categories": "ts-node scripts/seedCategories.ts",
-    "assign:admin": "ts-node scripts/assignAdminRole.ts",
-    "clear:inventory": "ts-node scripts/clearInventory.ts",
-    "fix:enums": "ts-node scripts/fix-enums.ts",
-    "maintenance:cron": "ts-node scripts/run-maintenance-cron.ts"
+    "fix:enums": "ts-node scripts/fix-enums.ts"
   },
   "keywords": [],
   "author": "",

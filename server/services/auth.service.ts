@@ -1,5 +1,5 @@
 import { User } from "../models/user.model";
-import { Church } from "../models/church.model";
+import { Denomination as Church } from "../models/church";
 import { AppDataSource } from "../config/database";
 import { firebaseAuth } from "../config/firebase.admin";
 import bcrypt from "bcrypt";

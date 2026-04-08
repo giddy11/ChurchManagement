@@ -51,3 +51,9 @@ export const getRecentActivities = asyncHandler(async (req: Request, res: Respon
 	res.json({ data: activities, message: 'Recent activities fetched successfully', status: true });
 });
 
+export const getActivityStats = asyncHandler(async (req: Request, res: Response) => {
+	const days = parseInt(req.query.days as string) || 30;
+	const stats = await activityLogService.getStats(days);
+	res.json({ data: stats, message: 'Activity stats fetched', status: true });
+});
+

@@ -3,7 +3,7 @@ import type { Church, Branch, ChurchMembership } from '@/types/church';
 const CHURCHES_KEY = 'church_mgmt_churches';
 const BRANCHES_KEY = 'church_mgmt_branches';
 
-// ─── Church CRUD ───────────────────────────────────────
+// ─── Church (Denomination) CRUD — localStorage fallback ───────────────────
 
 export const getChurches = (): Church[] => {
   const data = localStorage.getItem(CHURCHES_KEY);
@@ -19,13 +19,14 @@ export const getChurchById = (id: string): Church | undefined => {
 };
 
 export const createChurch = (
-  data: Omit<Church, 'id' | 'createdAt'>
+  data: Omit<Church, 'id' | 'created_at' | 'updated_at'>
 ): Church => {
   const churches = getChurches();
   const church: Church = {
     ...data,
     id: `church-${Date.now()}`,
-    createdAt: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
   churches.push(church);
   saveChurches(churches);
@@ -34,12 +35,12 @@ export const createChurch = (
 
 export const updateChurch = (
   id: string,
-  data: Partial<Omit<Church, 'id' | 'createdAt' | 'createdBy'>>
+  data: Partial<Omit<Church, 'id' | 'created_at' | 'updated_at' | 'admin_id'>>
 ): Church | null => {
   const churches = getChurches();
   const idx = churches.findIndex(c => c.id === id);
   if (idx === -1) return null;
-  churches[idx] = { ...churches[idx], ...data };
+  churches[idx] = { ...churches[idx], ...data, updated_at: new Date().toISOString() };
   saveChurches(churches);
   return churches[idx];
 };
@@ -50,12 +51,12 @@ export const deleteChurch = (id: string): boolean => {
   if (filtered.length === churches.length) return false;
   saveChurches(filtered);
   // Also remove associated branches
-  const branches = getBranches().filter(b => b.churchId !== id);
+  const branches = getBranches().filter(b => b.denomination_id !== id);
   saveBranches(branches);
   return true;
 };
 
-// ─── Branch CRUD ───────────────────────────────────────
+// ─── Branch CRUD — localStorage fallback ──────────────────────────────────
 
 export const getBranches = (): Branch[] => {
   const data = localStorage.getItem(BRANCHES_KEY);
@@ -66,8 +67,8 @@ export const saveBranches = (branches: Branch[]) => {
   localStorage.setItem(BRANCHES_KEY, JSON.stringify(branches));
 };
 
-export const getBranchesByChurch = (churchId: string): Branch[] => {
-  return getBranches().filter(b => b.churchId === churchId);
+export const getBranchesByChurch = (denominationId: string): Branch[] => {
+  return getBranches().filter(b => b.denomination_id === denominationId);
 };
 
 export const getBranchById = (id: string): Branch | undefined => {
@@ -75,13 +76,14 @@ export const getBranchById = (id: string): Branch | undefined => {
 };
 
 export const createBranch = (
-  data: Omit<Branch, 'id' | 'createdAt'>
+  data: Omit<Branch, 'id' | 'created_at' | 'updated_at'>
 ): Branch => {
   const branches = getBranches();
   const branch: Branch = {
     ...data,
     id: `branch-${Date.now()}`,
-    createdAt: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
   branches.push(branch);
   saveBranches(branches);
@@ -90,12 +92,12 @@ export const createBranch = (
 
 export const updateBranch = (
   id: string,
-  data: Partial<Omit<Branch, 'id' | 'createdAt'>>
+  data: Partial<Omit<Branch, 'id' | 'created_at' | 'updated_at'>>
 ): Branch | null => {
   const branches = getBranches();
   const idx = branches.findIndex(b => b.id === id);
   if (idx === -1) return null;
-  branches[idx] = { ...branches[idx], ...data };
+  branches[idx] = { ...branches[idx], ...data, updated_at: new Date().toISOString() };
   saveBranches(branches);
   return branches[idx];
 };
@@ -108,7 +110,7 @@ export const deleteBranch = (id: string): boolean => {
   return true;
 };
 
-// ─── Helpers ───────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────
 
 export const getChurchesForUser = (
   memberships: ChurchMembership[]

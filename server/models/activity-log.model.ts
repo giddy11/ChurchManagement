@@ -19,6 +19,9 @@ export enum ActivityAction {
   DISPATCH = "dispatch",
   ASSIGN = "assign",
   STATUS_CHANGE = "status_change",
+  LOGIN = "login",
+  REGISTER = "register",
+  LOGOUT = "logout",
 }
 
 export enum EntityType {
@@ -36,6 +39,9 @@ export enum EntityType {
   COST_RECORD = "cost_record",
   VESSEL = "vessel",
   REPORT = "report",
+  CHURCH = "church",
+  BRANCH = "branch",
+  AUTH = "auth",
 }
 
 @Entity("activity_logs")

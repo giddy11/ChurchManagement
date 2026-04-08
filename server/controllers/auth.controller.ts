@@ -3,6 +3,8 @@ import { AuthService } from "../services/auth.service";
 import asyncHandler from "../utils/asyncHandler";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { getPermissionsForRole } from "../utils/roles";
+import { logActivity } from "../utils/activityLogger";
+import { ActivityAction, EntityType } from "../models/activity-log.model";
 
 const authService = new AuthService();
 
@@ -73,6 +75,12 @@ export const register = asyncHandler(
       const permissions = getPermissionsForRole(roleName as string);
       setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
 
+      logActivity(
+        result.user.id, ActivityAction.REGISTER, EntityType.AUTH, result.user.id,
+        `User "${result.user.full_name}" registered with church "${result.church.denomination_name}"`,
+        { email: result.user.email, church: result.church.denomination_name }
+      );
+
       res.status(201).json({
         data: {
           user: {
@@ -101,6 +109,12 @@ export const register = asyncHandler(
       const result = await authService.registerMember(idToken, full_name);
       setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
 
+      logActivity(
+        result.user.id, ActivityAction.REGISTER, EntityType.AUTH, result.user.id,
+        `User "${result.user.full_name}" registered`,
+        { email: result.user.email }
+      );
+
       res.status(201).json({
         data: buildAuthResponse(result),
         status: 201,
@@ -120,6 +134,12 @@ export const firebaseLogin = asyncHandler(
 
     const result = await authService.firebaseLogin(idToken);
     setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
+
+    logActivity(
+      result.user.id, ActivityAction.LOGIN, EntityType.AUTH, result.user.id,
+      `User "${result.user.full_name || result.user.email}" logged in`,
+      { email: result.user.email, method: 'firebase' }
+    );
 
     res.status(200).json({
       data: buildAuthResponse(result),
@@ -143,6 +163,12 @@ export const login = asyncHandler(
     const result = await authService.login(email, password);
     setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
 
+    logActivity(
+      result.user.id, ActivityAction.LOGIN, EntityType.AUTH, result.user.id,
+      `User "${result.user.full_name || result.user.email}" logged in`,
+      { email: result.user.email, method: 'email' }
+    );
+
     res.status(200).json({
       data: buildAuthResponse(result),
       status: 200,
@@ -164,6 +190,14 @@ export const googleSignIn = asyncHandler(
 
     const result = await authService.googleSignIn(idToken);
     setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
+
+    logActivity(
+      result.user.id,
+      result.isNewUser ? ActivityAction.REGISTER : ActivityAction.LOGIN,
+      EntityType.AUTH, result.user.id,
+      `User "${result.user.full_name || result.user.email}" ${result.isNewUser ? 'registered' : 'logged in'} via Google`,
+      { email: result.user.email, method: 'google' }
+    );
 
     res.status(200).json({
       data: { ...buildAuthResponse(result), isNewUser: result.isNewUser },

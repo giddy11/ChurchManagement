@@ -30,9 +30,11 @@ import {
   Church,
   Crown,
   MapPin,
+  Monitor,
 } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useChurch } from '@/components/church/ChurchProvider';
+import { useNavigate } from 'react-router-dom';
 import ChurchSelector from '@/components/church/ChurchSelector';
 
 interface SidebarProps {
@@ -43,6 +45,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => {
   const { user, logout } = useAuth();
   const { effectiveRole } = useChurch();
+  const navigate = useNavigate();
   const [contributionsOpen, setContributionsOpen] = useState(false);
 
   if (!user) return null;
@@ -171,6 +174,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
       visible: canManageUsers
     },
     {
+      id: 'superadmin',
+      label: 'Developer Console',
+      icon: Monitor,
+      visible: isSuperAdmin,
+      isExternalRoute: true
+    },
+    {
       id: 'settings',
       label: 'Settings',
       icon: Settings,
@@ -270,7 +280,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
             key={item.id}
             variant={activeSection === item.id ? "secondary" : "ghost"}
             className="w-full justify-start mb-1 h-9"
-            onClick={() => onSectionChange(item.id)}
+            onClick={() => (item as any).isExternalRoute ? navigate(`/${item.id}`) : onSectionChange(item.id)}
           >
             <item.icon className="h-4 w-4 mr-3" />
             {item.label}
