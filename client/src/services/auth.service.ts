@@ -1,5 +1,6 @@
 import {
   createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
 } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase";
 
@@ -8,9 +9,10 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:7777/api";
 // Tokens are stored in HttpOnly cookies set by the server.
 // We only track lightweight flags in memory.
 let sessionActive = false;
-// Set to true after an explicit logout or session expiry — prevents the
-// useProfile query from re-firing and causing an infinite refresh loop.
-let sessionInvalidated = false;
+// Persisted to sessionStorage so it survives the page reload triggered by logout.
+// This prevents useProfile from firing on the /login page after logout,
+// which would make spurious /user/profile (401) and /auth/refresh-token (400) calls.
+let sessionInvalidated = sessionStorage.getItem('session_invalidated') === '1';
 
 export interface AuthResponse {
   user: {
@@ -60,6 +62,7 @@ export function getAccessToken(): string | null {
 export function clearTokens(): void {
   sessionActive = false;
   sessionInvalidated = true;
+  sessionStorage.setItem('session_invalidated', '1');
   // Remove legacy localStorage tokens if present from old version
   localStorage.removeItem('access_token');
   localStorage.removeItem('refresh_token');
@@ -143,16 +146,22 @@ export async function apiLogin(
   email: string,
   password: string
 ): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE}/auth/login`, {
+  // Authenticate with Firebase first — Firebase owns the password.
+  const credential = await signInWithEmailAndPassword(firebaseAuth, email, password);
+  const idToken = await credential.user.getIdToken();
+
+  // Exchange the Firebase ID token for our server's HttpOnly cookies.
+  const res = await fetch(`${API_BASE}/auth/firebase-login`, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ idToken }),
   });
   const body = await res.json();
   if (!res.ok) throw new Error(body.message || "Login failed");
   sessionActive = true;
   sessionInvalidated = false;
+  sessionStorage.removeItem('session_invalidated');
   return body.data;
 }
 
@@ -169,6 +178,7 @@ export async function apiGoogleSignIn(
   if (!res.ok) throw new Error(body.message || "Google sign-in failed");
   sessionActive = true;
   sessionInvalidated = false;
+  sessionStorage.removeItem('session_invalidated');
   return body.data;
 }
 
@@ -176,7 +186,7 @@ export async function apiRegister(
   email: string,
   full_name: string,
   password: string,
-  church: {
+  church?: {
     denomination_name: string;
     description?: string;
     location?: string;
@@ -192,7 +202,7 @@ export async function apiRegister(
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idToken, full_name, ...church }),
+    body: JSON.stringify({ idToken, full_name, ...(church ?? {}) }),
   });
   const body = await res.json();
   if (!res.ok) {
@@ -235,29 +245,27 @@ export async function apiSetNewPassword(email: string, newPassword: string): Pro
 }
 
 export async function apiLogout(): Promise<void> {
-  try {
-    await authFetch("/auth/logout", { method: "POST" });
-  } finally {
-    clearTokens();
-  }
+  // Use plain fetch so a 401 (expired access token) does NOT trigger
+  // the refresh-token cycle. The server will still clear the cookies.
+  await fetch(`${API_BASE}/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+  }).catch(() => {});
 }
 
 export async function apiFetchProfile(): Promise<any> {
   // If the session was explicitly invalidated (logout / expired), return null
-  // immediately without making a network call. This prevents the infinite loop:
-  // queryClient.clear() → refetch → 401 → refresh → fail → clear() → repeat.
+  // immediately without making a network call. This prevents the infinite loop
+  // after logout: queryClient.clear() → refetch → 401 → refresh → fail → repeat.
   if (sessionInvalidated) return null;
 
-  // Use a plain fetch (not authFetch) so a 401 here is treated as "no session"
-  // rather than triggering an access-token refresh cycle.
-  const res = await fetch(`${API_BASE}/user/profile`, {
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-  });
+  // Use authFetch so an expired access token is transparently refreshed via
+  // the refresh-token cookie before retrying the profile request.
+  const res = await authFetch('/user/profile');
 
   if (res.status === 401) return null;
   const body = await res.json();
-  if (!res.ok) throw new Error(body.message || "Failed to fetch profile");
+  if (!res.ok) throw new Error(body.message || 'Failed to fetch profile');
   sessionActive = true;
   return body.data;
 }

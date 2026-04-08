@@ -31,7 +31,9 @@ function AppRoutes() {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Index />} />
+            <Route path="/register" element={<Index />} />
             <Route path="/register-church" element={<Index />} />
+            <Route path="/forgot-password" element={<Index />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/people" element={<Dashboard />} />
             <Route path="/groups" element={<Dashboard />} />

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 import { useLogin } from '../../hooks/useAuthQuery';
 import { GoogleSignInButton } from './GoogleSignInButton';
@@ -14,8 +15,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { loginWithResponse } = useAuth();
+  const { isAuthenticated, loginWithResponse } = useAuth();
   const loginMutation = useLogin();
+  const navigate = useNavigate();
+
+  // Navigate only after React has committed the auth state update
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +33,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     loginMutation.mutate(
       { email, password },
       {
-        onSuccess: (data) => loginWithResponse(data),
+        onSuccess: (data) => {
+          loginWithResponse(data);
+        },
       }
     );
   };

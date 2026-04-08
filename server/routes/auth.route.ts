@@ -17,15 +17,11 @@ import { authMiddleware } from "../middleware/auth.middleware";
 const router = Router();
 
 router.post("/signup", register);
-router.post("/login", login);
+router.post("/login", firebaseLogin);
 router.post("/firebase-login", firebaseLogin);
 router.post("/google", googleSignIn);
 router.post("/refresh-token", refreshToken);
-router.post(
-  "/logout",
-  authMiddleware(new UserService()) as RequestHandler,
-  logout
-);
+router.post("/logout", logout);
 router.post("/forgot-password", forgotPassword);
 router.post("/verify-reset-otp", verifyResetOtp);
 router.post("/set-new-password", setNewPassword);

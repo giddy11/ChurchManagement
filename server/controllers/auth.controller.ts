@@ -6,7 +6,7 @@ import { getPermissionsForRole } from "../utils/roles";
 
 const authService = new AuthService();
 
-const IS_PROD = process.env.NODE_ENV === 'development';
+const IS_PROD = process.env.NODE_ENV === 'production';
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -57,49 +57,56 @@ export const register = asyncHandler(
       });
       return;
     }
-    if (!denomination_name) {
-      res.status(400).json({
-        status: 400,
-        message: "Church denomination name is required",
+
+    if (denomination_name) {
+      // Register with church (creates an admin account + denomination)
+      const result = await authService.register(idToken, full_name, {
+        denomination_name,
+        description,
+        location,
+        state,
+        country,
+        address,
       });
-      return;
+
+      const roleName = result.user.role || 'admin';
+      const permissions = getPermissionsForRole(roleName as string);
+      setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
+
+      res.status(201).json({
+        data: {
+          user: {
+            id: result.user.id,
+            email: result.user.email,
+            full_name: result.user.full_name,
+            profile_img: result.user.profile_img,
+          },
+          church: {
+            id: result.church.id,
+            denomination_name: result.church.denomination_name,
+            description: result.church.description,
+            location: result.church.location,
+            state: result.church.state,
+            country: result.church.country,
+            address: result.church.address,
+          },
+          role: { name: roleName },
+          permissions,
+        },
+        status: 201,
+        message: "Registration successful.",
+      });
+    } else {
+      // Register without church (creates a member account)
+      const result = await authService.registerMember(idToken, full_name);
+      setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
+
+      res.status(201).json({
+        data: buildAuthResponse(result),
+        status: 201,
+        message: "Registration successful.",
+      });
     }
-
-    const result = await authService.register(idToken, full_name, {
-      denomination_name,
-      description,
-      location,
-      state,
-      country,
-      address,
-    });
-
-    const roleName = result.user.role || 'admin';
-    const permissions = getPermissionsForRole(roleName as string);
-
-    res.status(201).json({
-      data: {
-        user: {
-          id: result.user.id,
-          email: result.user.email,
-          full_name: result.user.full_name,
-          profile_img: result.user.profile_img,
-        },
-        church: {
-          id: result.church.id,
-          denomination_name: result.church.denomination_name,
-          description: result.church.description,
-          location: result.church.location,
-          state: result.church.state,
-          country: result.church.country,
-          address: result.church.address,
-        },
-        role: { name: roleName },
-        permissions,
-      },
-      status: 201,
-      message: "Registration successful.",
-    });
   }
 );
 
@@ -192,9 +199,21 @@ export const refreshToken = asyncHandler(
 
 export const logout = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const userId = (req as AuthRequest).user?.id;
-    if (userId) {
-      await authService.revokeRefreshToken(userId);
+    // Try to identify the user from the access token cookie so we can
+    // revoke their refresh token. This is best-effort — even if the token
+    // is expired or missing we still clear the cookies.
+    try {
+      const token = req.cookies?.access_token;
+      if (token) {
+        const { TokenService } = await import('../services/token.service');
+        const ts = new TokenService();
+        const decoded = ts.verifyAccessToken(token);
+        if (decoded?.id) {
+          await authService.revokeRefreshToken(decoded.id);
+        }
+      }
+    } catch {
+      // Token expired or invalid — still proceed with clearing cookies
     }
     clearAuthCookies(res);
     res.status(200).json({ status: 200, message: "Logged out successfully" });

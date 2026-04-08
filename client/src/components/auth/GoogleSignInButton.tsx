@@ -14,7 +14,9 @@ export const GoogleSignInButton: React.FC = () => {
       // The implicit flow gives us an access_token; we pass it to the backend
       // which will verify it
       googleMutation.mutate(tokenResponse.access_token, {
-        onSuccess: (data) => loginWithResponse(data),
+        onSuccess: (data) => {
+          loginWithResponse(data);
+        },
       });
     },
     onError: () => {

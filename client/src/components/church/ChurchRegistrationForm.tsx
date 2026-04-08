@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useRegister } from '@/hooks/useAuthQuery';
-import { createChurch, createBranch } from '@/lib/church';
 
 interface ChurchRegistrationFormProps {
   onSwitchToLogin: () => void;
@@ -56,21 +55,19 @@ export const ChurchRegistrationForm: React.FC<ChurchRegistrationFormProps> = ({ 
 
     const fullName = `${formData.firstName} ${formData.lastName}`;
     registerMutation.mutate(
-      { email: formData.email, full_name: fullName, password: formData.password },
+      {
+        email: formData.email,
+        full_name: fullName,
+        password: formData.password,
+        church: {
+          denomination_name: formData.denominationName,
+          description: formData.denominationDescription || undefined,
+        },
+      },
       {
         onSuccess: (data) => {
-          // Create denomination locally (will be server-managed later)
-          const church = createChurch({
-            name: formData.denominationName,
-            description: formData.denominationDescription,
-            createdBy: data.user.id,
-          });
-          createBranch({
-            churchId: church.id,
-            name: 'Main Church',
-            isHeadquarters: true,
-          });
-          loginWithResponse(data);
+          loginWithResponse(data as any);
+          // Index.tsx reactively redirects to /dashboard when isAuthenticated becomes true
         },
         onError: (err) => setError(err.message),
       }

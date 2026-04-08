@@ -32,6 +32,10 @@ function handleAuthSuccess(
   data: AuthResponse,
   queryClient: ReturnType<typeof useQueryClient>
 ) {
+  // Cancel any in-flight profile fetch before setting data.
+  // Without this, a stale 401 response (from before login) can overwrite
+  // the auth data we're about to set, flipping isAuthenticated back to false.
+  queryClient.cancelQueries({ queryKey: AUTH_KEYS.profile });
   queryClient.setQueryData(AUTH_KEYS.profile, {
     ...data.user,
     role: data.role,
@@ -50,12 +54,14 @@ export function useLogin() {
 }
 
 export function useRegister() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (vars: {
       email: string;
       full_name: string;
       password: string;
-      church: {
+      church?: {
         denomination_name: string;
         description?: string;
         location?: string;
@@ -65,6 +71,15 @@ export function useRegister() {
       };
     }): Promise<RegisterResponse> =>
       apiRegister(vars.email, vars.full_name, vars.password, vars.church),
+    onSuccess: (data) => {
+      // Cancel any in-flight profile fetch before setting data.
+      queryClient.cancelQueries({ queryKey: AUTH_KEYS.profile });
+      queryClient.setQueryData(AUTH_KEYS.profile, {
+        ...data.user,
+        role: data.role,
+        permissions: data.permissions,
+      });
+    },
   });
 }
 

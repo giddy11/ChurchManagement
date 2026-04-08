@@ -1,30 +1,22 @@
 import React, { useState } from 'react';
 import { useRegister } from '@/hooks/useAuthQuery';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 interface RegisterFormProps {
   onSwitchToLogin: () => void;
   onSuccess?: () => void;
 }
 
-export const RegisterForm: React.FC<RegisterFormProps> = ({ 
-  onSwitchToLogin,
-  onSuccess 
-}) => {
+export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onSuccess }) => {
+  const { loginWithResponse } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
     firstName: '',
     lastName: '',
-    denomination_name: '',
-    description: '',
-    location: '',
-    state: '',
-    country: '',
-    address: '',
   });
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const registerMutation = useRegister();
 
   const handleInputChange = (field: string, value: string) => {
@@ -34,14 +26,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setSuccess('');
 
     if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
       setError('Please fill in all required fields');
-      return;
-    }
-    if (!formData.denomination_name) {
-      setError('Church denomination name is required');
       return;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -59,19 +46,15 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
         email: formData.email,
         full_name: fullName,
         password: formData.password,
-        church: {
-          denomination_name: formData.denomination_name,
-          description: formData.description || undefined,
-          location: formData.location || undefined,
-          state: formData.state || undefined,
-          country: formData.country || undefined,
-          address: formData.address || undefined,
-        },
       },
       {
-        onSuccess: () => {
-          setSuccess('Registration successful! Please sign in.');
-          onSuccess?.();
+        onSuccess: (data) => {
+          if (onSuccess) {
+            // Called from a management dialog — just notify the parent, don't redirect.
+            onSuccess();
+          } else {
+            loginWithResponse(data as any);
+          }
         },
         onError: (err) => setError(err.message),
       }
@@ -81,8 +64,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   return (
     <div style={styles.card}>
       <div style={styles.cardHeader}>
-        <h2 style={styles.cardTitle}>Register Your Church</h2>
-        <p style={styles.cardDescription}>Create your church admin account to get started</p>
+        <h2 style={styles.cardTitle}>Create an Account</h2>
+        <p style={styles.cardDescription}>Fill in your details to get started</p>
       </div>
       <div style={styles.cardContent}>
         <form onSubmit={handleSubmit} style={styles.form}>
@@ -91,11 +74,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
               <p style={styles.alertText}>{error}</p>
             </div>
           )}
-          {success && (
-            <div style={{ ...styles.alert, backgroundColor: '#f0fdf4', borderColor: '#86efac' }}>
-              <p style={{ ...styles.alertText, color: '#166534' }}>{success}</p>
-            </div>
-          )}
+
 
           <p style={styles.sectionTitle}>Admin Account</p>
 
@@ -162,76 +141,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
                 style={styles.input}
               />
             </div>
-          </div>
-
-          <p style={styles.sectionTitle}>Church Details</p>
-
-          <div style={styles.formGroup}>
-            <label htmlFor="denomination_name" style={styles.label}>Denomination / Church Name *</label>
-            <input
-              id="denomination_name"
-              placeholder="e.g. Grace Baptist Church"
-              value={formData.denomination_name}
-              onChange={(e) => handleInputChange('denomination_name', e.target.value)}
-              required
-              style={styles.input}
-            />
-          </div>
-
-          <div style={styles.formGroup}>
-            <label htmlFor="description" style={styles.label}>Description</label>
-            <input
-              id="description"
-              placeholder="Brief description of your church"
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              style={styles.input}
-            />
-          </div>
-
-          <div style={styles.formGroup}>
-            <label htmlFor="address" style={styles.label}>Address</label>
-            <input
-              id="address"
-              placeholder="123 Church Street"
-              value={formData.address}
-              onChange={(e) => handleInputChange('address', e.target.value)}
-              style={styles.input}
-            />
-          </div>
-
-          <div style={styles.gridRow}>
-            <div style={styles.formGroup}>
-              <label htmlFor="location" style={styles.label}>City / Location</label>
-              <input
-                id="location"
-                placeholder="City"
-                value={formData.location}
-                onChange={(e) => handleInputChange('location', e.target.value)}
-                style={styles.input}
-              />
-            </div>
-            <div style={styles.formGroup}>
-              <label htmlFor="state" style={styles.label}>State</label>
-              <input
-                id="state"
-                placeholder="State"
-                value={formData.state}
-                onChange={(e) => handleInputChange('state', e.target.value)}
-                style={styles.input}
-              />
-            </div>
-          </div>
-
-          <div style={styles.formGroup}>
-            <label htmlFor="country" style={styles.label}>Country</label>
-            <input
-              id="country"
-              placeholder="Country"
-              value={formData.country}
-              onChange={(e) => handleInputChange('country', e.target.value)}
-              style={styles.input}
-            />
           </div>
 
           <button

@@ -130,8 +130,8 @@
 
 
 
-import React, { useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import React from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Church } from 'lucide-react';
 import { useAuth } from '../components/auth/AuthProvider';
 import { LoginForm } from '../components/auth/LoginForm';
@@ -143,9 +143,16 @@ type AuthMode = 'login' | 'register' | 'register-church' | 'forgot-password';
 
 export default function IndexPage() {
   const { isAuthenticated } = useAuth();
-  const location = useLocation();
-  const initialMode: AuthMode = location.pathname === '/register-church' ? 'register-church' : 'login';
-  const [mode, setMode] = useState<AuthMode>(initialMode);
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+
+  const mode: AuthMode =
+    pathname === '/register' ? 'register' :
+    pathname === '/register-church' ? 'register-church' :
+    pathname === '/forgot-password' ? 'forgot-password' :
+    'login';
+
+  const go = (m: AuthMode) => navigate(`/${m}`);
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
@@ -169,15 +176,15 @@ export default function IndexPage() {
         {mode === 'login' && (
           <>
             <LoginForm
-              onSwitchToRegister={() => setMode('register')}
-              onSwitchToForgotPassword={() => setMode('forgot-password')}
+              onSwitchToRegister={() => go('register')}
+              onSwitchToForgotPassword={() => go('forgot-password')}
             />
             <div className="mt-4 text-center">
               <p className="text-sm text-muted-foreground">
                 Want to register your denomination?{' '}
                 <button
                   className="text-blue-600 hover:underline font-medium"
-                  onClick={() => setMode('register-church')}
+                  onClick={() => go('register-church')}
                 >
                   Register Denomination
                 </button>
@@ -186,13 +193,13 @@ export default function IndexPage() {
           </>
         )}
         {mode === 'register' && (
-          <RegisterForm onSwitchToLogin={() => setMode('login')} />
+          <RegisterForm onSwitchToLogin={() => go('login')} />
         )}
         {mode === 'register-church' && (
-          <ChurchRegistrationForm onSwitchToLogin={() => setMode('login')} />
+          <ChurchRegistrationForm onSwitchToLogin={() => go('login')} />
         )}
         {mode === 'forgot-password' && (
-          <ForgotPasswordForm onSwitchToLogin={() => setMode('login')} />
+          <ForgotPasswordForm onSwitchToLogin={() => go('login')} />
         )}
       </div>
 

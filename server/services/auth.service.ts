@@ -71,7 +71,7 @@ export class AuthService {
     idToken: string,
     full_name: string,
     church: ChurchFields
-  ): Promise<{ user: UserResponse; church: Church }> {
+  ): Promise<{ user: UserResponse; church: Church; tokens: AuthTokens }> {
     if (!idToken || !full_name) {
       throw new Error("All fields are required");
     }
@@ -109,7 +109,43 @@ export class AuthService {
     });
     const savedChurch = await this.churchRepository.save(newChurch);
 
-    return { user: this.stripSensitiveFields(completeUser), church: savedChurch };
+    const tokens = this.tokenService.generateTokenPair(completeUser);
+    await this.saveRefreshToken(completeUser, tokens.refreshToken);
+
+    return { user: this.stripSensitiveFields(completeUser), church: savedChurch, tokens };
+  }
+
+  async registerMember(
+    idToken: string,
+    full_name: string
+  ): Promise<{ user: UserResponse; tokens: AuthTokens }> {
+    if (!idToken || !full_name) {
+      throw new Error("All fields are required");
+    }
+
+    const decoded = await firebaseAuth.verifyIdToken(idToken);
+    const email = decoded.email;
+    if (!email) throw new Error("Firebase token missing email");
+
+    const existingUser = await this.userRepository.findOne({ where: { email } });
+    if (existingUser) throw new Error("User with this email already exists");
+
+    const isFirst = await this.isFirstUser();
+
+    const user = this.userRepository.create({
+      email: email.toLowerCase().trim(),
+      full_name: full_name.trim(),
+      role: isFirst ? 'super_admin' : 'member',
+    });
+
+    const savedUser = await this.userRepository.save(user);
+    const completeUser = await this.findUserWithRelations({ id: savedUser.id });
+    if (!completeUser) throw new Error("Failed to fetch complete user data");
+
+    const tokens = this.tokenService.generateTokenPair(completeUser);
+    await this.saveRefreshToken(completeUser, tokens.refreshToken);
+
+    return { user: this.stripSensitiveFields(completeUser), tokens };
   }
 
   async firebaseLogin(

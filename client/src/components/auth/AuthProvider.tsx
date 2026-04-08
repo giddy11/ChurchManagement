@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useProfile } from '@/hooks/useAuthQuery';
 import {
   clearTokens,
+  apiLogout,
   type AuthResponse,
 } from '@/services/auth.service';
 import { disconnectSocket } from '@/services/socket.service';
@@ -19,7 +20,7 @@ export interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   loginWithResponse: (data: AuthResponse) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
@@ -44,8 +45,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loginWithResponse = useCallback(
     (data: AuthResponse) => {
-      // Tokens are in HttpOnly cookies set by the server — nothing to store here.
-      // Just cache user/role/permissions so the UI updates immediately.
+      // Cancel any in-flight profile fetch before setting data to prevent
+      // a stale 401 response from overwriting the just-set auth data.
+      queryClient.cancelQueries({ queryKey: ['auth', 'profile'] });
       queryClient.setQueryData(['auth', 'profile'], {
         ...data.user,
         role: data.role,
@@ -55,11 +57,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     [queryClient]
   );
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     clearTokens();
     disconnectSocket();
+    // Await the server logout so cookies are cleared BEFORE the page navigates.
+    // A timeout ensures we never block indefinitely if the network is slow.
+    await Promise.race([
+      apiLogout(),
+      new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+    ]);
     queryClient.clear();
-    window.location.replace('/login');
+    // Only hard-navigate to /login if not already on an auth page.
+    // Skipping window.location.replace when already on /login prevents an
+    // infinite reload loop: after a reload the JS module resets sessionInvalidated
+    // to false, useProfile fires again, refresh fails, session-expired fires,
+    // logout runs, and the cycle repeats forever.
+    const AUTH_PATHS = ['/login', '/register', '/forgot-password', '/register-church'];
+    if (!AUTH_PATHS.some((p) => window.location.pathname.startsWith(p))) {
+      window.location.replace('/login');
+    }
   }, [queryClient]);
 
   useEffect(() => {
