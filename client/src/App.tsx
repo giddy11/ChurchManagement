@@ -11,6 +11,7 @@ import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
 import SuperAdmin from './pages/SuperAdmin';
 import NotFound from './pages/NotFound';
+import ProtectedRoute from '@/components/auth/RouteGuard';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,31 +35,31 @@ function AppRoutes() {
             <Route path="/register" element={<Index />} />
             <Route path="/register-church" element={<Index />} />
             <Route path="/forgot-password" element={<Index />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/people" element={<Dashboard />} />
-            <Route path="/groups" element={<Dashboard />} />
-            <Route path="/events" element={<Dashboard />} />
-            <Route path="/followups" element={<Dashboard />} />
-            <Route path="/calendar" element={<Dashboard />} />
-            <Route path="/appointments" element={<Dashboard />} />
-            <Route path="/notifications" element={<Dashboard />} />
-            <Route path="/reports" element={<Dashboard />} />
-            <Route path="/accounting" element={<Dashboard />} />
-            <Route path="/users-roles" element={<Dashboard />} />
-            <Route path="/settings" element={<Dashboard />} />
-            <Route path="/help" element={<Dashboard />} />
-            <Route path="/share-app" element={<Dashboard />} />
-            <Route path="/churches" element={<Dashboard />} />
-            <Route path="/branches" element={<Dashboard />} />
-            <Route path="/church-members" element={<Dashboard />} />
-            <Route path="/add-contribution" element={<Dashboard />} />
-            <Route path="/all-contributions" element={<Dashboard />} />
-            <Route path="/batches" element={<Dashboard />} />
-            <Route path="/funds" element={<Dashboard />} />
-            <Route path="/pledges" element={<Dashboard />} />
-            <Route path="/contacts" element={<Dashboard />} />
-            <Route path="/organisations" element={<Dashboard />} />
-            <Route path="/superadmin" element={<SuperAdmin />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/people" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/groups" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/events" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/followups" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/calendar" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/appointments" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/reports" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/accounting" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/users-roles" element={<ProtectedRoute allowedRoles={['admin','super_admin']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/help" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/share-app" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/churches" element={<ProtectedRoute allowedRoles={['admin','super_admin']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/branches" element={<ProtectedRoute allowedRoles={['admin','super_admin']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/church-members" element={<ProtectedRoute allowedRoles={['admin','super_admin']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/add-contribution" element={<ProtectedRoute allowedRoles={['admin','super_admin']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/all-contributions" element={<ProtectedRoute allowedRoles={['admin','super_admin']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/batches" element={<ProtectedRoute allowedRoles={['admin','super_admin']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/funds" element={<ProtectedRoute allowedRoles={['admin','super_admin']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/pledges" element={<ProtectedRoute allowedRoles={['admin','super_admin']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/contacts" element={<ProtectedRoute allowedRoles={['admin','super_admin']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/organisations" element={<ProtectedRoute allowedRoles={['admin','super_admin']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdmin /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

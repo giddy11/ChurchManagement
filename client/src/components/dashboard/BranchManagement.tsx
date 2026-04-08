@@ -42,7 +42,7 @@ import ConfirmDialog from '@/components/ui/confirm-dialog';
 import { useChurch } from '@/components/church/ChurchProvider';
 
 const BranchManagement: React.FC = () => {
-  const { currentChurch, effectiveRole } = useChurch();
+  const { currentChurch, effectiveRole, refreshChurches } = useChurch();
   const isAdmin = effectiveRole === 'admin';
   const isSuperAdmin = effectiveRole === 'super_admin';
 
@@ -100,13 +100,20 @@ const BranchManagement: React.FC = () => {
 
   const handleFormSubmit = async (data: any) => {
     const ok = editTarget ? await update(editTarget.id, data) : await create(data);
-    if (ok) setFormOpen(false);
+    if (ok) {
+      // Ensure global church context (userChurches/myBranches) is refreshed so ChurchSelector updates
+      refreshChurches();
+      setFormOpen(false);
+    }
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     const ok = await remove(deleteTarget.id);
-    if (ok) setDeleteTarget(null);
+    if (ok) {
+      refreshChurches();
+      setDeleteTarget(null);
+    }
   };
 
   if (denomLoading) {

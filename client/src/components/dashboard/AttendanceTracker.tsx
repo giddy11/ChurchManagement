@@ -52,7 +52,3 @@ export const AttendanceTracker: React.FC = () => {
     </div>
   );
 };
-      </Card>
-    </div>
-  );
-};
