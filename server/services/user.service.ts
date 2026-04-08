@@ -8,6 +8,7 @@ import { In } from "typeorm";
 
 export class UserService {
   private readonly userRepository = AppDataSource.getRepository(User);
+  private readonly membershipRepository = AppDataSource.getRepository(require('../models/church/branch-membership.model').BranchMembership);
 
   async createUserWithGeneratedPassword(
     email: string,
@@ -95,19 +96,36 @@ export class UserService {
     };
   }
 
-  async getAllUsers(): Promise<User[]> {
-    return this.userRepository.find({
-      relations: ["groups", "department"],
-      order: { createdAt: "DESC" },
-    });
+  async getAllUsers(branchId?: string): Promise<User[]> {
+    if (!branchId) {
+      return this.userRepository.find({
+        relations: ["groups", "department"],
+        order: { createdAt: "DESC" },
+      });
+    }
+    return this.userRepository.createQueryBuilder('user')
+      .leftJoinAndSelect('user.groups', 'groups')
+      .leftJoinAndSelect('user.department', 'department')
+      .innerJoin('user.branchMemberships', 'bm', 'bm.branch_id = :branchId', { branchId })
+      .orderBy('user.createdAt', 'DESC')
+      .getMany();
   }
 
-  async getUsersByRole(roleName: string): Promise<User[]> {
-    return this.userRepository.find({
-      where: { role: roleName },
-      relations: ["groups", "department"],
-      order: { createdAt: "DESC" },
-    });
+  async getUsersByRole(roleName: string, branchId?: string): Promise<User[]> {
+    if (!branchId) {
+      return this.userRepository.find({
+        where: { role: roleName },
+        relations: ["groups", "department"],
+        order: { createdAt: "DESC" },
+      });
+    }
+    return this.userRepository.createQueryBuilder('user')
+      .leftJoinAndSelect('user.groups', 'groups')
+      .leftJoinAndSelect('user.department', 'department')
+      .innerJoin('user.branchMemberships', 'bm', 'bm.branch_id = :branchId', { branchId })
+      .where('user.role = :roleName', { roleName })
+      .orderBy('user.createdAt', 'DESC')
+      .getMany();
   }
 
   async getUserById(id: string): Promise<any> {
@@ -297,5 +315,18 @@ export class UserService {
     if (!user) return null;
     user.role = roleName;
     return await this.userRepository.save(user);
+  }
+
+  // ─── Branch helpers ─────────────────────────────────────────────────────
+  async addUserToBranch(userId: string, branchId: string, role: 'member' | 'coordinator' | 'admin' = 'member'): Promise<void> {
+    const existing = await this.membershipRepository.findOne({ where: { user_id: userId, branch_id: branchId } });
+    if (existing) return;
+    const { BranchMembership, BranchRole } = require('../models/church/branch-membership.model');
+    const membership = this.membershipRepository.create({
+      user_id: userId,
+      branch_id: branchId,
+      role: (BranchRole[role.toUpperCase()] ?? BranchRole.MEMBER)
+    });
+    await this.membershipRepository.save(membership);
   }
 }

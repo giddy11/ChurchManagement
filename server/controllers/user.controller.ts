@@ -42,6 +42,15 @@ export class UserController {
             `User "${user.full_name || user.email}" created`,
             { userName: user.full_name, userEmail: user.email, role: user.role }
           );
+          // If a branch is active, attach new user to that branch as member
+          const branchId = (req as any).branchId as string | null;
+          if (branchId) {
+            try {
+              await this.userService.addUserToBranch(user.id, branchId, 'member');
+            } catch (e: any) {
+              console.warn('Failed to attach user to branch:', e?.message);
+            }
+          }
         }
         res.status(201).json({
           data: classToPlain(user),
@@ -69,6 +78,13 @@ export class UserController {
         return;
       }
       const result = await this.userService.createManyUsers(users);
+      // Attach all newly created users to active branch when present
+      const branchId = (req as any).branchId as string | null;
+      if (branchId && result.created?.length) {
+        for (const u of result.created) {
+          try { await this.userService.addUserToBranch(u.id, branchId, 'member'); } catch {}
+        }
+      }
       res.status(201).json({
         data: result.created,
         status: 201,
@@ -83,12 +99,13 @@ export class UserController {
   getUsers = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { role } = req.query;
+      const branchId = (req as any).branchId as string | undefined;
       
       let users;
       if (role && typeof role === 'string') {
-        users = await this.userService.getUsersByRole(role);
+        users = await this.userService.getUsersByRole(role, branchId);
       } else {
-        users = await this.userService.getAllUsers();
+        users = await this.userService.getAllUsers(branchId);
       }
       
       res.status(200).json({

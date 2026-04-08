@@ -104,11 +104,13 @@ export async function authFetch(
   const hasOptions = Boolean(options);
   const token = getAccessToken();
   const hasToken = Boolean(token);
+  const branchId = localStorage.getItem('church_mgmt_selected_branch') || undefined;
   console.debug(`API Request -> ${endpoint} | method=${options?.method || 'GET'} | hasOptions=${hasOptions} | hasToken=${hasToken}`);
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}`, 'X-Access-Token': token } : {}),
+    ...(branchId ? { 'X-Branch-Id': branchId } : {}),
     ...(options?.headers as Record<string, string> | undefined),
   };
 
@@ -128,9 +130,11 @@ export async function authFetch(
     const refreshed = await handleTokenRefresh();
     if (refreshed) {
       const newToken = getAccessToken();
+      const newBranchId = localStorage.getItem('church_mgmt_selected_branch') || undefined;
       const retryHeaders: Record<string, string> = {
         "Content-Type": "application/json",
         ...(newToken ? { Authorization: `Bearer ${newToken}`, 'X-Access-Token': newToken } : {}),
+        ...(newBranchId ? { 'X-Branch-Id': newBranchId } : {}),
         ...(options?.headers as Record<string, string> | undefined),
       };
       res = await axios({ ...axiosConfig, headers: retryHeaders });

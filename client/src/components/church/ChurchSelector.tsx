@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -13,15 +13,44 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/auth/AuthProvider';
 
 const ChurchSelector: React.FC = () => {
-  const { currentChurch, myBranches, branches, currentBranch, selectBranch, selectBranchGlobal, effectiveRole } = useChurch();
-  const { user } = useAuth();
+  const { currentChurch, myBranches, branches, currentBranch, selectBranch, selectBranchGlobal, effectiveRole, isMembershipsReady } = useChurch();
+  const { user, isLoading: authLoading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [showBranches, setShowBranches] = useState(false);
   const navigate = useNavigate();
 
-  if (!user) return null;
+  // Ensure a default branch is auto-selected after login without refresh
+  useEffect(() => {
+    console.log("ChurchSelector useEffect: user, isMembershipsReady, myBranches", user, isMembershipsReady, myBranches);
+    if (!user) return;
+    if (!isMembershipsReady) return;
+    if (!currentBranch && myBranches && myBranches.length > 0) {
+      // Prefer previously saved selection if any; otherwise first membership
+      const savedId = localStorage.getItem('church_mgmt_selected_branch');
+      const target = myBranches.find(b => b.id === savedId) || myBranches[0];
+      // Fire and forget — ChurchProvider will sync church/branches accordingly
+      selectBranchGlobal(target);
+    }
+  }, [user?.id, isMembershipsReady, myBranches?.length]);
 
   // Super admin without branches falls through to the general empty-branches state
+
+  // If profile/auth is still loading, show a lightweight placeholder
+  if (!user || authLoading || !isMembershipsReady) {
+    // If there's no authenticated user, don't render the selector at all
+    if (!user) return null;
+    return (
+      <div className="p-3 border-b border-gray-200 animate-pulse">
+        <div className="flex items-center gap-2">
+          <div className="w-9 h-9 bg-gray-200 rounded-lg" />
+          <div className="flex-1 min-w-0">
+            <div className="h-3 bg-gray-200 rounded w-1/2 mb-1" />
+            <div className="h-2 bg-gray-100 rounded w-1/4" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // If user has no branches memberships
   if (!myBranches || myBranches.length === 0) {

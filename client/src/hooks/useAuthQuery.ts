@@ -42,6 +42,8 @@ function handleAuthSuccess(
     role: data.role,
     permissions: data.permissions,
   });
+  // Immediately refetch full profile (with memberships) to hydrate sidebar/branches
+  queryClient.invalidateQueries({ queryKey: AUTH_KEYS.profile });
 }
 
 export function useLogin() {
@@ -72,15 +74,7 @@ export function useRegister() {
       };
     }): Promise<RegisterResponse> =>
       apiRegister(vars.email, vars.full_name, vars.password, vars.church),
-    onSuccess: (data) => {
-      // Cancel any in-flight profile fetch before setting data.
-      queryClient.cancelQueries({ queryKey: AUTH_KEYS.profile });
-      queryClient.setQueryData(AUTH_KEYS.profile, {
-        ...data.user,
-        role: data.role,
-        permissions: data.permissions,
-      });
-    },
+    onSuccess: (data) => handleAuthSuccess(data as unknown as AuthResponse, queryClient),
   });
 }
 

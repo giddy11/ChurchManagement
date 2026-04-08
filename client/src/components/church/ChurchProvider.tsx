@@ -10,6 +10,7 @@ interface ChurchContextType {
   branches: Branch[];
   myBranches: Branch[]; // all branches the user belongs to (across churches)
   userChurches: Church[];
+  isMembershipsReady: boolean; // profile.branchMemberships has been resolved from server
   effectiveRole: 'super_admin' | 'admin' | 'member';
   selectChurch: (churchId: string) => void;
   selectBranch: (branchId: string | null) => void;
@@ -36,12 +37,13 @@ interface ChurchProviderProps {
 
 export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
   const { user } = useAuth();
-  const { data: profile } = useProfile();
+  const { data: profile, isFetching: profileFetching } = useProfile();
   const [currentChurch, setCurrentChurch] = useState<Church | null>(null);
   const [currentBranch, setCurrentBranch] = useState<Branch | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [userChurches, setUserChurches] = useState<Church[]>([]);
   const [myBranches, setMyBranches] = useState<Branch[]>([]);
+  const [isMembershipsReady, setIsMembershipsReady] = useState(false);
 
   const loadUserChurches = useCallback(async () => {
     if (!user) {
@@ -74,16 +76,55 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
 
   // Derive all branches the user belongs to from profile.branchMemberships
   useEffect(() => {
+    // While the profile query is fetching, mark memberships as not ready
+    if (profileFetching) {
+      setIsMembershipsReady(false);
+      return;
+    }
+
+    // Query has settled (either with data or null); treat as ready
     const memberships = (profile as any)?.branchMemberships as Array<{ branch?: Branch }> | undefined;
-    if (Array.isArray(memberships)) {
+    const denomBranches = Array.isArray((profile as any)?.denominations)
+      ? ((profile as any).denominations as Array<{ branches?: Branch[] }>)
+          .flatMap((d) => Array.isArray(d.branches) ? (d.branches as Branch[]) : [])
+      : [];
+    const userChurchBranches = Array.isArray(userChurches)
+      ? (userChurches.flatMap((c) => Array.isArray(c.branches) ? (c.branches as Branch[]) : []))
+      : [];
+
+    if (Array.isArray(memberships) && memberships.length > 0) {
       const list = memberships
         .map((m) => m?.branch)
         .filter(Boolean) as Branch[];
       setMyBranches(list);
+    } else if (denomBranches.length > 0) {
+      // Fallback for admins without explicit membership rows: use denomination branches from profile
+      setMyBranches(denomBranches);
+    } else if (userChurchBranches.length > 0) {
+      // Ultimate fallback: use branches from userChurches fetch
+      setMyBranches(userChurchBranches);
     } else {
       setMyBranches([]);
     }
-  }, [profile]);
+    setIsMembershipsReady(true);
+  }, [profile, profileFetching, userChurches]);
+
+  // Auto-select active branch after login/profile resolve without refreshing:
+  // 1) Prefer saved branch if it belongs to the current user
+  // 2) Else fall back to the first branch membership
+  useEffect(() => {
+    if (!user) return;
+    if (!isMembershipsReady) return; // wait until memberships have been resolved
+    if (myBranches.length === 0) return;
+    if (userChurches.length === 0) return; // wait until churches are fetched
+
+    const savedBranchId = localStorage.getItem(SELECTED_BRANCH_KEY);
+    const candidate = myBranches.find(b => b.id === savedBranchId) || myBranches[0];
+    if (!currentBranch || currentBranch.id !== candidate.id) {
+      // Switch church and select the branch globally
+      selectBranchGlobal(candidate);
+    }
+  }, [user?.id, isMembershipsReady, myBranches, userChurches.length]);
 
   // Auto-select church from localStorage or first available
   useEffect(() => {
@@ -186,6 +227,7 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
     branches,
     myBranches,
     userChurches,
+    isMembershipsReady,
     effectiveRole,
     selectChurch,
     selectBranch,

@@ -15,7 +15,7 @@ export const setupMiddleware = (app: Express) => {
     origin: config.corsOrigins,
     // No cookies used for auth; credentials not required
     credentials: false,
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Access-Token', 'X-Refresh-Token'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Access-Token', 'X-Refresh-Token', 'X-Branch-Id'],
     exposedHeaders: ['Authorization', 'X-Access-Token', 'X-Refresh-Token'],
   }));
   app.use('/public', express.static(path.join(__dirname, '../public')));

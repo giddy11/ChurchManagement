@@ -3,6 +3,8 @@ import { UserService } from "../services/user.service";
 import { TokenService } from "../services/token.service";
 import { getPermissionsForRole } from "../utils/roles";
 import dotenv from "dotenv";
+import { AppDataSource } from "../config/database";
+import { BranchMembership } from "../models/church/branch-membership.model";
 dotenv.config();
 
 const tokenService = new TokenService();
@@ -16,6 +18,7 @@ export interface AuthRequest extends Request {
         groups?: any[];
         effectivePermissions?: string[];
     };
+    branchId?: string | null;
 }
 
 export const authMiddleware = (userService: UserService) => {
@@ -71,6 +74,34 @@ export const authMiddleware = (userService: UserService) => {
                 groups: user.groups || [],
                 effectivePermissions,
             };
+
+            // Optional branch scoping via header
+            const requestedBranchId = (req.headers['x-branch-id'] as string | undefined) || undefined;
+            if (requestedBranchId) {
+                // Super admins can scope to any branch
+                if (req.user.role === 'super_admin') {
+                    req.branchId = requestedBranchId;
+                } else {
+                    // Validate membership for non-super admins
+                    try {
+                        const membershipRepo = AppDataSource.getRepository(BranchMembership);
+                        const membership = await membershipRepo.findOne({ where: { user_id: req.user.id, branch_id: requestedBranchId } });
+                        if (!membership) {
+                            res.status(403).json({ statusCode: 403, message: 'You are not a member of the selected branch' });
+                            return;
+                        }
+                        req.branchId = requestedBranchId;
+                    } catch (e) {
+                        if (process.env.NODE_ENV !== 'production') {
+                            console.warn('[auth] branch membership lookup failed', { message: (e as any)?.message });
+                        }
+                        res.status(500).json({ statusCode: 500, message: 'Failed to validate branch membership' });
+                        return;
+                    }
+                }
+            } else {
+                req.branchId = null;
+            }
             next();
         } catch (error) {
             if (process.env.NODE_ENV !== 'production') {
