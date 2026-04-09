@@ -37,9 +37,39 @@ const PeopleManagement = () => {
   });
 
   const handleExport = () => {
+    const DATE_COLS = new Set(['birthdate']);
+    // Cols that Excel would mangle as numbers — force text with ="value" formula
+    const TEXT_COLS = new Set(['phone']);
+
+    const escapeCell = (value: unknown): string => {
+      if (value === undefined || value === null) return '';
+      let str = String(value);
+      if (str.includes('"') || str.includes(',') || str.includes('\n')) {
+        str = '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    };
+
+    const formatCell = (col: string, raw: unknown): string => {
+      if (DATE_COLS.has(col) && raw) {
+        const d = new Date(raw as any);
+        if (!isNaN(d.getTime())) {
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          return `${yyyy}-${mm}-${dd}`;
+        }
+      }
+      if (TEXT_COLS.has(col) && raw !== undefined && raw !== null && String(raw) !== '') {
+        // ="value" forces Excel/Sheets to render as text, not scientific notation
+        return `"=""${String(raw).replace(/"/g, '""')}"""`;
+      }
+      return escapeCell(raw);
+    };
+
     const header = PERSON_IMPORT_COLUMNS.join(',');
     const rows = people.map((p) =>
-      PERSON_IMPORT_COLUMNS.map((col) => (p as any)[col] ?? '').join(',')
+      PERSON_IMPORT_COLUMNS.map((col) => formatCell(col, (p as any)[col])).join(',')
     );
     const csv = [header, ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
