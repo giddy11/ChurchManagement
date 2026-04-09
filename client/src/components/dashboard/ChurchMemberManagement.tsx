@@ -36,7 +36,7 @@ type ApiUser = {
 
 const ChurchMemberManagement: React.FC = () => {
   const { user } = useAuth();
-  const { currentChurch, effectiveRole } = useChurch();
+  const { currentChurch, currentBranch, effectiveRole } = useChurch();
   const [members, setMembers] = useState<ApiUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -84,7 +84,7 @@ const ChurchMemberManagement: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Members</h2>
           <p className="text-sm text-gray-500 mt-1">
-            Manage members of {currentChurch.name}
+            Manage members of {currentBranch?.name ?? currentChurch.denomination_name}
           </p>
         </div>
 
@@ -98,7 +98,7 @@ const ChurchMemberManagement: React.FC = () => {
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>Add Member to {currentChurch.name}</DialogTitle>
+                <DialogTitle>Add Member to {currentBranch?.name ?? currentChurch.denomination_name}</DialogTitle>
               </DialogHeader>
               <RegisterForm
                 onSwitchToLogin={() => setIsAddOpen(false)}
