@@ -88,6 +88,57 @@ export const fetchHealth = () =>
 export const deleteUserById = (id: string) =>
   request<{ status: number; message: string }>(`/user/${id}`, { method: 'DELETE' });
 
+// ─── Members (users scoped to branch/church) ──────────────────────────────
+export interface MemberDTO {
+  id: string;
+  email: string;
+  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  phone_number?: string;
+  role: string;
+  is_active?: boolean;
+}
+
+export const fetchMembersApi = () =>
+  request<{ data: MemberDTO[]; status: number; message: string }>('/user');
+
+export const createMemberApi = (data: {
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: string;
+  phone_number?: string;
+  branch_name?: string;
+  church_name?: string;
+}) =>
+  request<{ data: MemberDTO; status: number; message: string }>('/user', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+export const updateMemberApi = (id: string, data: Partial<{
+  full_name: string;
+  role: string;
+  is_active: boolean;
+}>) =>
+  request<{ data: MemberDTO; status: number; message: string }>(`/user/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+
+export const deleteMembersApi = (ids: string[]) =>
+  request<{ data: { deleted: number }; status: number; message: string }>('/user/bulk', {
+    method: 'DELETE',
+    body: JSON.stringify({ ids }),
+  });
+
+export const importMembersApi = (rows: { first_name: string; last_name: string; email: string; role?: string; phone_number?: string }[]) =>
+  request<{ data: MemberDTO[]; status: number; message: string; uniqueCount: number; duplicateCount: number; duplicateData: any[] }>('/user/import', {
+    method: 'POST',
+    body: JSON.stringify(rows.map((r) => ({ ...r, roleName: r.role || 'member' }))),
+  });
+
 // ─── Denominations (top-level church organisations) ───────────────────────
 export interface BranchDTO {
   id: string;

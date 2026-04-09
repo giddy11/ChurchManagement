@@ -116,6 +116,13 @@ router.put(
 );
 
 router.delete(
+  "/bulk",
+  authMiddleware(new UserService()) as RequestHandler,
+  adminMiddleware,
+  userController.deleteManyUsers.bind(userController)
+);
+
+router.delete(
   "/:id",
   authMiddleware(new UserService()) as RequestHandler,
   adminMiddleware,

@@ -3,6 +3,7 @@ import { AppDataSource } from "../config/database";
 import { User } from "../models/user.model";
 import { UserSettings } from "../types/user";
 import emailService from "../email/email.service";
+import { sendMemberAddedEmail } from "../email/email.member_added";
 
 import { In } from "typeorm";
 
@@ -16,7 +17,8 @@ export class UserService {
     first_name?: string,
     last_name?: string,
     phone_number?: string,
-    username?: string
+    username?: string,
+    context?: { branchName?: string; churchName?: string }
   ): Promise<User | null> {
     // Check for existing email
     const exists = await this.userRepository.findOne({ where: { email } });
@@ -41,15 +43,16 @@ export class UserService {
     const savedUser = await this.userRepository.save(user);
 
     try {
-      await emailService.sendEmail(
+      const fullName = [first_name, last_name].filter(Boolean).join(' ') || email;
+      await sendMemberAddedEmail(email, {
+        fullName,
         email,
-        "Your Account Password",
-        `Your password is: ${generatedPassword}`,
-        undefined,
-        // { retries: 2, throwOnError: false }
-      );
+        password: generatedPassword,
+        branchName: context?.branchName,
+        churchName: context?.churchName,
+      });
     } catch (emailError: any) {
-      console.error('⚠️  Failed to send password email, but user was created successfully');
+      console.error('⚠️  Failed to send member-added email, but user was created successfully');
       console.error('   User can use "Forgot Password" to reset their password');
       console.error('   Email error:', emailError.message);
     }
@@ -315,6 +318,19 @@ export class UserService {
     if (!user) return null;
     user.role = roleName;
     return await this.userRepository.save(user);
+  }
+
+  async deleteManyUsers(ids: string[]): Promise<{ deleted: number; notFound: string[] }> {
+    const notFound: string[] = [];
+    let deleted = 0;
+    for (const id of ids) {
+      const user = await this.userRepository.findOne({ where: { id } });
+      if (!user) { notFound.push(id); continue; }
+      user.is_active = false;
+      await this.userRepository.save(user);
+      deleted++;
+    }
+    return { deleted, notFound };
   }
 
   // ─── Branch helpers ─────────────────────────────────────────────────────

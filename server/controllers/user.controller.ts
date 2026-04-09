@@ -24,13 +24,17 @@ export class UserController {
         return;
       }
       try {
+        const branchId = (req as any).branchId as string | null;
+        // Resolve names for the welcome email
+        const { branch_name, church_name } = req.body as { branch_name?: string; church_name?: string };
         const user = await this.userService.createUserWithGeneratedPassword(
           email,
           role,
           first_name,
           last_name,
           phone_number,
-          username
+          username,
+          { branchName: branch_name, churchName: church_name }
         );
         if (user) {
           const userId = (req as any).user?.id;
@@ -43,7 +47,6 @@ export class UserController {
             { userName: user.full_name, userEmail: user.email, role: user.role }
           );
           // If a branch is active, attach new user to that branch as member
-          const branchId = (req as any).branchId as string | null;
           if (branchId) {
             try {
               await this.userService.addUserToBranch(user.id, branchId, 'member');
@@ -319,6 +322,31 @@ export class UserController {
       message: "Settings updated successfully.",
     });
   });
+
+  deleteManyUsers = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { ids } = req.body as { ids?: string[] };
+      if (!Array.isArray(ids) || ids.length === 0) {
+        res.status(400).json({ status: 400, message: 'ids array is required' });
+        return;
+      }
+      const result = await this.userService.deleteManyUsers(ids);
+      const actorId = (req as any).user?.id;
+      await logActivity(
+        actorId,
+        ActivityAction.DELETE,
+        EntityType.USER,
+        ids[0],
+        `Bulk deleted ${result.deleted} user(s)`,
+        { ids, deleted: result.deleted }
+      );
+      res.status(200).json({
+        data: result,
+        status: 200,
+        message: `${result.deleted} user(s) deactivated successfully`,
+      });
+    }
+  );
 
   deleteUser = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
