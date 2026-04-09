@@ -1,18 +1,38 @@
 export interface Person {
-  id: number;
-  firstName: string;
-  lastName: string;
-  name: string;
-  middleName?: string;
+  id: string;
+  first_name: string;
+  last_name: string;
+  middle_name?: string;
   nickname?: string;
   birthdate?: string;
   gender?: 'male' | 'female';
-  addressLine?: string;
+  address?: string;
   state?: string;
   city?: string;
-  postalCode?: string;
-  envelopeNumber?: string;
-  email: string;
-  mobile: string;
-  homePhone?: string;
+  country?: string;
+  email?: string;
+  phone?: string;
+  profile_image?: string;
+  branch_id?: string;
+  converted_user_id?: string;
+  created_at: string;
+  updated_at: string;
 }
+
+export type PersonCreateDTO = Omit<Person, 'id' | 'created_at' | 'updated_at' | 'converted_user_id'>;
+export type PersonUpdateDTO = Partial<PersonCreateDTO>;
+
+export const PERSON_IMPORT_COLUMNS = [
+  'first_name',
+  'last_name',
+  'middle_name',
+  'nickname',
+  'birthdate',
+  'gender',
+  'address',
+  'state',
+  'city',
+  'country',
+  'email',
+  'phone',
+] as const;

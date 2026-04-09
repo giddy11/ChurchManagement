@@ -9,6 +9,7 @@ import { Department } from "../models/catalogs/department.model";
 import { ActivityLog } from "../models/activity-log.model";
 import { Group } from "../models/role-permission/group.model";
 import { Denomination, Branch, BranchMembership } from "../models/church";
+import { Person } from "../models/person.model";
 dotenv.config();
 
 export const AppDataSource = new DataSource({
@@ -31,7 +32,8 @@ export const AppDataSource = new DataSource({
                 ActivityLog,
                 Denomination,
                 Branch,
-                BranchMembership
+                BranchMembership,
+                Person
             ],
     migrations: ["./migrations/*.ts"],
     subscribers: ['./subscribers/*.ts'],

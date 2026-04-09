@@ -7,6 +7,7 @@ import rolePermissionRoutes from './routes/role-permission/role_permission.route
 import catalogRoutes from './routes/catalog.route';
 import activityLogRoutes from './routes/activity-log.route';
 import churchRoutes from './routes/church.route';
+import personRoutes from './routes/person.route';
 import { createServer } from 'http';
 import { errorHandler } from './middleware/error_handler.middleware';
 import { AppDataSource } from './config/database';
@@ -30,6 +31,7 @@ app.use('/api/roles-permissions', rolePermissionRoutes);
 app.use('/api/catalog', catalogRoutes);
 app.use('/api/activities', activityLogRoutes);
 app.use('/api/churches', churchRoutes);
+app.use('/api/people', personRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });

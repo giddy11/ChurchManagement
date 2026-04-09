@@ -28,6 +28,16 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Normalize role from either string or object { name: string }
+  const roleName: Role | undefined = React.useMemo(() => {
+    const r: any = user?.role;
+    if (!r) return undefined;
+    if (typeof r === 'string') return r as Role;
+    if (typeof r === 'object' && typeof r.name === 'string') return r.name as Role;
+    return undefined;
+  }, [user?.role]);
+
+  // While auth/profile is loading, don't decide yet
   if (isLoading) return null;
 
   if (requireAuth && !isAuthenticated) {
@@ -36,9 +46,14 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   const roleAllowed = (): boolean => {
     if (!allowedRoles || allowedRoles.length === 0) return true;
-    const role = (user?.role as Role | undefined) || 'member';
-    return allowedRoles.includes(role);
+    if (!roleName) return false; // role not hydrated yet
+    return allowedRoles.includes(roleName);
   };
+
+  // If roles are enforced but role not ready yet, wait instead of denying
+  if (allowedRoles && allowedRoles.length > 0 && !roleName) {
+    return null;
+  }
 
   if (!roleAllowed()) {
     return (

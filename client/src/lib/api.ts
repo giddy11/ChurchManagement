@@ -196,3 +196,40 @@ export const deleteBranchApi = (denominationId: string, branchId: string) =>
   request<{ status: number; message: string }>(`/churches/${denominationId}/branches/${branchId}`, {
     method: 'DELETE',
   });
+
+// ─── People ───────────────────────────────────────────────────────────────
+import type { Person, PersonCreateDTO, PersonUpdateDTO } from '@/types/person';
+
+export const fetchPeople = (search?: string) => {
+  const qs = search ? `?search=${encodeURIComponent(search)}` : '';
+  return request<{ data: Person[]; status: number; message: string }>(`/people${qs}`);
+};
+
+export const fetchPersonById = (id: string) =>
+  request<{ data: Person; status: number; message: string }>(`/people/${id}`);
+
+export const createPersonApi = (data: PersonCreateDTO) =>
+  request<{ data: Person; status: number; message: string }>('/people', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+
+export const updatePersonApi = (id: string, data: PersonUpdateDTO) =>
+  request<{ data: Person; status: number; message: string }>(`/people/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+
+export const deletePersonApi = (id: string) =>
+  request<{ status: number; message: string }>(`/people/${id}`, { method: 'DELETE' });
+
+export const importPeopleApi = (rows: Partial<PersonCreateDTO>[]) =>
+  request<{ data: Person[]; status: number; message: string }>('/people/import', {
+    method: 'POST',
+    body: JSON.stringify(rows),
+  });
+
+export const convertPersonApi = (id: string) =>
+  request<{ data: any; status: number; message: string }>(`/people/${id}/convert`, {
+    method: 'POST',
+  });
