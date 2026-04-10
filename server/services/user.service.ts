@@ -1,9 +1,11 @@
+import { randomUUID } from "crypto";
 import { classToPlain } from "class-transformer";
 import { AppDataSource } from "../config/database";
 import { User } from "../models/user.model";
 import { UserSettings } from "../types/user";
 import emailService from "../email/email.service";
 import { sendMemberAddedEmail } from "../email/email.member_added";
+import { firebaseAuth } from "../config/firebase.admin";
 
 import { In } from "typeorm";
 
@@ -20,30 +22,61 @@ export class UserService {
     username?: string,
     context?: { branchName?: string; churchName?: string }
   ): Promise<User | null> {
-    // Check for existing email
+    // 1. Guard: reject duplicate email early
     const exists = await this.userRepository.findOne({ where: { email } });
     if (exists) throw new Error('User with this email already exists');
 
-    // Generate a random password
-    const generatedPassword = Math.random().toString(36).slice(-10);
-    const bcrypt = require("bcrypt");
-    const password_hash = await bcrypt.hash(generatedPassword, 10);
+    // 2. Pre-generate a shared UUID so Firebase UID === PostgreSQL user ID
+    const userId = randomUUID();
 
-    // Create user
+    // 3. Generate plain-text password (needed for Firebase and the welcome email only)
+    const generatedPassword = Math.random().toString(36).slice(-10);
+
+    const fullName = [first_name, last_name].filter(Boolean).join(' ') || email;
+
+    // 4. Create Firebase Auth account first — fail fast so we never have a DB
+    //    user whose email doesn't exist in Firebase
+    try {
+      await firebaseAuth.createUser({
+        uid: userId,
+        email,
+        password: generatedPassword,
+        displayName: fullName,
+        emailVerified: false,
+      });
+    } catch (firebaseError: any) {
+      // Surface a clear error; nothing has been written to the DB yet
+      throw new Error(`Failed to create Firebase account: ${firebaseError.message}`);
+    }
+
+    // 5. Persist to PostgreSQL using the same UUID (no password stored — Firebase owns auth)
     const user = this.userRepository.create({
+      id: userId,
       first_name,
       last_name,
       email,
-      password_hash,
       role: roleName,
       is_active: true,
       phone_number,
-      username
+      username,
     });
-    const savedUser = await this.userRepository.save(user);
 
+    let savedUser: User;
     try {
-      const fullName = [first_name, last_name].filter(Boolean).join(' ') || email;
+      savedUser = await this.userRepository.save(user);
+    } catch (dbError: any) {
+      // Roll back the Firebase account so the two systems stay in sync
+      try {
+        await firebaseAuth.deleteUser(userId);
+      } catch (fbRollbackError: any) {
+        console.error('⚠️  Firebase rollback failed after DB error — manual cleanup may be needed for uid:', userId);
+        console.error('   Rollback error:', fbRollbackError.message);
+      }
+      throw dbError;
+    }
+
+    // 6. Send welcome email (non-fatal — user can reset password if this fails)
+    try {
       await sendMemberAddedEmail(email, {
         fullName,
         email,
