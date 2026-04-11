@@ -135,13 +135,10 @@ export class UserService {
   async getAllUsers(branchId?: string, excludeUserId?: string): Promise<any[]> {
     if (!branchId) {
       return this.userRepository.find({
-        relations: ["groups", "department"],
         order: { createdAt: "DESC" },
       });
     }
     let qb = this.userRepository.createQueryBuilder('user')
-      .leftJoinAndSelect('user.groups', 'groups')
-      .leftJoinAndSelect('user.department', 'department')
       .innerJoinAndSelect('user.branchMemberships', 'bm', 'bm.branch_id = :branchId', { branchId })
       .orderBy('user.createdAt', 'DESC');
 
@@ -163,13 +160,10 @@ export class UserService {
     if (!branchId) {
       return this.userRepository.find({
         where: { role: roleName },
-        relations: ["groups", "department"],
         order: { createdAt: "DESC" },
       });
     }
     let qb = this.userRepository.createQueryBuilder('user')
-      .leftJoinAndSelect('user.groups', 'groups')
-      .leftJoinAndSelect('user.department', 'department')
       .innerJoin('user.branchMemberships', 'bm', 'bm.branch_id = :branchId', { branchId })
       .where('user.role = :roleName', { roleName });
 
@@ -184,8 +178,6 @@ export class UserService {
     const user = await this.userRepository.findOne({
       where: { id },
       relations: [
-        "groups",
-        "department",
         "denominations",
         "denominations.branches",
         "branchMemberships",

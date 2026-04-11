@@ -15,7 +15,6 @@ export interface AuthRequest extends Request {
         id: string;
         email: string;
         role: string;
-        groups?: any[];
         effectivePermissions?: string[];
     };
     branchId?: string | null;
@@ -71,7 +70,6 @@ export const authMiddleware = (userService: UserService) => {
                 id: user.id,
                 email: user.email,
                 role: user.role || 'member',
-                groups: user.groups || [],
                 effectivePermissions,
             };
 
