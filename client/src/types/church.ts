@@ -31,6 +31,10 @@ export interface Branch {
   denomination_id: string;
   created_at: string;
   updated_at: string;
+  /** Whether the current user's membership in this branch is active */
+  membership_is_active?: boolean;
+  /** The current user's role within this branch (from BranchMembership.role) */
+  membership_role?: string;
 }
 
 export interface ChurchMembership {

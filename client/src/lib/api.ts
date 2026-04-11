@@ -121,15 +121,20 @@ export const createMemberApi = (data: {
 
 export const updateMemberApi = (id: string, data: Partial<{
   full_name: string;
-  role: string;
 }>) =>
   request<{ data: MemberDTO; status: number; message: string }>(`/user/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   });
 
-export const updateMemberBranchStatusApi = (id: string, is_active: boolean) =>
-  request<{ data: any; status: number; message: string }>(`/user/${id}/branch-status`, {
+export const updateMemberBranchRoleApi = (churchId: string, branchId: string, userId: string, role: string) =>
+  request<{ data: any; status: number; message: string }>(`/churches/${churchId}/branches/${branchId}/members/${userId}/role`, {
+    method: 'PUT',
+    body: JSON.stringify({ role }),
+  });
+
+export const updateMemberBranchStatusApi = (churchId: string, branchId: string, userId: string, is_active: boolean) =>
+  request<{ data: any; status: number; message: string }>(`/churches/${churchId}/branches/${branchId}/members/${userId}/status`, {
     method: 'PUT',
     body: JSON.stringify({ is_active }),
   });
@@ -362,9 +367,9 @@ export const fetchUsersDirectoryApi = (search?: string) => {
   return request<{ data: DirectoryUserDTO[]; status: number; message: string }>(`/user/directory${qs}`);
 };
 
-/** Add an existing user to the branch currently set via X-Branch-Id. */
-export const addUserToBranchApi = (userId: string, role?: string) =>
-  request<{ status: number; message: string }>(`/user/${userId}/branch`, {
+/** Add an existing user to a specific branch. */
+export const addUserToBranchApi = (churchId: string, branchId: string, userId: string, role?: string) =>
+  request<{ status: number; message: string }>(`/churches/${churchId}/branches/${branchId}/members/${userId}`, {
     method: 'POST',
     body: JSON.stringify({ role: role ?? 'member' }),
   });

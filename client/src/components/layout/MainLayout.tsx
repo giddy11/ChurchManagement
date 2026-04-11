@@ -191,7 +191,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             <MobileSidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
             <div>
               <h1 className="text-lg font-bold text-gray-900">
-              {currentChurch?.name || 'Church Management'}
+              {currentChurch?.denomination_name || 'Church Management'}
             </h1>
               {user && (
                 <p className="text-sm text-gray-600">

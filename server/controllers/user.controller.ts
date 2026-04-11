@@ -226,19 +226,11 @@ export class UserController {
 
   addToBranch = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const { id } = req.params;
-      const branchId = (req as any).branchId as string | null;
-      if (!branchId) {
-        res.status(400).json({
-          status: 400,
-          message: 'No branch selected. Set the X-Branch-Id header.',
-        });
-        return;
-      }
+      const { userId, branchId } = req.params;
       const { role = 'member' } = req.body as { role?: string };
       try {
         await this.userService.addUserToBranch(
-          id,
+          userId,
           branchId,
           role as 'member' | 'coordinator' | 'admin',
         );
@@ -575,20 +567,41 @@ export class UserController {
     }
   );
 
-  updateMemberBranchStatus = asyncHandler(
+  updateMemberBranchRole = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
-      const { id } = req.params;
-      const { is_active } = req.body;
-      const branchId = (req as AuthRequest).branchId;
+      const { userId, branchId } = req.params;
+      const { role } = req.body;
 
-      if (!branchId) {
-        res.status(400).json({
-          data: null,
-          status: 400,
-          message: "No branch context. Include the X-Branch-Id header.",
-        });
+      if (!role || typeof role !== "string") {
+        res.status(400).json({ data: null, status: 400, message: "role is required" });
         return;
       }
+
+      const membership = await this.userService.updateMemberBranchRole(userId, branchId, role);
+
+      if (!membership) {
+        res.status(404).json({ data: null, status: 404, message: "Membership not found" });
+        return;
+      }
+
+      const actorId = (req as AuthRequest).user?.id;
+      await logActivity(
+        actorId,
+        ActivityAction.UPDATE,
+        EntityType.USER,
+        userId,
+        `Member branch role changed to ${role} in branch ${branchId}`,
+        { userId, branchId, role }
+      );
+
+      res.status(200).json({ data: membership, status: 200, message: "Member branch role updated successfully" });
+    }
+  );
+
+  updateMemberBranchStatus = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { userId, branchId } = req.params;
+      const { is_active } = req.body;
 
       if (typeof is_active !== "boolean") {
         res.status(400).json({
@@ -599,7 +612,7 @@ export class UserController {
         return;
       }
 
-      const membership = await this.userService.updateMemberBranchStatus(id, branchId, is_active);
+      const membership = await this.userService.updateMemberBranchStatus(userId, branchId, is_active);
 
       if (!membership) {
         res.status(404).json({
@@ -615,9 +628,9 @@ export class UserController {
         actorId,
         ActivityAction.STATUS_CHANGE,
         EntityType.USER,
-        id,
+        userId,
         `Member branch access changed to ${is_active ? "active" : "inactive"} in branch ${branchId}`,
-        { userId: id, branchId, isActive: is_active }
+        { userId, branchId, isActive: is_active }
       );
 
       res.status(200).json({

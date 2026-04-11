@@ -34,7 +34,7 @@ function sectionFromPath(pathname: string): string {
 
 const MemberLayout: React.FC<MemberLayoutProps> = ({ children }) => {
   const { user } = useAuth();
-  const { currentChurch } = useChurch();
+  const { currentChurch, currentBranch } = useChurch();
   const { pathname } = useLocation();
 
   const activeSection = sectionFromPath(pathname);
@@ -70,8 +70,14 @@ const MemberLayout: React.FC<MemberLayoutProps> = ({ children }) => {
             <MobileMemberSidebar />
             <div>
               <h1 className="text-lg font-bold text-gray-900">
-                {currentChurch?.name || 'Church'}
+                {currentChurch?.denomination_name || 'Church'}
               </h1>
+              {currentBranch && (
+                <p className="text-xs text-gray-500 flex items-center gap-1">
+                  <span className="inline-block w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                  {currentBranch.name}
+                </p>
+              )}
               {user && (
                 <p className="text-sm text-gray-600">
                   {user.full_name} ({user.role?.name ?? user.role})

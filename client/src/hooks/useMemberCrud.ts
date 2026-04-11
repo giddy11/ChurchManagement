@@ -4,11 +4,13 @@ import {
   fetchMembersApi,
   createMemberApi,
   updateMemberApi,
+  updateMemberBranchRoleApi,
   updateMemberBranchStatusApi,
   deleteMembersApi,
   importMembersApi,
 } from '@/lib/api';
 import { toast } from 'sonner';
+import { useChurch } from '@/components/church/ChurchProvider';
 
 export type { MemberDTO };
 
@@ -20,6 +22,7 @@ export interface ImportMembersResult {
 }
 
 export function useMemberCrud() {
+  const { currentChurch, currentBranch } = useChurch();
   const [members, setMembers] = useState<MemberDTO[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -51,10 +54,16 @@ export function useMemberCrud() {
     }
   };
 
-  const update = async (id: string, data: Parameters<typeof updateMemberApi>[1]) => {
+  const update = async (id: string, data: Partial<{ full_name: string; role: string }>) => {
     setSaving(true);
     try {
-      await updateMemberApi(id, data);
+      const { role, ...userFields } = data;
+      const tasks: Promise<any>[] = [];
+      if (Object.keys(userFields).length > 0) tasks.push(updateMemberApi(id, userFields));
+      if (role && currentChurch && currentBranch) {
+        tasks.push(updateMemberBranchRoleApi(currentChurch.id, currentBranch.id, id, role));
+      }
+      await Promise.all(tasks);
       toast.success('Member updated successfully');
       await load();
       return true;
@@ -69,7 +78,8 @@ export function useMemberCrud() {
   const setBranchStatus = async (id: string, is_active: boolean) => {
     setSaving(true);
     try {
-      await updateMemberBranchStatusApi(id, is_active);
+      if (!currentChurch || !currentBranch) throw new Error('No branch selected');
+      await updateMemberBranchStatusApi(currentChurch.id, currentBranch.id, id, is_active);
       toast.success(is_active ? 'Member activated in this branch' : 'Member deactivated in this branch');
       await load();
       return true;

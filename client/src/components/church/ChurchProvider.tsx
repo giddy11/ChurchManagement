@@ -98,7 +98,14 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
 
     if (Array.isArray(memberships) && memberships.length > 0) {
       const list = memberships
-        .map((m) => m?.branch)
+        .map((m) => {
+          if (!m?.branch) return null;
+          return {
+            ...m.branch,
+            membership_is_active: (m as any).is_active !== false,
+            membership_role: (m as any).role ?? 'member',
+          } as Branch;
+        })
         .filter(Boolean) as Branch[];
       setMyBranches(list);
     } else if (denomBranches.length > 0) {
@@ -160,7 +167,14 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
           const savedBranch = savedBranchId
             ? churchBranches.find(b => b.id === savedBranchId)
             : null;
-          setCurrentBranch(savedBranch || null);
+          // Prefer the branch from myBranches (has membership metadata); fall back to
+          // the freshly-fetched one which now also carries membership fields from the server.
+          const knownBranch = myBranches.find(b => b.id === savedBranch?.id);
+          setCurrentBranch(
+            knownBranch
+              ? { ...savedBranch, ...knownBranch }
+              : savedBranch || null
+          );
         }
       })
       .catch(() => setBranches([]));
@@ -203,6 +217,10 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
 
   // Select a branch across churches: switches church, loads its branches, then selects the branch
   const selectBranchGlobal = async (branch: Branch) => {
+    if (branch.membership_is_active === false) {
+      // Caller should guard against this, but block here as a safety net
+      return;
+    }
     const targetChurch = userChurches.find(c => c.id === branch.denomination_id) || null;
     if (!targetChurch) return;
     setCurrentChurch(targetChurch);
@@ -218,10 +236,17 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
       const churchBranches = (res.data ?? []) as unknown as Branch[];
       setBranches(churchBranches);
       const match = churchBranches.find(b => b.id === branch.id) || null;
-      setCurrentBranch(match);
+      // Merge membership metadata (role, active flag) from the known branch into the
+      // freshly-fetched match, since the raw branch listing doesn't include those fields.
+      setCurrentBranch(match
+        ? { ...match, membership_role: branch.membership_role, membership_is_active: branch.membership_is_active }
+        : branch
+      );
     } catch {
+      // fetchBranches may 403 for non-admin users; use the known branch so the
+      // active-branch indicator still renders correctly.
       setBranches([]);
-      setCurrentBranch(null);
+      setCurrentBranch(branch);
     }
   };
 

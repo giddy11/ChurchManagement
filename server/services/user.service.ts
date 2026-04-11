@@ -188,9 +188,30 @@ export class UserService {
   async getUserChurches(userId: string): Promise<any[]> {
     const user = await this.userRepository.findOne({
       where: { id: userId },
-      relations: ["denominations", "denominations.branches"],
+      relations: [
+        "denominations",
+        "denominations.branches",
+        "branchMemberships",
+        "branchMemberships.branch",
+        "branchMemberships.branch.denomination",
+        "branchMemberships.branch.denomination.branches",
+      ],
     });
-    return user?.denominations ?? [];
+
+    // Admins / super admins: direct denomination membership
+    if (user?.denominations && user.denominations.length > 0) {
+      return user.denominations;
+    }
+
+    // Regular members: derive churches from their branch memberships
+    const churchMap = new Map<string, any>();
+    for (const membership of (user?.branchMemberships ?? [])) {
+      const branch = (membership as any).branch;
+      if (branch?.denomination) {
+        churchMap.set(branch.denomination.id, branch.denomination);
+      }
+    }
+    return Array.from(churchMap.values());
   }
 
   async updateUser(id: string, data: Partial<User>): Promise<User | null> {
@@ -400,6 +421,14 @@ export class UserService {
   }
 
   // ─── Branch helpers ─────────────────────────────────────────────────────
+  async updateMemberBranchRole(userId: string, branchId: string, role: string): Promise<any | null> {
+    const { BranchRole } = require('../models/church/branch-membership.model');
+    const membership = await this.membershipRepository.findOne({ where: { user_id: userId, branch_id: branchId } });
+    if (!membership) return null;
+    membership.role = BranchRole[role.toUpperCase()] ?? BranchRole.MEMBER;
+    return await this.membershipRepository.save(membership);
+  }
+
   async updateMemberBranchStatus(userId: string, branchId: string, is_active: boolean): Promise<any | null> {
     const membership = await this.membershipRepository.findOne({ where: { user_id: userId, branch_id: branchId } });
     if (!membership) return null;

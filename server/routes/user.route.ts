@@ -83,14 +83,6 @@ router.put(
   userController.updateSettings.bind(userController)
 );
 
-// Add an existing user to the currently-selected branch (read from X-Branch-Id)
-router.post(
-  "/:id/branch",
-  authMiddleware(new UserService()) as RequestHandler,
-  adminMiddleware,
-  userController.addToBranch.bind(userController)
-);
-
 router.get(
   "/:userId/permissions",
   authMiddleware(new UserService()) as RequestHandler,
@@ -130,13 +122,6 @@ router.put(
   authMiddleware(new UserService()) as RequestHandler,
   adminMiddleware,
   userController.updateUserPermissions.bind(userController)
-);
-
-router.put(
-  "/:id/branch-status",
-  authMiddleware(new UserService()) as RequestHandler,
-  adminMiddleware,
-  userController.updateMemberBranchStatus.bind(userController)
 );
 
 router.delete(

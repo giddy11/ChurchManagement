@@ -340,6 +340,8 @@ interface AddFromUsersDialogProps {
   onOpenChange: (open: boolean) => void;
   existingMemberIds: Set<string>;
   onAdded: () => void;
+  churchId: string;
+  branchId: string;
   branchName?: string;
   churchName?: string;
 }
@@ -349,6 +351,8 @@ const AddFromUsersDialog: React.FC<AddFromUsersDialogProps> = ({
   onOpenChange,
   existingMemberIds,
   onAdded,
+  churchId,
+  branchId,
   branchName,
   churchName,
 }) => {
@@ -403,7 +407,7 @@ const AddFromUsersDialog: React.FC<AddFromUsersDialogProps> = ({
     let failCount = 0;
     for (const userId of Array.from(selected)) {
       try {
-        await addUserToBranchApi(userId, role);
+        await addUserToBranchApi(churchId, branchId, userId, role);
         successCount++;
       } catch {
         failCount++;
@@ -613,7 +617,9 @@ const ChurchMemberManagement: React.FC = () => {
   const displayOrg = branchName ?? churchName ?? '';
 
   const adminCount = members.filter((m) => m.role === 'admin' || m.role === 'super_admin').length;
-  const activeCount = members.filter((m) => m.is_active !== false).length;
+  const activeCount = members.filter((m) => m.branch_is_active !== false).length;
+
+  console.log("admin count", adminCount, "active count", activeCount);
 
   if (!currentChurch) {
     return (
@@ -737,6 +743,8 @@ const ChurchMemberManagement: React.FC = () => {
         onOpenChange={setAddFromUsersOpen}
         existingMemberIds={new Set(members.map((m) => m.id))}
         onAdded={load}
+        churchId={currentChurch!.id}
+        branchId={currentBranch?.id ?? ''}
         branchName={branchName}
         churchName={churchName}
       />

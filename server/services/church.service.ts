@@ -89,10 +89,29 @@ export class ChurchService {
     return savedBranch;
   }
 
-  async findBranchesByDenomination(denomination_id: string): Promise<Branch[]> {
-    return this.branchRepo.find({
+  async findBranchesByDenomination(denomination_id: string, userId?: string): Promise<any[]> {
+    const branches = await this.branchRepo.find({
       where: { denomination_id },
       order: { created_at: "DESC" },
+    });
+
+    if (!userId) return branches;
+
+    // Attach the requesting user's membership metadata to each branch
+    const memberships = await this.membershipRepo.find({
+      where: { user_id: userId },
+    });
+    const membershipMap = new Map(
+      memberships.map((m) => [m.branch_id, m])
+    );
+
+    return branches.map((b) => {
+      const membership = membershipMap.get(b.id);
+      return {
+        ...b,
+        membership_role: membership?.role ?? null,
+        membership_is_active: membership ? membership.is_active : null,
+      };
     });
   }
 

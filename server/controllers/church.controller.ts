@@ -148,7 +148,8 @@ export const createBranch = asyncHandler(
 
 export const getBranches = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const branches = await churchService.findBranchesByDenomination(req.params.id);
+    const userId = (req as AuthRequest).user?.id;
+    const branches = await churchService.findBranchesByDenomination(req.params.id, userId);
     res.json({ data: branches, status: 200, message: "Branches fetched" });
   }
 );
