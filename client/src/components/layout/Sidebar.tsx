@@ -68,6 +68,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
 
   const canViewAnalytics = effectiveRole === 'super_admin' || effectiveRole === 'admin' || isBranchAdmin;
   const canManageUsers = effectiveRole === 'super_admin' || effectiveRole === 'admin' || isBranchAdmin;
+  const canViewChurchMembers = effectiveRole === 'super_admin' || effectiveRole === 'admin' || isBranchAdmin || isBranchCoordinator || branchRole === 'member';
   const isSuperAdmin = effectiveRole === 'super_admin';
   const isDenominationCreator = Boolean(
     user?.id && currentChurch?.admin_id && String(user.id) === String(currentChurch.admin_id)
@@ -90,7 +91,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeSection, onSectionChange }) => 
       id: 'church-members',
       label: 'Church Members',
       icon: UserCheck,
-      visible: canManageUsers
+      visible: canViewChurchMembers
+    },
+    {
+      id: 'directory',
+      label: 'Directory',
+      icon: Users,
+      visible: true
     },
     {
       id: 'groups',

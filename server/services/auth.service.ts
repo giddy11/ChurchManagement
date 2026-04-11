@@ -7,6 +7,7 @@ import * as speakeasy from "speakeasy";
 import { sendPasswordResetOtpEmail } from "../email/sendPasswordResetOtpEmail";
 import { TokenService } from "./token.service";
 import { GoogleAuthService, GoogleProfile } from "./google-auth.service";
+import CustomError from "../utils/customError";
 
 type UserResponse = Omit<
   User,
@@ -393,23 +394,85 @@ export class AuthService {
     await this.userRepository.save(user);
     return { success: true };
   }
+
+  private async verifyFirebasePassword(email: string, password: string): Promise<boolean> {
+    const apiKey = process.env.DOMAIN_FIREBASE_API_KEY;
+    if (!apiKey) {
+      throw new CustomError("Firebase API key is not configured", 500);
+    }
+
+    const resp = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          password,
+          returnSecureToken: false,
+        }),
+      }
+    );
+
+    if (resp.ok) return true;
+
+    let code = "";
+    try {
+      const body: any = await resp.json();
+      code = body?.error?.message || "";
+    } catch {
+      code = "";
+    }
+
+    if (
+      code.includes("INVALID_PASSWORD") ||
+      code.includes("INVALID_LOGIN_CREDENTIALS") ||
+      code.includes("EMAIL_NOT_FOUND")
+    ) {
+      return false;
+    }
+
+    throw new CustomError("Failed to verify old password with Firebase", 500);
+  }
+
   /**
    * Change password for authenticated user
    */
   async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<{ success: boolean }> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
-      throw new Error("User not found");
+      throw new CustomError("User not found", 404);
     }
-    const isValid = await user.validatePassword(oldPassword);
+
+    if (!user.email) {
+      throw new CustomError("User email is missing", 400);
+    }
+
+    const isValid = await this.verifyFirebasePassword(user.email, oldPassword);
     if (!isValid) {
-      throw new Error("Old password is incorrect");
+      throw new CustomError("Old password is incorrect", 401);
     }
+
     if (newPassword.length < 6) {
-      throw new Error("New password must be at least 6 characters long");
+      throw new CustomError("New password must be at least 6 characters long", 400);
     }
-    user.password_hash = await bcrypt.hash(newPassword, 10);
-    await this.userRepository.save(user);
+
+    try {
+      const firebaseUser = await firebaseAuth.getUserByEmail(user.email);
+      await firebaseAuth.updateUser(firebaseUser.uid, { password: newPassword });
+    } catch (err: any) {
+      if (err?.code === "auth/user-not-found") {
+        await firebaseAuth.createUser({
+          uid: user.id,
+          email: user.email,
+          password: newPassword,
+          displayName: user.full_name || undefined,
+        });
+      } else {
+        throw new CustomError(`Failed to update Firebase password: ${err?.message || "Unknown error"}`, 500);
+      }
+    }
+
     return { success: true };
   }
 }

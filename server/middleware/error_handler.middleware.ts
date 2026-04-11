@@ -6,9 +6,14 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ) => {
+  const status = (err as any).status && Number.isInteger((err as any).status)
+    ? (err as any).status
+    : 500;
+
   console.error('=== FULL ERROR DETAILS ===');
   console.error('Message:', err.message);
   console.error('Name:', err.name);
+  console.error('Status:', status);
   console.error('Code:', (err as any).code);
   console.error('Detail:', (err as any).detail);
   console.error('Request:', req.method, req.originalUrl);
@@ -16,7 +21,7 @@ export const errorHandler = (
   console.error('Stack:', err.stack);
   console.error('========================');
 
-  res.status(500).json({
+  res.status(status).json({
     error: err.message, // Always show for debugging
     name: err.name,
     code: (err as any).code,

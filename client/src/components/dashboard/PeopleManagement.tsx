@@ -10,6 +10,7 @@ import AddPersonDialog from './AddPersonDialog';
 import EditPersonDialog from './EditPersonDialog';
 import ImportPeopleDialog from './ImportPeopleDialog';
 import PeopleList from './PeopleList';
+import PersonDetailsDialog from './PersonDetailsDialog';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
 
 const PeopleManagement = () => {
@@ -19,6 +20,7 @@ const PeopleManagement = () => {
   const [editTarget, setEditTarget] = useState<Person | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Person | null>(null);
   const [convertTarget, setConvertTarget] = useState<Person | null>(null);
+  const [viewTarget, setViewTarget] = useState<Person | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -153,6 +155,7 @@ const PeopleManagement = () => {
         <CardContent className="overflow-y-auto">
           <PeopleList
             people={filteredPeople}
+            onView={setViewTarget}
             onEdit={setEditTarget}
             onDelete={setDeleteTarget}
             onConvert={setConvertTarget}
@@ -168,6 +171,7 @@ const PeopleManagement = () => {
        <AddPersonDialog open={addOpen} onOpenChange={setAddOpen} onSave={create} saving={saving} />
        <EditPersonDialog open={!!editTarget} onOpenChange={(o) => { if (!o) setEditTarget(null); }} person={editTarget} onSave={update} saving={saving} />
        <ImportPeopleDialog open={importOpen} onOpenChange={setImportOpen} onImport={importPeople} saving={saving} />
+      <PersonDetailsDialog open={!!viewTarget} onOpenChange={(o) => { if (!o) setViewTarget(null); }} person={viewTarget} />
 
       <ConfirmDialog
         open={!!deleteTarget}

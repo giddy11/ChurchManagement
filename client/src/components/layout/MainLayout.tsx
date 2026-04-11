@@ -9,6 +9,7 @@ import PeopleManagement from '../dashboard/PeopleManagement';
 import ChurchManagement from '../dashboard/ChurchManagement';
 import BranchManagement from '../dashboard/BranchManagement';
 import ChurchMemberManagement from '../dashboard/ChurchMemberManagement';
+import MemberDirectory from '../member/MemberDirectory';
 import MemberSettings from '../member/MemberSettings';
 
 interface MainLayoutProps {
@@ -39,6 +40,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         return <BranchManagement />;
       case 'church-members':
         return <ChurchMemberManagement />;
+      case 'directory':
+        return <MemberDirectory />;
       case 'groups':
         return (
           <div className="p-4 md:p-6">

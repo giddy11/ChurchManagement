@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 
 interface PeopleListProps {
   people: Person[];
+  onView: (person: Person) => void;
   onEdit: (person: Person) => void;
   onDelete: (person: Person) => void;
   onConvert: (person: Person) => void;
@@ -21,8 +22,7 @@ function fullName(p: Person) {
   return `${p.first_name} ${p.last_name}`;
 }
 
-const PeopleList: React.FC<PeopleListProps> = ({ people, onEdit, onDelete, onConvert, selectedIds, onToggleSelect, onToggleSelectAll, viewMode }) => {
-  console.log('Rendering PeopleList with people:', people);
+const PeopleList: React.FC<PeopleListProps> = ({ people, onView, onEdit, onDelete, onConvert, selectedIds, onToggleSelect, onToggleSelectAll, viewMode }) => {
   if (people.length === 0) {
     return <p className="p-4 text-center text-gray-500">No people found.</p>;
   }
@@ -54,6 +54,7 @@ const PeopleList: React.FC<PeopleListProps> = ({ people, onEdit, onDelete, onCon
             <MobileCard
               key={p.id}
               person={p}
+              onView={onView}
               onEdit={onEdit}
               onDelete={onDelete}
               onConvert={onConvert}
@@ -90,6 +91,7 @@ const PeopleList: React.FC<PeopleListProps> = ({ people, onEdit, onDelete, onCon
               <DesktopRow
                 key={p.id}
                 person={p}
+                onView={onView}
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onConvert={onConvert}
@@ -108,22 +110,26 @@ export default PeopleList;
 
 /* ─── Sub-components ──────────────────────────────────────────────────── */
 
-const MobileCard: React.FC<{ person: Person; onEdit: (p: Person) => void; onDelete: (p: Person) => void; onConvert: (p: Person) => void; selected: boolean; onToggleSelect: (id: string) => void }> = ({ person, onEdit, onDelete, onConvert, selected, onToggleSelect }) => (
-  <Card className={`p-4 space-y-3 transition-colors ${selected ? 'ring-2 ring-primary bg-primary/5' : ''}`}>
+const MobileCard: React.FC<{ person: Person; onView: (p: Person) => void; onEdit: (p: Person) => void; onDelete: (p: Person) => void; onConvert: (p: Person) => void; selected: boolean; onToggleSelect: (id: string) => void }> = ({ person, onView, onEdit, onDelete, onConvert, selected, onToggleSelect }) => (
+  <Card className={`p-4 space-y-3 transition-colors cursor-pointer ${selected ? 'ring-2 ring-primary bg-primary/5' : ''}`} onClick={() => onView(person)}>
     <div className="flex justify-between items-start">
       <div className="flex items-start gap-3">
-        <Checkbox
-          checked={selected}
-          onCheckedChange={() => onToggleSelect(person.id)}
-          aria-label={`Select ${person.first_name} ${person.last_name}`}
-          className="mt-0.5"
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <Checkbox
+            checked={selected}
+            onCheckedChange={() => onToggleSelect(person.id)}
+            aria-label={`Select ${person.first_name} ${person.last_name}`}
+            className="mt-0.5"
+          />
+        </div>
         <div>
           <h3 className="font-semibold">{fullName(person)}</h3>
           {person.converted_user_id && <Badge variant="secondary" className="text-xs mt-1">Member</Badge>}
         </div>
       </div>
-      <ActionButtons person={person} onEdit={onEdit} onDelete={onDelete} onConvert={onConvert} />
+      <div onClick={(e) => e.stopPropagation()}>
+        <ActionButtons person={person} onEdit={onEdit} onDelete={onDelete} onConvert={onConvert} />
+      </div>
     </div>
     <div className="space-y-2 text-sm text-gray-600">
       {person.email && <div className="flex items-center gap-2"><Mail className="h-3 w-3 text-gray-400" /><span>{person.email}</span></div>}
@@ -132,21 +138,27 @@ const MobileCard: React.FC<{ person: Person; onEdit: (p: Person) => void; onDele
   </Card>
 );
 
-const DesktopRow: React.FC<{ person: Person; onEdit: (p: Person) => void; onDelete: (p: Person) => void; onConvert: (p: Person) => void; selected: boolean; onToggleSelect: (id: string) => void }> = ({ person, onEdit, onDelete, onConvert, selected, onToggleSelect }) => (
-  <tr className={`border-b hover:bg-muted/50 ${selected ? 'bg-primary/5' : ''}`}>
+const DesktopRow: React.FC<{ person: Person; onView: (p: Person) => void; onEdit: (p: Person) => void; onDelete: (p: Person) => void; onConvert: (p: Person) => void; selected: boolean; onToggleSelect: (id: string) => void }> = ({ person, onView, onEdit, onDelete, onConvert, selected, onToggleSelect }) => (
+  <tr className={`border-b hover:bg-muted/50 cursor-pointer ${selected ? 'bg-primary/5' : ''}`} onClick={() => onView(person)}>
     <td className="p-4 w-10">
-      <Checkbox
-        checked={selected}
-        onCheckedChange={() => onToggleSelect(person.id)}
-        aria-label={`Select ${person.first_name} ${person.last_name}`}
-      />
+      <div onClick={(e) => e.stopPropagation()}>
+        <Checkbox
+          checked={selected}
+          onCheckedChange={() => onToggleSelect(person.id)}
+          aria-label={`Select ${person.first_name} ${person.last_name}`}
+        />
+      </div>
     </td>
     <td className="p-4 font-medium">{fullName(person)}</td>
     <td className="p-4">{person.email && <span className="flex items-center gap-2"><Mail className="h-3 w-3 text-gray-400" />{person.email}</span>}</td>
     <td className="p-4">{person.phone && <span className="flex items-center gap-2"><Phone className="h-3 w-3 text-gray-400" />{person.phone}</span>}</td>
     <td className="p-4 capitalize">{person.gender || '—'}</td>
     <td className="p-4">{person.converted_user_id ? <Badge variant="secondary">Member</Badge> : <Badge variant="outline">Person</Badge>}</td>
-    <td className="p-4 text-right"><ActionButtons person={person} onEdit={onEdit} onDelete={onDelete} onConvert={onConvert} /></td>
+    <td className="p-4 text-right">
+      <div onClick={(e) => e.stopPropagation()}>
+        <ActionButtons person={person} onEdit={onEdit} onDelete={onDelete} onConvert={onConvert} />
+      </div>
+    </td>
   </tr>
 );
 

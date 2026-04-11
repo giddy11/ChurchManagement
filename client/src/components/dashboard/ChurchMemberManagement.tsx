@@ -24,7 +24,6 @@ import {
   Mail,
   Phone,
   Loader2,
-  User,
   LayoutGrid,
   LayoutList,
   UsersRound,
@@ -38,6 +37,7 @@ import ConfirmDialog from '@/components/ui/confirm-dialog';
 import { fetchUsersDirectoryApi, addUserToBranchApi } from '@/lib/api';
 import type { DirectoryUserDTO } from '@/lib/api';
 import { toast } from 'sonner';
+import MemberDetailsDialog from '@/components/member/MemberDetailsDialog';
 
 // ── Export helpers ─────────────────────────────────────────────────────────
 function exportToCSV(members: MemberDTO[]) {
@@ -149,52 +149,6 @@ const EditMemberDialog: React.FC<EditMemberDialogProps> = ({ open, onOpenChange,
             Save Changes
           </Button>
         </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-// ── View Member Dialog ─────────────────────────────────────────────────────
-const ViewMemberDialog: React.FC<{ member: MemberDTO | null; onClose: () => void }> = ({ member, onClose }) => {
-  if (!member) return null;
-  const name = member.full_name || `${member.first_name ?? ''} ${member.last_name ?? ''}`.trim() || member.email;
-  const initials = name.slice(0, 2).toUpperCase();
-
-  return (
-    <Dialog open={!!member} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm bg-white">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <User className="h-4 w-4 text-blue-600" /> Member Details
-          </DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-              <span className="text-lg font-bold text-blue-700">{initials}</span>
-            </div>
-            <div>
-              <p className="font-semibold text-gray-900 text-base">{name}</p>
-              <Badge variant={member.role === 'admin' || member.role === 'super_admin' ? 'destructive' : 'secondary'} className="text-xs mt-1">
-                {member.branch_role || member.role}
-              </Badge>
-            </div>
-          </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center gap-2 text-gray-600">
-              <Mail className="h-4 w-4 flex-shrink-0" /><span>{member.email}</span>
-            </div>
-            {member.phone_number && (
-              <div className="flex items-center gap-2 text-gray-600">
-                <Phone className="h-4 w-4 flex-shrink-0" /><span>{member.phone_number}</span>
-              </div>
-            )}
-            <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${member.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-              {member.is_active !== false ? '● Active' : '○ Inactive'}
-            </span>
-          </div>
-        </div>
-        <DialogFooter><Button variant="outline" onClick={onClose}>Close</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -760,9 +714,10 @@ const ChurchMemberManagement: React.FC = () => {
         saving={saving}
       />
 
-      <ViewMemberDialog
+      <MemberDetailsDialog
+        open={!!viewTarget}
+        onOpenChange={(open) => { if (!open) setViewTarget(null); }}
         member={viewTarget}
-        onClose={() => setViewTarget(null)}
       />
 
       <ImportMembersDialog

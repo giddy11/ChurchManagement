@@ -37,6 +37,7 @@ function AppRoutes() {
             <Route path="/forgot-password" element={<Index />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/people" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/directory" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/groups" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/events" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/followups" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -51,7 +52,7 @@ function AppRoutes() {
             <Route path="/share-app" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/churches" element={<ProtectedRoute allowedRoles={['admin','super_admin']}><Dashboard /></ProtectedRoute>} />
             <Route path="/branches" element={<ProtectedRoute allowedRoles={['admin','super_admin']}><Dashboard /></ProtectedRoute>} />
-            <Route path="/church-members" element={<ProtectedRoute allowedRoles={['admin','super_admin']} allowedBranchRoles={['admin']}><Dashboard /></ProtectedRoute>} />
+            <Route path="/church-members" element={<ProtectedRoute allowedRoles={['admin','super_admin']} allowedBranchRoles={['admin','coordinator','member']}><Dashboard /></ProtectedRoute>} />
             <Route path="/add-contribution" element={<ProtectedRoute allowedRoles={['admin','super_admin']}><Dashboard /></ProtectedRoute>} />
             <Route path="/all-contributions" element={<ProtectedRoute allowedRoles={['admin','super_admin']}><Dashboard /></ProtectedRoute>} />
             <Route path="/batches" element={<ProtectedRoute allowedRoles={['admin','super_admin']}><Dashboard /></ProtectedRoute>} />

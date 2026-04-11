@@ -1,16 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Search, Mail, Phone, Shield, Loader2 } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import { useMemberCrud } from '@/hooks/useMemberCrud';
 import { useChurch } from '@/components/church/ChurchProvider';
 import type { MemberDTO } from '@/lib/api';
+import MemberDetailsDialog from './MemberDetailsDialog';
 
 const MemberDirectory: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewTarget, setViewTarget] = useState<MemberDTO | null>(null);
   const { currentBranch } = useChurch();
   const { members, loading, load } = useMemberCrud();
 
@@ -116,9 +117,7 @@ const MemberDirectory: React.FC = () => {
           const displayName = getDisplayName(member);
           const displayRole = member.branch_role || member.role || 'member';
           return (
-          <Dialog key={member.id}>
-            <DialogTrigger asChild>
-              <Card className="cursor-pointer hover:shadow-md transition-shadow">
+              <Card key={member.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setViewTarget(member)}>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-12 w-12">
@@ -137,58 +136,6 @@ const MemberDirectory: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Member Details</DialogTitle>
-                <DialogDescription>
-                  Contact information for {displayName}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-16 w-16">
-                    <AvatarImage src={getProfileImage(member)} />
-                    <AvatarFallback className="text-lg">{getInitials(displayName)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="text-lg font-semibold">{displayName}</h3>
-                    <Badge className={`text-xs ${getRoleColor(displayRole)}`}>
-                      {displayRole}
-                    </Badge>
-                  </div>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <Mail className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium">Email</p>
-                      <p className="text-sm text-gray-600">{member.email}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <Phone className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium">Phone</p>
-                      <p className="text-sm text-gray-600">{member.phone_number || 'Not provided'}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <Shield className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium">Branch Status</p>
-                      <p className="text-sm text-gray-600">
-                        {member.branch_is_active === false ? 'Inactive' : 'Active'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
         );})}
       </div>
       )}
@@ -200,6 +147,12 @@ const MemberDirectory: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      <MemberDetailsDialog
+        open={!!viewTarget}
+        onOpenChange={(open) => { if (!open) setViewTarget(null); }}
+        member={viewTarget}
+      />
     </div>
   );
 };

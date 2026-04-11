@@ -604,7 +604,7 @@ const MemberProfile: React.FC<{ embedded?: boolean }> = ({ embedded = false }) =
                     {savingPassword && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Update Password
                   </Button>
-                  <Button type="button" variant="outline" onClick={() => { setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); }}>Cancel</Button>
+                  {/* <Button type="button" variant="outline" onClick={() => { setCurrentPassword(''); setNewPassword(''); setConfirmPassword(''); }}>Cancel</Button> */}
                 </div>
               </form>
             </CardContent>
