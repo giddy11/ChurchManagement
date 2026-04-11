@@ -166,6 +166,13 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
       .catch(() => setBranches([]));
   }, [userChurches]);
 
+  /** Invalidate every query that is scoped to a branch (i.e. everything except auth/profile). */
+  const invalidateBranchQueries = () => {
+    queryClient.invalidateQueries({
+      predicate: (query) => query.queryKey[0] !== 'auth',
+    });
+  };
+
   const selectChurch = (churchId: string) => {
     const church = userChurches.find(c => c.id === churchId);
     if (church) {
@@ -173,6 +180,8 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
       localStorage.setItem(SELECTED_CHURCH_KEY, churchId);
       setCurrentBranch(null);
       localStorage.removeItem(SELECTED_BRANCH_KEY);
+      // Flush stale data from old church/branch before new requests go out
+      invalidateBranchQueries();
       fetchBranches(churchId)
         .then((res) => setBranches((res.data ?? []) as unknown as Branch[]))
         .catch(() => setBranches([]));
@@ -184,6 +193,8 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
       const branch = branches.find(b => b.id === branchId);
       setCurrentBranch(branch || null);
       localStorage.setItem(SELECTED_BRANCH_KEY, branchId);
+      // Flush stale data so pages re-fetch with the new X-Branch-Id header
+      invalidateBranchQueries();
     } else {
       setCurrentBranch(null);
       localStorage.removeItem(SELECTED_BRANCH_KEY);
@@ -199,6 +210,9 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
     // Pre-mark desired branch so selection persists after fetch
     localStorage.setItem(SELECTED_BRANCH_KEY, branch.id);
     setCurrentBranch(null);
+    // Flush stale data — X-Branch-Id in localStorage is now the new branch,
+    // so any re-fetches triggered below will automatically use it
+    invalidateBranchQueries();
     try {
       const res = await fetchBranches(targetChurch.id);
       const churchBranches = (res.data ?? []) as unknown as Branch[];
@@ -217,9 +231,19 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
     // any newly created/deleted branches without requiring a page refresh.
     queryClient.invalidateQueries({ queryKey: ['auth', 'profile'] });
     // Re-fetch branches for the current church to keep the branch lookup table current.
+    // Also eagerly merge any newly returned branches into myBranches so ChurchSelector
+    // shows them immediately, without waiting for the async profile re-fetch to complete.
     if (currentChurch) {
       fetchBranches(currentChurch.id)
-        .then((res) => setBranches((res.data ?? []) as unknown as Branch[]))
+        .then((res) => {
+          const freshBranches = (res.data ?? []) as unknown as Branch[];
+          setBranches(freshBranches);
+          setMyBranches((prev) => {
+            const missing = freshBranches.filter((b) => !prev.some((m) => m.id === b.id));
+            if (missing.length === 0) return prev;
+            return [...prev, ...missing];
+          });
+        })
         .catch(() => {});
     }
   };

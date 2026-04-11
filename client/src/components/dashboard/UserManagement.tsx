@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Users, Plus, Trash2, Crown, Shield, User, UserCheck } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { useChurch } from '@/components/church/ChurchProvider';
 import { RegisterForm } from '@/components/auth/RegisterForm';
 import { fetchUsers, deleteUserById } from '@/lib/api';
 
@@ -20,6 +21,7 @@ type UserType = {
 
 export const UserManagement: React.FC = () => {
   const { user } = useAuth();
+  const { currentBranch } = useChurch();
   const [users, setUsers] = useState([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [message, setMessage] = useState('');
@@ -29,7 +31,7 @@ export const UserManagement: React.FC = () => {
     if (user) {
       loadUsers();
     }
-  }, [user]);
+  }, [user, currentBranch?.id]);
 
   const loadUsers = async () => {
     try {

@@ -9,12 +9,18 @@ import {
   convertPersonApi,
 } from '@/lib/api';
 import { toast } from 'sonner';
+import { useChurch } from '@/components/church/ChurchProvider';
 
 export function usePeopleCrud() {
+  const { currentBranch } = useChurch();
   const [people, setPeople] = useState<Person[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // currentBranch?.id in deps ensures load() gets a new reference whenever the
+  // active branch changes, which triggers any useEffect([load]) in consumers to
+  // re-fire and fetch data for the new branch (authFetch reads X-Branch-Id from
+  // localStorage at call time, so the correct branch is always used).
   const load = useCallback(async (search?: string) => {
     setLoading(true);
     try {
@@ -26,7 +32,7 @@ export function usePeopleCrud() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentBranch?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const create = async (data: PersonCreateDTO) => {
     setSaving(true);
