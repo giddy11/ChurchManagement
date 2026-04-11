@@ -9,6 +9,7 @@ import {
   getBranches,
   updateBranch,
   deleteBranch,
+  removeBranchMembers,
 } from "../controllers/church.controller";
 import { UserController } from "../controllers/user.controller";
 import { authMiddleware, adminMiddleware } from "../middleware/auth.middleware";
@@ -36,5 +37,6 @@ router.delete("/:id/branches/:branchId", auth, adminMiddleware, deleteBranch);
 router.post("/:churchId/branches/:branchId/members/:userId", auth, adminMiddleware, userController.addToBranch.bind(userController));
 router.put("/:churchId/branches/:branchId/members/:userId/role", auth, adminMiddleware, userController.updateMemberBranchRole.bind(userController));
 router.put("/:churchId/branches/:branchId/members/:userId/status", auth, adminMiddleware, userController.updateMemberBranchStatus.bind(userController));
+router.delete("/:churchId/branches/:branchId/members", auth, adminMiddleware, removeBranchMembers);
 
 export default router;

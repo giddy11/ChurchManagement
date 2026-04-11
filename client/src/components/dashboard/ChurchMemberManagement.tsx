@@ -83,7 +83,7 @@ const EditMemberDialog: React.FC<EditMemberDialogProps> = ({ open, onOpenChange,
   useEffect(() => {
     if (member) {
       setFullName(member.full_name || `${member.first_name ?? ''} ${member.last_name ?? ''}`.trim());
-      setRole(member.role || 'member');
+      setRole(member.branch_role || member.role || 'member');
       setIsActive(member.branch_is_active !== false);
     }
   }, [member]);
@@ -110,10 +110,10 @@ const EditMemberDialog: React.FC<EditMemberDialogProps> = ({ open, onOpenChange,
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
-          <div className="space-y-1.5">
+          {/* <div className="space-y-1.5">
             <Label>Full Name</Label>
             <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
-          </div>
+          </div> */}
           <div className="space-y-1.5">
             <Label>Role</Label>
             <div className="grid grid-cols-3 gap-2">
@@ -176,7 +176,7 @@ const ViewMemberDialog: React.FC<{ member: MemberDTO | null; onClose: () => void
             <div>
               <p className="font-semibold text-gray-900 text-base">{name}</p>
               <Badge variant={member.role === 'admin' || member.role === 'super_admin' ? 'destructive' : 'secondary'} className="text-xs mt-1">
-                {member.role}
+                {member.branch_role || member.role}
               </Badge>
             </div>
           </div>
@@ -211,6 +211,7 @@ const MemberCard: React.FC<{
 }> = ({ member, selected, onToggle, onView, onEdit, onDelete }) => {
   const name = member.full_name || `${member.first_name ?? ''} ${member.last_name ?? ''}`.trim() || member.email;
   const isAdmin = member.role === 'admin' || member.role === 'super_admin';
+  const displayRole = member.branch_role || member.role;
 
   return (
     <Card className={`p-4 space-y-3 transition-colors ${selected ? 'ring-2 ring-primary bg-primary/5' : ''}`}>
@@ -219,7 +220,7 @@ const MemberCard: React.FC<{
           <Checkbox checked={selected} onCheckedChange={onToggle} className="mt-0.5" onClick={(e) => e.stopPropagation()} />
           <div>
             <h3 className="font-semibold cursor-pointer hover:underline" onClick={onView}>{name}</h3>
-            <Badge variant={isAdmin ? 'destructive' : 'secondary'} className="text-xs mt-1">{member.role}</Badge>
+            <Badge variant={isAdmin ? 'destructive' : 'secondary'} className="text-xs mt-1">{displayRole}</Badge>
             {member.branch_is_active === false && <Badge variant="outline" className="text-xs mt-1 ml-1 text-gray-400">inactive</Badge>}
           </div>
         </div>
@@ -308,6 +309,7 @@ const MemberList: React.FC<MemberListProps> = ({ members, selectedIds, onToggleS
             {members.map((m) => {
               const name = m.full_name || `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim() || m.email;
               const isAdmin = m.role === 'admin' || m.role === 'super_admin';
+              const displayRole = m.branch_role || m.role;
               return (
                 <tr key={m.id} className={`border-b hover:bg-muted/50 ${selectedIds.has(m.id) ? 'bg-primary/5' : ''}`}>
                   <td className="p-4 w-10">
@@ -316,7 +318,7 @@ const MemberList: React.FC<MemberListProps> = ({ members, selectedIds, onToggleS
                   <td className="p-4 font-medium cursor-pointer hover:underline" onClick={() => onView(m)}>{name}</td>
                   <td className="p-4">{m.email && <span className="flex items-center gap-2"><Mail className="h-3 w-3 text-gray-400" />{m.email}</span>}</td>
                   <td className="p-4">{m.phone_number && <span className="flex items-center gap-2"><Phone className="h-3 w-3 text-gray-400" />{m.phone_number}</span>}</td>
-                  <td className="p-4"><Badge variant={isAdmin ? 'destructive' : 'secondary'}>{m.role}</Badge></td>
+                  <td className="p-4"><Badge variant={isAdmin ? 'destructive' : 'secondary'}>{displayRole}</Badge></td>
                   <td className="p-4">{m.branch_is_active !== false ? <Badge variant="secondary">Active</Badge> : <Badge variant="outline" className="text-gray-400">Inactive</Badge>}</td>
                   <td className="p-4 text-right">
                     <div className="flex gap-1 justify-end">

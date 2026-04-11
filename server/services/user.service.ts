@@ -146,10 +146,11 @@ export class UserService {
       .orderBy('user.createdAt', 'DESC')
       .getMany();
 
-    // Attach branch-level active flag from the membership row
+    // Attach branch-level active flag and role from the membership row
     return users.map((u) => ({
       ...classToPlain(u),
       branch_is_active: (u as any).branchMemberships?.[0]?.is_active ?? true,
+      branch_role: (u as any).branchMemberships?.[0]?.role ?? null,
     }));
   }
 

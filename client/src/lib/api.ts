@@ -97,6 +97,8 @@ export interface MemberDTO {
   last_name?: string;
   phone_number?: string;
   role: string;
+  /** Role within the current branch (from BranchMembership.role) */
+  branch_role?: string;
   is_active?: boolean;
   /** Active flag scoped to the current branch (from BranchMembership) */
   branch_is_active?: boolean;
@@ -139,8 +141,8 @@ export const updateMemberBranchStatusApi = (churchId: string, branchId: string, 
     body: JSON.stringify({ is_active }),
   });
 
-export const deleteMembersApi = (ids: string[]) =>
-  request<{ data: { deleted: number }; status: number; message: string }>('/user/bulk', {
+export const deleteMembersApi = (churchId: string, branchId: string, ids: string[]) =>
+  request<{ data: { removed: number }; status: number; message: string }>(`/churches/${churchId}/branches/${branchId}/members`, {
     method: 'DELETE',
     body: JSON.stringify({ ids }),
   });

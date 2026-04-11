@@ -94,7 +94,8 @@ export function useMemberCrud() {
   const remove = async (id: string) => {
     setSaving(true);
     try {
-      await deleteMembersApi([id]);
+      if (!currentChurch || !currentBranch) throw new Error('No branch selected');
+      await deleteMembersApi(currentChurch.id, currentBranch.id, [id]);
       toast.success('Member removed');
       await load();
       return true;
@@ -109,7 +110,8 @@ export function useMemberCrud() {
   const removeMany = async (ids: string[]) => {
     setSaving(true);
     try {
-      await deleteMembersApi(ids);
+      if (!currentChurch || !currentBranch) throw new Error('No branch selected');
+      await deleteMembersApi(currentChurch.id, currentBranch.id, ids);
       toast.success(`${ids.length} member(s) removed`);
       await load();
       return true;

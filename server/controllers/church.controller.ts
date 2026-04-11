@@ -207,3 +207,22 @@ export const deleteBranch = asyncHandler(
   }
 );
 
+export const removeBranchMembers = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const { branchId } = req.params;
+    const { ids } = req.body as { ids?: string[] };
+    if (!Array.isArray(ids) || ids.length === 0) {
+      res.status(400).json({ status: 400, message: 'ids array is required' });
+      return;
+    }
+    const userId = (req as AuthRequest).user?.id;
+    const result = await churchService.removeBranchMembers(branchId, ids);
+    logActivity(
+      userId, ActivityAction.DELETE, EntityType.USER, ids[0],
+      `Removed ${result.removed} member(s) from branch`,
+      { branchId, ids, removed: result.removed }
+    );
+    res.status(200).json({ data: result, status: 200, message: `${result.removed} member(s) removed from branch` });
+  }
+);
+

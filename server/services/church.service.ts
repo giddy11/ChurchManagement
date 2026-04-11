@@ -115,6 +115,18 @@ export class ChurchService {
     });
   }
 
+  async removeBranchMembers(branchId: string, userIds: string[]): Promise<{ removed: number; notFound: string[] }> {
+    const notFound: string[] = [];
+    let removed = 0;
+    for (const userId of userIds) {
+      const membership = await this.membershipRepo.findOne({ where: { user_id: userId, branch_id: branchId } });
+      if (!membership) { notFound.push(userId); continue; }
+      await this.membershipRepo.remove(membership);
+      removed++;
+    }
+    return { removed, notFound };
+  }
+
   async findBranchById(id: string): Promise<Branch | null> {
     return this.branchRepo.findOne({
       where: { id },
