@@ -574,4 +574,57 @@ export class UserController {
       });
     }
   );
+
+  updateMemberBranchStatus = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { id } = req.params;
+      const { is_active } = req.body;
+      const branchId = (req as AuthRequest).branchId;
+
+      if (!branchId) {
+        res.status(400).json({
+          data: null,
+          status: 400,
+          message: "No branch context. Include the X-Branch-Id header.",
+        });
+        return;
+      }
+
+      if (typeof is_active !== "boolean") {
+        res.status(400).json({
+          data: null,
+          status: 400,
+          message: "is_active must be a boolean",
+        });
+        return;
+      }
+
+      const membership = await this.userService.updateMemberBranchStatus(id, branchId, is_active);
+
+      if (!membership) {
+        res.status(404).json({
+          data: null,
+          status: 404,
+          message: "Membership not found",
+        });
+        return;
+      }
+
+      const actorId = (req as AuthRequest).user?.id;
+      await logActivity(
+        actorId,
+        ActivityAction.STATUS_CHANGE,
+        EntityType.USER,
+        id,
+        `Member branch access changed to ${is_active ? "active" : "inactive"} in branch ${branchId}`,
+        { userId: id, branchId, isActive: is_active }
+      );
+
+      res.status(200).json({
+        data: membership,
+        status: 200,
+        message: "Member branch status updated successfully",
+      });
+    }
+  );
 }

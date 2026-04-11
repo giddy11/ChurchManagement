@@ -132,19 +132,25 @@ export class UserService {
     };
   }
 
-  async getAllUsers(branchId?: string): Promise<User[]> {
+  async getAllUsers(branchId?: string): Promise<any[]> {
     if (!branchId) {
       return this.userRepository.find({
         relations: ["groups", "department"],
         order: { createdAt: "DESC" },
       });
     }
-    return this.userRepository.createQueryBuilder('user')
+    const users = await this.userRepository.createQueryBuilder('user')
       .leftJoinAndSelect('user.groups', 'groups')
       .leftJoinAndSelect('user.department', 'department')
-      .innerJoin('user.branchMemberships', 'bm', 'bm.branch_id = :branchId', { branchId })
+      .innerJoinAndSelect('user.branchMemberships', 'bm', 'bm.branch_id = :branchId', { branchId })
       .orderBy('user.createdAt', 'DESC')
       .getMany();
+
+    // Attach branch-level active flag from the membership row
+    return users.map((u) => ({
+      ...classToPlain(u),
+      branch_is_active: (u as any).branchMemberships?.[0]?.is_active ?? true,
+    }));
   }
 
   async getUsersByRole(roleName: string, branchId?: string): Promise<User[]> {
@@ -394,6 +400,13 @@ export class UserService {
   }
 
   // ─── Branch helpers ─────────────────────────────────────────────────────
+  async updateMemberBranchStatus(userId: string, branchId: string, is_active: boolean): Promise<any | null> {
+    const membership = await this.membershipRepository.findOne({ where: { user_id: userId, branch_id: branchId } });
+    if (!membership) return null;
+    membership.is_active = is_active;
+    return await this.membershipRepository.save(membership);
+  }
+
   async addUserToBranch(userId: string, branchId: string, role: 'member' | 'coordinator' | 'admin' = 'member'): Promise<void> {
     const existing = await this.membershipRepository.findOne({ where: { user_id: userId, branch_id: branchId } });
     if (existing) return;

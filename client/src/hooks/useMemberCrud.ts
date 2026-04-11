@@ -4,6 +4,7 @@ import {
   fetchMembersApi,
   createMemberApi,
   updateMemberApi,
+  updateMemberBranchStatusApi,
   deleteMembersApi,
   importMembersApi,
 } from '@/lib/api';
@@ -59,6 +60,21 @@ export function useMemberCrud() {
       return true;
     } catch (err: any) {
       toast.error(err.message || 'Failed to update member');
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const setBranchStatus = async (id: string, is_active: boolean) => {
+    setSaving(true);
+    try {
+      await updateMemberBranchStatusApi(id, is_active);
+      toast.success(is_active ? 'Member activated in this branch' : 'Member deactivated in this branch');
+      await load();
+      return true;
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update member status');
       return false;
     } finally {
       setSaving(false);
@@ -124,5 +140,5 @@ export function useMemberCrud() {
     }
   };
 
-  return { members, loading, saving, load, create, update, remove, removeMany, importMembers };
+  return { members, loading, saving, load, create, update, setBranchStatus, remove, removeMany, importMembers };
 }

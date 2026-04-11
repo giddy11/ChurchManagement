@@ -43,6 +43,9 @@ export class BranchMembership {
   })
   role: BranchRole;
 
+  @Column({ default: true })
+  is_active: boolean;
+
   @ManyToOne("User", "branchMemberships", { onDelete: "CASCADE" })
   @JoinColumn({ name: "user_id" })
   user: any;

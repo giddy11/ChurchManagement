@@ -54,7 +54,7 @@ function exportToCSV(members: MemberDTO[]) {
     }
     return escape(v);
   };
-  const cols = ['full_name', 'email', 'phone_number', 'role', 'is_active'];
+  const cols = ['full_name', 'email', 'phone_number', 'role', 'branch_is_active'];
   const header = cols.join(',');
   const rows = members.map((m) => cols.map((c) => format(c, (m as any)[c])).join(','));
   const csv = [header, ...rows].join('\n');
@@ -70,11 +70,12 @@ interface EditMemberDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   member: MemberDTO | null;
-  onSave: (id: string, data: { full_name?: string; role?: string; is_active?: boolean }) => Promise<boolean>;
+  onSave: (id: string, data: { full_name?: string; role?: string }) => Promise<boolean>;
+  onToggleBranchActive: (id: string, is_active: boolean) => Promise<boolean>;
   saving?: boolean;
 }
 
-const EditMemberDialog: React.FC<EditMemberDialogProps> = ({ open, onOpenChange, member, onSave, saving }) => {
+const EditMemberDialog: React.FC<EditMemberDialogProps> = ({ open, onOpenChange, member, onSave, onToggleBranchActive, saving }) => {
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState('member');
   const [isActive, setIsActive] = useState(true);
@@ -83,14 +84,21 @@ const EditMemberDialog: React.FC<EditMemberDialogProps> = ({ open, onOpenChange,
     if (member) {
       setFullName(member.full_name || `${member.first_name ?? ''} ${member.last_name ?? ''}`.trim());
       setRole(member.role || 'member');
-      setIsActive(member.is_active !== false);
+      setIsActive(member.branch_is_active !== false);
     }
   }, [member]);
 
   const handleSave = async () => {
     if (!member) return;
-    const ok = await onSave(member.id, { full_name: fullName, role, is_active: isActive });
-    if (ok) onOpenChange(false);
+    const tasks: Promise<boolean>[] = [
+      onSave(member.id, { full_name: fullName, role }),
+    ];
+    // Only update branch status if it actually changed
+    if (isActive !== (member.branch_is_active !== false)) {
+      tasks.push(onToggleBranchActive(member.id, isActive));
+    }
+    const results = await Promise.all(tasks);
+    if (results.every(Boolean)) onOpenChange(false);
   };
 
   return (
@@ -212,7 +220,7 @@ const MemberCard: React.FC<{
           <div>
             <h3 className="font-semibold cursor-pointer hover:underline" onClick={onView}>{name}</h3>
             <Badge variant={isAdmin ? 'destructive' : 'secondary'} className="text-xs mt-1">{member.role}</Badge>
-            {member.is_active === false && <Badge variant="outline" className="text-xs mt-1 ml-1 text-gray-400">inactive</Badge>}
+            {member.branch_is_active === false && <Badge variant="outline" className="text-xs mt-1 ml-1 text-gray-400">inactive</Badge>}
           </div>
         </div>
         <div className="flex gap-1">
@@ -309,7 +317,7 @@ const MemberList: React.FC<MemberListProps> = ({ members, selectedIds, onToggleS
                   <td className="p-4">{m.email && <span className="flex items-center gap-2"><Mail className="h-3 w-3 text-gray-400" />{m.email}</span>}</td>
                   <td className="p-4">{m.phone_number && <span className="flex items-center gap-2"><Phone className="h-3 w-3 text-gray-400" />{m.phone_number}</span>}</td>
                   <td className="p-4"><Badge variant={isAdmin ? 'destructive' : 'secondary'}>{m.role}</Badge></td>
-                  <td className="p-4">{m.is_active !== false ? <Badge variant="secondary">Active</Badge> : <Badge variant="outline" className="text-gray-400">Inactive</Badge>}</td>
+                  <td className="p-4">{m.branch_is_active !== false ? <Badge variant="secondary">Active</Badge> : <Badge variant="outline" className="text-gray-400">Inactive</Badge>}</td>
                   <td className="p-4 text-right">
                     <div className="flex gap-1 justify-end">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(m)}><Edit className="h-4 w-4" /></Button>
@@ -558,7 +566,7 @@ const AddFromUsersDialog: React.FC<AddFromUsersDialogProps> = ({
 // ── Main Component ─────────────────────────────────────────────────────────
 const ChurchMemberManagement: React.FC = () => {
   const { currentChurch, currentBranch, effectiveRole } = useChurch();
-  const { members, loading, saving, load, create, update, remove, removeMany, importMembers } = useMemberCrud();
+  const { members, loading, saving, load, create, update, setBranchStatus, remove, removeMany, importMembers } = useMemberCrud();
 
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
@@ -738,6 +746,7 @@ const ChurchMemberManagement: React.FC = () => {
         onOpenChange={(o) => { if (!o) setEditTarget(null); }}
         member={editTarget}
         onSave={update}
+        onToggleBranchActive={setBranchStatus}
         saving={saving}
       />
 

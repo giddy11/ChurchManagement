@@ -90,6 +90,10 @@ export const authMiddleware = (userService: UserService) => {
                             res.status(403).json({ statusCode: 403, message: 'You are not a member of the selected branch' });
                             return;
                         }
+                        if (!membership.is_active) {
+                            res.status(403).json({ statusCode: 403, message: 'Your access to this branch has been deactivated. Please contact an administrator.' });
+                            return;
+                        }
                         req.branchId = requestedBranchId;
                     } catch (e) {
                         if (process.env.NODE_ENV !== 'production') {

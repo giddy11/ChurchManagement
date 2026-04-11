@@ -98,6 +98,8 @@ export interface MemberDTO {
   phone_number?: string;
   role: string;
   is_active?: boolean;
+  /** Active flag scoped to the current branch (from BranchMembership) */
+  branch_is_active?: boolean;
 }
 
 export const fetchMembersApi = () =>
@@ -120,11 +122,16 @@ export const createMemberApi = (data: {
 export const updateMemberApi = (id: string, data: Partial<{
   full_name: string;
   role: string;
-  is_active: boolean;
 }>) =>
   request<{ data: MemberDTO; status: number; message: string }>(`/user/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
+  });
+
+export const updateMemberBranchStatusApi = (id: string, is_active: boolean) =>
+  request<{ data: any; status: number; message: string }>(`/user/${id}/branch-status`, {
+    method: 'PUT',
+    body: JSON.stringify({ is_active }),
   });
 
 export const deleteMembersApi = (ids: string[]) =>

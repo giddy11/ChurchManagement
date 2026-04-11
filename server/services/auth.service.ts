@@ -375,7 +375,19 @@ export class AuthService {
     if (newPassword.length < 6) {
       throw new Error("Password must be at least 6 characters long");
     }
-    user.password_hash = await bcrypt.hash(newPassword, 10);
+    // Update (or create) the password in Firebase so the Firebase login path stays in sync
+    try {
+      const firebaseUser = await firebaseAuth.getUserByEmail(email);
+      await firebaseAuth.updateUser(firebaseUser.uid, { password: newPassword });
+    } catch (err: any) {
+      if (err.code === "auth/user-not-found") {
+        // User exists in DB but has no Firebase account — create one so Firebase login works
+        await firebaseAuth.createUser({ email, password: newPassword });
+      } else {
+        throw err;
+      }
+    }
+
     user.otp_hash = "";
     user.otp_secret = "";
     await this.userRepository.save(user);

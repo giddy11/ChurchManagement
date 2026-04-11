@@ -132,6 +132,13 @@ router.put(
   userController.updateUserPermissions.bind(userController)
 );
 
+router.put(
+  "/:id/branch-status",
+  authMiddleware(new UserService()) as RequestHandler,
+  adminMiddleware,
+  userController.updateMemberBranchStatus.bind(userController)
+);
+
 router.delete(
   "/bulk",
   authMiddleware(new UserService()) as RequestHandler,
