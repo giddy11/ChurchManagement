@@ -10,8 +10,8 @@ import AddPersonDialog from './AddPersonDialog';
 import EditPersonDialog from './EditPersonDialog';
 import ImportPeopleDialog from './ImportPeopleDialog';
 import PeopleList from './PeopleList';
-import PersonDetailsDialog from './PersonDetailsDialog';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
+import PersonDetailsDialog from './PersonDetailsDialog';
 
 const PeopleManagement = () => {
   const { people, loading, saving, load, create, update, remove, removeMany, importPeople, convert } = usePeopleCrud();

@@ -6,6 +6,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from '@/components/auth/AuthProvider';
 import { SocketProvider } from '@/components/auth/SocketProvider';
 import { ChurchProvider } from '@/components/church/ChurchProvider';
+import { ReloadPrompt } from '@/components/pwa/ReloadPrompt';
 import Index from './pages/Index';
 import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
@@ -86,6 +87,7 @@ const App = () => (
       <TooltipProvider>
         <AuthProvider>
           <AppRoutes />
+          <ReloadPrompt />
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>

@@ -12,6 +12,11 @@ export interface AuthUser {
   id: string;
   email: string;
   full_name: string;
+  first_name?: string;
+  last_name?: string;
+  phone_number?: string;
+  createdAt?: string;
+  created_at?: string;
   profile_img?: string;
   role?: any;
   permissions?: any[];
@@ -93,6 +98,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         id: profile.id,
         email: profile.email,
         full_name: profile.full_name,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        phone_number: profile.phone_number,
+        createdAt: profile.createdAt,
+        created_at: profile.created_at,
         profile_img: profile.profile_img,
         role: profile.role,
         permissions: profile.permissions,

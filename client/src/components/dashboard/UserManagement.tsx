@@ -2,13 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Users, Plus, Trash2, Crown, Shield, User, UserCheck } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useChurch } from '@/components/church/ChurchProvider';
-import { RegisterForm } from '@/components/auth/RegisterForm';
-import { fetchUsers, deleteUserById } from '@/lib/api';
+import AddMemberDialog from './AddMemberDialog';
+import { createMemberApi, fetchUsers, deleteUserById } from '@/lib/api';
 
 type UserType = {
   id: string;
@@ -21,9 +20,10 @@ type UserType = {
 
 export const UserManagement: React.FC = () => {
   const { user } = useAuth();
-  const { currentBranch } = useChurch();
-  const [users, setUsers] = useState([]);
+  const { currentBranch, currentChurch } = useChurch();
+  const [users, setUsers] = useState<UserType[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
 
@@ -61,6 +61,39 @@ export const UserManagement: React.FC = () => {
     setIsCreateDialogOpen(false);
     loadUsers();
     setTimeout(() => setMessage(''), 3000);
+  };
+
+  const handleCreateUser = async (data: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone_number: string;
+    role: string;
+  }) => {
+    if (!getCreatableRoles().includes(data.role as 'admin' | 'member')) {
+      setMessage('You are not allowed to create a user with that role');
+      setMessageType('error');
+      setTimeout(() => setMessage(''), 3000);
+      return false;
+    }
+
+    setIsCreatingUser(true);
+    try {
+      await createMemberApi({
+        ...data,
+        branch_name: currentBranch?.name,
+        church_name: currentChurch?.denomination_name,
+      });
+      handleCreateSuccess();
+      return true;
+    } catch (err: any) {
+      setMessage(err.message || 'Failed to create user');
+      setMessageType('error');
+      setTimeout(() => setMessage(''), 3000);
+      return false;
+    } finally {
+      setIsCreatingUser(false);
+    }
   };
 
   const getRoleIcon = (role: UserType['role']) => {
@@ -133,28 +166,21 @@ export const UserManagement: React.FC = () => {
             </div>
             
             {canCreateUsers && (
-              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add User
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Create New User</DialogTitle>
-                    <DialogDescription>
-                      Add a new member to your church community
-                    </DialogDescription>
-                  </DialogHeader>
-                  <RegisterForm
-                    onSwitchToLogin={() => {}}
-                    createdBy={user.id}
-                    allowedRoles={getCreatableRoles()}
-                    onSuccess={handleCreateSuccess}
-                  />
-                </DialogContent>
-              </Dialog>
+              <>
+                <Button className="flex items-center gap-2" onClick={() => setIsCreateDialogOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  Add User
+                </Button>
+                <AddMemberDialog
+                  open={isCreateDialogOpen}
+                  onOpenChange={setIsCreateDialogOpen}
+                  onSave={handleCreateUser}
+                  saving={isCreatingUser}
+                  branchName={currentBranch?.name}
+                  churchName={currentChurch?.denomination_name}
+                  allowedRoles={getCreatableRoles()}
+                />
+              </>
             )}
           </div>
         </CardHeader>

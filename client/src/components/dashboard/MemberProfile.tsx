@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { User, Mail, Phone, Calendar, Award } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Shield } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
 
 export const MemberProfile: React.FC = () => {
@@ -10,8 +10,18 @@ export const MemberProfile: React.FC = () => {
 
   if (!user) return null;
 
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  const getInitials = (name: string) => {
+    const parts = name
+      .split(' ')
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .slice(0, 2);
+
+    if (parts.length === 0) {
+      return user.email.slice(0, 2).toUpperCase();
+    }
+
+    return parts.map((part) => part.charAt(0)).join('').toUpperCase();
   };
 
   const formatDate = (dateString: string) => {
@@ -26,13 +36,15 @@ export const MemberProfile: React.FC = () => {
     return role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800';
   };
 
-  const totalAttended = user.attendance.filter(a => a.present).length;
-  const totalServices = user.attendance.length;
-  const attendanceRate = totalServices > 0 ? Math.round((totalAttended / totalServices) * 100) : 0;
+  const displayName = user.full_name?.trim()
+    || [user.first_name, user.last_name].filter(Boolean).join(' ').trim()
+    || user.email;
+  const roleName = typeof user.role === 'string' ? user.role : user.role?.name ?? 'member';
+  const joinedAt = user.createdAt ?? user.created_at;
+  const phoneNumber = user.phone_number;
 
   return (
     <div className="space-y-6">
-      {/* Profile Header */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -47,17 +59,17 @@ export const MemberProfile: React.FC = () => {
           <div className="flex items-start gap-6">
             <Avatar className="h-20 w-20">
               <AvatarFallback className="text-lg font-semibold">
-                {getInitials(user.firstName, user.lastName)}
+                {getInitials(displayName)}
               </AvatarFallback>
             </Avatar>
             
             <div className="flex-1 space-y-4">
               <div>
                 <h2 className="text-2xl font-bold">
-                  {user.firstName} {user.lastName}
+                  {displayName}
                 </h2>
-                <Badge className={getRoleBadgeColor(user.role?.name ?? user.role)}>
-                  {((user.role?.name ?? user.role) as string).charAt(0).toUpperCase() + ((user.role?.name ?? user.role) as string).slice(1)}
+                <Badge className={getRoleBadgeColor(roleName)}>
+                  {roleName.charAt(0).toUpperCase() + roleName.slice(1)}
                 </Badge>
               </div>
               
@@ -67,70 +79,59 @@ export const MemberProfile: React.FC = () => {
                   <span>{user.email}</span>
                 </div>
                 
-                {user.phone && (
+                {phoneNumber && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Phone className="h-4 w-4" />
-                    <span>{user.phone}</span>
+                    <span>{phoneNumber}</span>
                   </div>
                 )}
                 
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
-                  <span>Joined {formatDate(user.joinDate)}</span>
+                  <Shield className="h-4 w-4" />
+                  <span>{roleName === 'admin' ? 'Administrator access' : 'Member access'}</span>
                 </div>
-                
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Award className="h-4 w-4" />
-                  <span>{attendanceRate}% Attendance Rate</span>
-                </div>
+
+                {joinedAt && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    <span>Joined {formatDate(joinedAt)}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Attendance History */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Attendance History</CardTitle>
+          <CardTitle>Membership Overview</CardTitle>
           <CardDescription>
-            Your attendance record for recent services
+            Summary of the profile details currently available for your account
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {user.attendance.length > 0 ? (
-            <div className="space-y-3">
-              {user.attendance
-                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                .slice(0, 10)
-                .map((record) => (
-                  <div
-                    key={record.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
-                  >
-                    <div>
-                      <div className="font-medium">{record.serviceType}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {formatDate(record.date)}
-                      </div>
-                    </div>
-                    
-                    <Badge
-                      variant={record.present ? "default" : "destructive"}
-                      className={record.present ? "bg-green-100 text-green-800" : ""}
-                    >
-                      {record.present ? "Present" : "Absent"}
-                    </Badge>
-                  </div>
-                ))}
+          <div className="space-y-3 text-sm text-muted-foreground">
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <span>Full name</span>
+              <span className="font-medium text-foreground">{displayName}</span>
             </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Award className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No attendance records yet.</p>
-              <p className="text-sm">Start attending services to see your history here.</p>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <span>Email</span>
+              <span className="font-medium text-foreground">{user.email}</span>
             </div>
-          )}
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <span>Role</span>
+              <span className="font-medium text-foreground">{roleName}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <span>Phone</span>
+              <span className="font-medium text-foreground">{phoneNumber || 'Not provided'}</span>
+            </div>
+            <div className="rounded-lg border p-3">
+              Attendance history is not included in the authenticated profile payload yet.
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

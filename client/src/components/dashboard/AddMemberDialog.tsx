@@ -36,6 +36,7 @@ interface AddMemberDialogProps {
   saving?: boolean;
   branchName?: string;
   churchName?: string;
+  allowedRoles?: Array<'member' | 'coordinator' | 'admin'>;
 }
 
 const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
@@ -45,6 +46,7 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
   saving,
   branchName,
   churchName,
+  allowedRoles,
 }) => {
   const [form, setForm] = useState<MemberFormData>({ ...EMPTY });
   const [error, setError] = useState('');
@@ -90,6 +92,9 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
   };
 
   const displayOrg = branchName ?? churchName;
+  const roleOptions = allowedRoles && allowedRoles.length > 0
+    ? allowedRoles
+    : (['member', 'coordinator', 'admin'] as const);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -160,7 +165,7 @@ const AddMemberDialog: React.FC<AddMemberDialogProps> = ({
           <div className="space-y-1.5">
             <Label>Role</Label>
             <div className="grid grid-cols-3 gap-2">
-              {(['member', 'coordinator', 'admin'] as const).map((r) => (
+              {roleOptions.map((r) => (
                 <button
                   key={r}
                   type="button"
