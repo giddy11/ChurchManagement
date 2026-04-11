@@ -52,7 +52,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // the sidebar to show "No branch assigned" until a manual refresh.
       queryClient.setQueryData(['auth', 'profile'], {
         ...data.user,
-        role: data.role,
+        role: typeof data.role === 'string' ? data.role : (data.role?.name ?? 'member'),
         permissions: data.permissions,
       });
       // Ensure a background refetch runs to hydrate branchMemberships/branches.

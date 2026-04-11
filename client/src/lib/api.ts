@@ -334,3 +334,30 @@ export const updateSettingsApi = (settings: UserSettings) =>
     method: 'PUT',
     body: JSON.stringify({ settings }),
   });
+
+// ─── Directory (global user search for Add-from-Users picker) ─────────────────
+export interface DirectoryUserDTO {
+  id: string;
+  email: string;
+  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  role: string;
+  is_active?: boolean;
+  state?: string;
+  city?: string;
+  country?: string;
+  phone_number?: string;
+}
+
+export const fetchUsersDirectoryApi = (search?: string) => {
+  const qs = search ? `?search=${encodeURIComponent(search)}` : '';
+  return request<{ data: DirectoryUserDTO[]; status: number; message: string }>(`/user/directory${qs}`);
+};
+
+/** Add an existing user to the branch currently set via X-Branch-Id. */
+export const addUserToBranchApi = (userId: string, role?: string) =>
+  request<{ status: number; message: string }>(`/user/${userId}/branch`, {
+    method: 'POST',
+    body: JSON.stringify({ role: role ?? 'member' }),
+  });

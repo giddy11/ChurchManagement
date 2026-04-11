@@ -50,6 +50,14 @@ router.get(
   userController.getUsersWithFilters.bind(userController)
 );
 
+// Global user directory — no branch scoping, used for the "Add from Users" picker
+router.get(
+  "/directory",
+  authMiddleware(new UserService()) as RequestHandler,
+  adminMiddleware,
+  userController.getDirectory.bind(userController)
+);
+
 router.put(
   "/users/me",
   authMiddleware(new UserService()) as RequestHandler,
@@ -73,6 +81,14 @@ router.put(
   "/settings",
   authMiddleware(new UserService()) as RequestHandler,
   userController.updateSettings.bind(userController)
+);
+
+// Add an existing user to the currently-selected branch (read from X-Branch-Id)
+router.post(
+  "/:id/branch",
+  authMiddleware(new UserService()) as RequestHandler,
+  adminMiddleware,
+  userController.addToBranch.bind(userController)
 );
 
 router.get(

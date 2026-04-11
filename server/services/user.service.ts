@@ -372,6 +372,27 @@ export class UserService {
     return { deleted, notFound };
   }
 
+  // ─── Directory (global user search, no branch scope) ────────────────────
+  async searchAllUsers(search?: string): Promise<User[]> {
+    const query = this.userRepository
+      .createQueryBuilder('user')
+      .select([
+        'user.id', 'user.email', 'user.full_name', 'user.first_name',
+        'user.last_name', 'user.role', 'user.is_active',
+        'user.state', 'user.city', 'user.country', 'user.phone_number',
+      ])
+      .where('user.is_active = :active', { active: true });
+
+    if (search?.trim()) {
+      query.andWhere(
+        '(user.full_name ILIKE :s OR user.email ILIKE :s OR user.first_name ILIKE :s OR user.last_name ILIKE :s)',
+        { s: `%${search.trim()}%` },
+      );
+    }
+
+    return query.orderBy('user.full_name', 'ASC').limit(100).getMany();
+  }
+
   // ─── Branch helpers ─────────────────────────────────────────────────────
   async addUserToBranch(userId: string, branchId: string, role: 'member' | 'coordinator' | 'admin' = 'member'): Promise<void> {
     const existing = await this.membershipRepository.findOne({ where: { user_id: userId, branch_id: branchId } });

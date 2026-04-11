@@ -212,6 +212,43 @@ export class UserController {
     });
   });
 
+  getDirectory = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { search } = req.query;
+      const users = await this.userService.searchAllUsers(search as string | undefined);
+      res.status(200).json({
+        data: users.map((u) => classToPlain(u)),
+        status: 200,
+        message: 'Users fetched successfully',
+      });
+    }
+  );
+
+  addToBranch = asyncHandler(
+    async (req: Request, res: Response): Promise<void> => {
+      const { id } = req.params;
+      const branchId = (req as any).branchId as string | null;
+      if (!branchId) {
+        res.status(400).json({
+          status: 400,
+          message: 'No branch selected. Set the X-Branch-Id header.',
+        });
+        return;
+      }
+      const { role = 'member' } = req.body as { role?: string };
+      try {
+        await this.userService.addUserToBranch(
+          id,
+          branchId,
+          role as 'member' | 'coordinator' | 'admin',
+        );
+        res.status(200).json({ status: 200, message: 'User added to branch successfully.' });
+      } catch (e: any) {
+        res.status(500).json({ status: 500, message: e.message || 'Failed to add user to branch' });
+      }
+    }
+  );
+
   updateUserInfo = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { id } = req.params;

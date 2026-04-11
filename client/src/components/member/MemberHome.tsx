@@ -38,7 +38,7 @@ const MemberHome: React.FC = () => {
         </div>
         {profile?.role && (
           <Badge variant="secondary" className="text-xs md:text-sm self-start sm:self-auto capitalize">
-            {profile.role}
+            {typeof profile.role === 'string' ? profile.role : (profile.role?.name ?? '')}
           </Badge>
         )}
       </div>

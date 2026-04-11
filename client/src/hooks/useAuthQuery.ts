@@ -39,7 +39,7 @@ function handleAuthSuccess(
   queryClient.cancelQueries({ queryKey: AUTH_KEYS.profile });
   queryClient.setQueryData(AUTH_KEYS.profile, {
     ...data.user,
-    role: data.role,
+    role: typeof data.role === 'string' ? data.role : (data.role?.name ?? 'member'),
     permissions: data.permissions,
   });
   // Immediately refetch full profile (with memberships) to hydrate sidebar/branches

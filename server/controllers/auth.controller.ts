@@ -24,7 +24,7 @@ function buildAuthResponse(result: { user: any; tokens: any }) {
       full_name: result.user.full_name,
       profile_img: result.user.profile_img,
     },
-    role: { name: roleName },
+    role: roleName,
     permissions,
   };
 }
@@ -78,7 +78,7 @@ export const register = asyncHandler(
             country: result.church.country,
             address: result.church.address,
           },
-          role: { name: roleName },
+          role: roleName,
           permissions,
         },
         status: 201,
