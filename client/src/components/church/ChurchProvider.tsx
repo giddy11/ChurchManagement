@@ -218,12 +218,24 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
 
   // Select a branch across churches: switches church, loads its branches, then selects the branch
   const selectBranchGlobal = async (branch: Branch) => {
+    console.log('[selectBranchGlobal] called with branch:', branch);
+    console.log('[selectBranchGlobal] membership_is_active:', branch.membership_is_active);
     if (branch.membership_is_active === false) {
       // Caller should guard against this, but block here as a safety net
+      console.log('[selectBranchGlobal] BLOCKED: membership_is_active is false');
       return;
     }
-    const targetChurch = userChurches.find(c => c.id === branch.denomination_id) || null;
-    if (!targetChurch) return;
+    console.log('[selectBranchGlobal] userChurches:', userChurches);
+    console.log('[selectBranchGlobal] branch.denomination_id:', branch.denomination_id);
+    const targetChurch = userChurches.find(c => c.id === branch.denomination_id)
+      || currentChurch
+      || userChurches[0]
+      || null;
+    console.log('[selectBranchGlobal] targetChurch found:', targetChurch);
+    if (!targetChurch) {
+      console.log('[selectBranchGlobal] BLOCKED: targetChurch is null — no church available');
+      return;
+    }
     setCurrentChurch(targetChurch);
     localStorage.setItem(SELECTED_CHURCH_KEY, targetChurch.id);
     // Pre-mark desired branch so selection persists after fetch
@@ -235,17 +247,21 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
     try {
       const res = await fetchBranches(targetChurch.id);
       const churchBranches = (res.data ?? []) as unknown as Branch[];
+      console.log('[selectBranchGlobal] churchBranches fetched:', churchBranches);
       setBranches(churchBranches);
       const match = churchBranches.find(b => b.id === branch.id) || null;
+      console.log('[selectBranchGlobal] match found in churchBranches:', match);
       // Merge membership metadata (role, active flag) from the known branch into the
       // freshly-fetched match, since the raw branch listing doesn't include those fields.
       setCurrentBranch(match
         ? { ...match, membership_role: branch.membership_role, membership_is_active: branch.membership_is_active }
         : branch
       );
-    } catch {
+      console.log('[selectBranchGlobal] currentBranch set to:', match ? match.id : branch.id);
+    } catch (err) {
       // fetchBranches may 403 for non-admin users; use the known branch so the
       // active-branch indicator still renders correctly.
+      console.log('[selectBranchGlobal] fetchBranches error:', err);
       setBranches([]);
       setCurrentBranch(branch);
     }
@@ -274,6 +290,15 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
     }
   };
 
+  // Build the set of church IDs the user directly owns (from profile.denominations).
+  // This is more reliable than checking admin_id on the church object, since admins
+  // who registered a church may not have a BranchMembership record in their own branches.
+  const ownedChurchIds = new Set<string>(
+    Array.isArray((profile as any)?.denominations)
+      ? ((profile as any).denominations as Array<{ id: string }>).map((d) => d.id)
+      : []
+  );
+
   // Derive effective role from backend user — role can be a string or { name: string }
   let effectiveRole: 'super_admin' | 'admin' | 'member' = 'member';
   const rawRole = user?.role;
@@ -281,8 +306,28 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
   if (roleName === 'super_admin') {
     effectiveRole = 'super_admin';
   } else if (roleName === 'admin') {
-    effectiveRole = 'admin';
+    // Treat as admin only when the current church is one the user owns.
+    // Fallback to admin_id field check for edge cases where denominations list
+    // hasn't loaded yet. If no church is selected (loading state), keep as admin.
+    const ownsCurrentChurch = currentChurch
+      ? ownedChurchIds.has(currentChurch.id) || currentChurch.admin_id === user?.id
+      : true;
+    if (ownsCurrentChurch) {
+      effectiveRole = 'admin';
+    }
   }
+
+  console.log('[ChurchProvider] role debug —', {
+    userRole: roleName,
+    currentChurchId: currentChurch?.id,
+    currentChurchAdminId: currentChurch?.admin_id,
+    userId: user?.id,
+    ownedChurchIds: Array.from(ownedChurchIds),
+    ownsCurrentChurch: currentChurch ? ownedChurchIds.has(currentChurch.id) || currentChurch.admin_id === user?.id : 'no church',
+    effectiveRole,
+    branchMembershipRole: currentBranch?.membership_role,
+    currentBranchId: currentBranch?.id,
+  });
 
   // Derive branch-level role from the current branch's membership metadata
   const rawBranchRole = currentBranch?.membership_role;
@@ -290,6 +335,13 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
     rawBranchRole === 'admin' || rawBranchRole === 'coordinator' || rawBranchRole === 'member'
       ? rawBranchRole
       : null;
+
+  console.log('[ChurchProvider] branchRole debug —', {
+    currentBranchId: currentBranch?.id,
+    rawBranchRole,
+    branchRole,
+    myBranches: myBranches.map(b => ({ id: b.id, name: b.name, membership_role: b.membership_role })),
+  });
 
   const value: ChurchContextType = {
     currentChurch,

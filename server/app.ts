@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.route';
 import activityLogRoutes from './routes/activity-log.route';
 import churchRoutes from './routes/church.route';
 import personRoutes from './routes/person.route';
+import joinRoutes from './routes/join.route';
 import { errorHandler } from './middleware/error_handler.middleware';
 import { setupMiddleware } from './middleware';
 
@@ -20,6 +21,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/activities', activityLogRoutes);
 app.use('/api/churches', churchRoutes);
 app.use('/api/people', personRoutes);
+app.use('/api/join', joinRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });

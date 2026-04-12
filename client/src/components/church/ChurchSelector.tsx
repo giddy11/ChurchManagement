@@ -115,11 +115,15 @@ const ChurchSelector: React.FC = () => {
                         : 'hover:bg-gray-100 text-gray-700'
                   }`}
                   onClick={async () => {
+                    console.log('[ChurchSelector] branch clicked:', branch);
+                    console.log('[ChurchSelector] isInactive:', isInactive, '| isActive:', isActive);
                     if (isInactive) {
                       toast.error('You have been deactivated in this branch. Contact an administrator.');
                       return;
                     }
+                    console.log('[ChurchSelector] calling selectBranchGlobal...');
                     await selectBranchGlobal(branch);
+                    console.log('[ChurchSelector] selectBranchGlobal done');
                     setIsOpen(false);
                   }}
                 >

@@ -13,6 +13,7 @@ import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
 import SuperAdmin from './pages/SuperAdmin';
 import NotFound from './pages/NotFound';
+import JoinPage from './pages/JoinPage';
 import ProtectedRoute from '@/components/auth/RouteGuard';
 
 const queryClient = new QueryClient({
@@ -75,6 +76,7 @@ function AppRoutes() {
             <Route path="/member/settings/currency" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/member/settings/directory" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdmin /></ProtectedRoute>} />
+            <Route path="/join" element={<JoinPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

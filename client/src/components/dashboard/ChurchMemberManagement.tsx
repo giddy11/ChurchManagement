@@ -12,6 +12,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   UserPlus,
   Search,
@@ -27,6 +28,8 @@ import {
   LayoutGrid,
   LayoutList,
   UsersRound,
+  Link2,
+  ClipboardList,
 } from 'lucide-react';
 import { useChurch } from '@/components/church/ChurchProvider';
 import { useMemberCrud } from '@/hooks/useMemberCrud';
@@ -39,6 +42,8 @@ import { fetchUsersDirectoryApi, addUserToBranchApi } from '@/lib/api';
 import type { DirectoryUserDTO } from '@/lib/api';
 import { toast } from 'sonner';
 import MemberDetailsDialog from '@/components/member/MemberDetailsDialog';
+import JoinRequestsPanel from './JoinRequestsPanel';
+import InviteLinksPanel from './InviteLinksPanel';
 
 // ── Export helpers ─────────────────────────────────────────────────────────
 function exportToCSV(members: MemberDTO[]) {
@@ -532,7 +537,7 @@ const AddFromUsersDialog: React.FC<AddFromUsersDialogProps> = ({
 
 // ── Main Component ─────────────────────────────────────────────────────────
 const ChurchMemberManagement: React.FC = () => {
-  const { currentChurch, currentBranch, effectiveRole } = useChurch();
+  const { currentChurch, currentBranch, effectiveRole, branchRole } = useChurch();
   const { members, loading, saving, load, create, update, setBranchStatus, remove, removeMany, importMembers } = useMemberCrud();
   const { people, load: loadPeople } = usePeopleCrud();
 
@@ -576,7 +581,15 @@ const ChurchMemberManagement: React.FC = () => {
     if (ok) setDeleteTarget(null);
   };
 
-  const canManage = effectiveRole === 'admin' || effectiveRole === 'super_admin';
+  const canManage = effectiveRole === 'admin' || effectiveRole === 'super_admin' || branchRole === 'admin' || branchRole === 'coordinator';
+  console.log('[canManage debug]', {
+    effectiveRole,
+    branchRole,
+    canManage,
+    currentBranchId: currentBranch?.id,
+    currentBranchMembershipRole: currentBranch?.membership_role,
+    currentChurchId: currentChurch?.id,
+  });
   const branchName = currentBranch?.name;
   const churchName = currentChurch?.denomination_name;
   const displayOrg = branchName ?? churchName ?? '';
@@ -653,6 +666,26 @@ const ChurchMemberManagement: React.FC = () => {
         </Card>
       </div>
 
+      {/* Tabbed section: Members / Join Requests / Invite Links */}
+      <Tabs defaultValue="members">
+        <TabsList className="mb-2">
+          <TabsTrigger value="members">
+            <Users className="h-4 w-4 mr-1.5" />Members
+          </TabsTrigger>
+          {canManage && (
+            <>
+              <TabsTrigger value="join-requests">
+                <ClipboardList className="h-4 w-4 mr-1.5" />Join Requests
+              </TabsTrigger>
+              <TabsTrigger value="invites">
+                <Link2 className="h-4 w-4 mr-1.5" />Invite Links
+              </TabsTrigger>
+            </>
+          )}
+        </TabsList>
+
+        {/* ── Members tab ─────────────────────────────────────────── */}
+        <TabsContent value="members">
       {/* List Card — matches PeopleManagement h-[600px] */}
       <Card className="flex flex-col h-[600px]">
         <CardHeader className="pb-3">
@@ -692,6 +725,30 @@ const ChurchMemberManagement: React.FC = () => {
           />
         </CardContent>
       </Card>
+        </TabsContent>
+
+        {/* ── Join Requests tab ────────────────────────────────────── */}
+        {canManage && currentChurch && currentBranch && (
+          <TabsContent value="join-requests">
+            <Card>
+              <CardContent className="pt-6">
+                <JoinRequestsPanel churchId={currentChurch.id} branchId={currentBranch.id} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {/* ── Invite Links tab ─────────────────────────────────────── */}
+        {canManage && currentChurch && currentBranch && (
+          <TabsContent value="invites">
+            <Card>
+              <CardContent className="pt-6">
+                <InviteLinksPanel churchId={currentChurch.id} branchId={currentBranch.id} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+      </Tabs>
 
       {/* Dialogs */}
       <AddMemberDialog

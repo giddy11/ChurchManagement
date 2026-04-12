@@ -3,7 +3,7 @@ import { DataSource } from "typeorm";
 import { User } from "../models/user.model";
 import dotenv from "dotenv";
 import { ActivityLog } from "../models/activity-log.model";
-import { Denomination, Branch, BranchMembership } from "../models/church";
+import { Denomination, Branch, BranchMembership, BranchJoinRequest, BranchInvite } from "../models/church";
 import { Person } from "../models/person.model";
 dotenv.config();
 
@@ -23,6 +23,8 @@ export const AppDataSource = new DataSource({
                 Denomination,
                 Branch,
                 BranchMembership,
+                BranchJoinRequest,
+                BranchInvite,
                 Person
             ],
     migrations: ["./migrations/*.ts"],

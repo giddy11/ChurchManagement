@@ -266,19 +266,24 @@ export class UserService {
       ],
     });
 
-    // Admins / super admins: direct denomination membership
-    if (user?.denominations && user.denominations.length > 0) {
-      return user.denominations;
+    // Merge BOTH: churches the user directly admins AND churches they belong to
+    // via branch membership. A user can be admin of their own church AND a member
+    // of another church's branch simultaneously.
+    const churchMap = new Map<string, any>();
+
+    // Admin-owned denominations
+    for (const denom of (user?.denominations ?? [])) {
+      churchMap.set(denom.id, denom);
     }
 
-    // Regular members: derive churches from their branch memberships
-    const churchMap = new Map<string, any>();
+    // Branch-membership derived denominations
     for (const membership of (user?.branchMemberships ?? [])) {
       const branch = (membership as any).branch;
-      if (branch?.denomination) {
+      if (branch?.denomination && !churchMap.has(branch.denomination.id)) {
         churchMap.set(branch.denomination.id, branch.denomination);
       }
     }
+
     return Array.from(churchMap.values());
   }
 

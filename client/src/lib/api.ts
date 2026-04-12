@@ -426,3 +426,92 @@ export const addUserToBranchApi = (churchId: string, branchId: string, userId: s
     method: 'POST',
     body: JSON.stringify({ role: role ?? 'member' }),
   });
+
+// ─── Join: public types ───────────────────────────────────────────────────
+export interface JoinRequestDTO {
+  id: string;
+  user_id: string;
+  branch_id: string;
+  denomination_id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  message?: string;
+  joined_via: 'request' | 'invite_link';
+  invite_id?: string;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  created_at: string;
+  user?: { id: string; email: string; full_name?: string; first_name?: string; last_name?: string };
+}
+
+export interface InviteLinkDTO {
+  id: string;
+  code: string;
+  branch_id: string;
+  denomination_id: string;
+  created_by: string;
+  expires_at?: string;
+  max_uses?: number;
+  uses_count: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface InviteInfoDTO {
+  code: string;
+  branch: { id: string; name: string; city?: string; country?: string };
+  denomination: { id: string; denomination_name: string };
+  expires_at?: string;
+  max_uses?: number;
+  uses_count: number;
+}
+
+const JOIN_API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:7777/api';
+
+// ─── Join: public endpoints (no auth) ────────────────────────────────────
+export const fetchPublicDenominations = () =>
+  fetch(`${JOIN_API_BASE}/join/churches`)
+    .then((r) => r.json())
+    .then((r) => r.data as Array<{ id: string; denomination_name: string; branches: Array<{ id: string; name: string; city?: string; country?: string }> }>);
+
+export const fetchInviteInfo = (code: string) =>
+  fetch(`${JOIN_API_BASE}/join/invite/${encodeURIComponent(code)}`)
+    .then((r) => r.json() as Promise<{ status: number; data?: InviteInfoDTO; message?: string }>);
+
+// ─── Join: authenticated user endpoints ──────────────────────────────────
+export const submitJoinRequestApi = (branch_id: string, message?: string) =>
+  request<{ data: JoinRequestDTO; status: number; message: string }>('/join/request', {
+    method: 'POST',
+    body: JSON.stringify({ branch_id, message }),
+  });
+
+export const useInviteCodeApi = (code: string) =>
+  request<{ data: any; status: number; message: string }>(`/join/invite/${encodeURIComponent(code)}/use`, {
+    method: 'POST',
+  });
+
+// ─── Join: admin endpoints ────────────────────────────────────────────────
+export const fetchJoinRequestsApi = (churchId: string, branchId: string, status?: string) => {
+  const qs = status ? `?status=${status}` : '';
+  return request<{ data: JoinRequestDTO[]; status: number }>(`/churches/${churchId}/branches/${branchId}/join-requests${qs}`);
+};
+
+export const reviewJoinRequestApi = (churchId: string, branchId: string, requestId: string, decision: 'approved' | 'rejected') =>
+  request<{ data: JoinRequestDTO; status: number; message: string }>(`/churches/${churchId}/branches/${branchId}/join-requests/${requestId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ decision }),
+  });
+
+export const fetchInviteLinksApi = (churchId: string, branchId: string) =>
+  request<{ data: InviteLinkDTO[]; status: number }>(`/churches/${churchId}/branches/${branchId}/invites`);
+
+export const createInviteLinkApi = (churchId: string, branchId: string, opts?: { expires_at?: string; max_uses?: number }) =>
+  request<{ data: InviteLinkDTO; status: number; message: string }>(`/churches/${churchId}/branches/${branchId}/invites`, {
+    method: 'POST',
+    body: JSON.stringify(opts ?? {}),
+  });
+
+export const deactivateInviteLinkApi = (churchId: string, branchId: string, inviteId: string) =>
+  request<{ status: number; message: string }>(`/churches/${churchId}/branches/${branchId}/invites/${inviteId}`, {
+    method: 'DELETE',
+  });
+

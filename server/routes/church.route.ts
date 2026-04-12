@@ -12,6 +12,13 @@ import {
   removeBranchMembers,
   checkDenominationName,
 } from "../controllers/church.controller";
+import {
+  listBranchJoinRequests,
+  reviewJoinRequest,
+  createInviteLink,
+  listInviteLinks,
+  deactivateInviteLink,
+} from "../controllers/join.controller";
 import { UserController } from "../controllers/user.controller";
 import { authMiddleware, adminMiddleware } from "../middleware/auth.middleware";
 import { UserService } from "../services/user.service";
@@ -41,4 +48,14 @@ router.put("/:churchId/branches/:branchId/members/:userId/role", auth, adminMidd
 router.put("/:churchId/branches/:branchId/members/:userId/status", auth, adminMiddleware, userController.updateMemberBranchStatus.bind(userController));
 router.delete("/:churchId/branches/:branchId/members", auth, adminMiddleware, removeBranchMembers);
 
+// ─── Join requests (admin) ────────────────────────────────────────────────
+router.get("/:churchId/branches/:branchId/join-requests", auth, adminMiddleware, listBranchJoinRequests);
+router.put("/:churchId/branches/:branchId/join-requests/:requestId", auth, adminMiddleware, reviewJoinRequest);
+
+// ─── Invite links (admin) ─────────────────────────────────────────────────
+router.get("/:churchId/branches/:branchId/invites", auth, adminMiddleware, listInviteLinks);
+router.post("/:churchId/branches/:branchId/invites", auth, adminMiddleware, createInviteLink);
+router.delete("/:churchId/branches/:branchId/invites/:inviteId", auth, adminMiddleware, deactivateInviteLink);
+
 export default router;
+

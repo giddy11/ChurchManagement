@@ -143,8 +143,11 @@ type AuthMode = 'login' | 'register' | 'register-church' | 'forgot-password';
 
 export default function IndexPage() {
   const { isAuthenticated } = useAuth();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const navigate = useNavigate();
+
+  const searchParams = new URLSearchParams(search);
+  const returnTo = searchParams.get('returnTo');
 
   const mode: AuthMode =
     pathname === '/register' ? 'register' :
@@ -155,7 +158,7 @@ export default function IndexPage() {
   const go = (m: AuthMode) => navigate(`/${m}`);
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={returnTo || '/dashboard'} replace />;
   }
 
   return (
