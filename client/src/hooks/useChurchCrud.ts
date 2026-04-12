@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ChurchDTO } from '@/lib/api';
 import {
   fetchChurches,
@@ -7,30 +8,31 @@ import {
   deleteChurchApi,
 } from '@/lib/api';
 import { toast } from 'sonner';
+import { queryKeys } from '@/lib/queryKeys';
 
 export function useChurchCrud() {
-  const [churches, setChurches] = useState<ChurchDTO[]>([]);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
+  const { data: churches = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.churches(),
+    queryFn: async () => {
       const res = await fetchChurches();
-      setChurches(res.data ?? []);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to load churches');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return res.data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.churches() });
+
+  const load = invalidate;
 
   const create = async (data: Parameters<typeof createChurchApi>[0]) => {
     setSaving(true);
     try {
       await createChurchApi(data);
       toast.success('Church created successfully');
-      await load();
+      invalidate();
       return true;
     } catch (err: any) {
       toast.error(err.message || 'Failed to create church');
@@ -45,7 +47,7 @@ export function useChurchCrud() {
     try {
       await updateChurchApi(id, data);
       toast.success('Church updated successfully');
-      await load();
+      invalidate();
       return true;
     } catch (err: any) {
       toast.error(err.message || 'Failed to update church');
@@ -60,7 +62,7 @@ export function useChurchCrud() {
     try {
       await deleteChurchApi(id);
       toast.success('Church deleted successfully');
-      await load();
+      invalidate();
       return true;
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete church');

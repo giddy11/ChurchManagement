@@ -15,6 +15,7 @@ export interface AuthRequest extends Request {
         id: string;
         email: string;
         role: string;
+        branchRole?: string;
         denominationIds?: string[];
         effectivePermissions?: string[];
     };
@@ -98,6 +99,8 @@ export const authMiddleware = (userService: UserService) => {
                             return;
                         }
                         req.branchId = requestedBranchId;
+                        // Elevate effective permissions when the user holds admin/coordinator in this branch
+                        req.user.branchRole = membership.role;
                     } catch (e) {
                         if (process.env.NODE_ENV !== 'production') {
                             console.warn('[auth] branch membership lookup failed', { message: (e as any)?.message });
@@ -126,7 +129,10 @@ export const authMiddleware = (userService: UserService) => {
 export const adminMiddleware: RequestHandler = (req, res, next) => {
     const authReq = req as AuthRequest;
     console.log("auth role:", authReq.user)
-    if (!authReq.user || !authReq.user.role || !['admin', 'super_admin'].includes(authReq.user.role)) {
+    const globalRole = authReq.user?.role;
+    const branchRole = authReq.user?.branchRole;
+    const isAdmin = ['admin', 'super_admin'].includes(globalRole) || ['admin', 'super_admin'].includes(branchRole ?? '');
+    if (!authReq.user || !isAdmin) {
         res.status(403).json({
             statusCode: 403,
             message: "Access denied. Admin role required."

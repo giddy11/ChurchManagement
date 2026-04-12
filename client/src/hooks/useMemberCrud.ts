@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { MemberDTO } from '@/lib/api';
 import {
   fetchMembersApi,
@@ -11,6 +12,7 @@ import {
 } from '@/lib/api';
 import { toast } from 'sonner';
 import { useChurch } from '@/components/church/ChurchProvider';
+import { queryKeys } from '@/lib/queryKeys';
 
 export type { MemberDTO };
 
@@ -25,28 +27,32 @@ export interface ImportMembersResult {
 
 export function useMemberCrud() {
   const { currentChurch, currentBranch } = useChurch();
-  const [members, setMembers] = useState<MemberDTO[]>([]);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
+  const branchId = currentBranch?.id;
+  const { data: members = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.members(branchId),
+    queryFn: async () => {
       const res = await fetchMembersApi();
-      setMembers(res.data ?? []);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to load members');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return res.data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.members(branchId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.directory(branchId) });
+  };
+
+  const load = invalidate;
 
   const create = async (data: Parameters<typeof createMemberApi>[0]) => {
     setSaving(true);
     try {
       await createMemberApi(data);
       toast.success('Member added successfully. A welcome email with their password has been sent.');
-      await load();
+      invalidate();
       return true;
     } catch (err: any) {
       toast.error(err.message || 'Failed to add member');
@@ -67,7 +73,7 @@ export function useMemberCrud() {
       }
       await Promise.all(tasks);
       toast.success('Member updated successfully');
-      await load();
+      invalidate();
       return true;
     } catch (err: any) {
       toast.error(err.message || 'Failed to update member');
@@ -83,7 +89,7 @@ export function useMemberCrud() {
       if (!currentChurch || !currentBranch) throw new Error('No branch selected');
       await updateMemberBranchStatusApi(currentChurch.id, currentBranch.id, id, is_active);
       toast.success(is_active ? 'Member activated in this branch' : 'Member deactivated in this branch');
-      await load();
+      invalidate();
       return true;
     } catch (err: any) {
       toast.error(err.message || 'Failed to update member status');
@@ -99,7 +105,7 @@ export function useMemberCrud() {
       if (!currentChurch || !currentBranch) throw new Error('No branch selected');
       await deleteMembersApi(currentChurch.id, currentBranch.id, [id]);
       toast.success('Member removed');
-      await load();
+      invalidate();
       return true;
     } catch (err: any) {
       toast.error(err.message || 'Failed to remove member');
@@ -115,7 +121,7 @@ export function useMemberCrud() {
       if (!currentChurch || !currentBranch) throw new Error('No branch selected');
       await deleteMembersApi(currentChurch.id, currentBranch.id, ids);
       toast.success(`${ids.length} member(s) removed`);
-      await load();
+      invalidate();
       return true;
     } catch (err: any) {
       toast.error(err.message || 'Failed to remove members');
@@ -131,7 +137,7 @@ export function useMemberCrud() {
     setSaving(true);
     try {
       const res = await importMembersApi(rows);
-      await load();
+      invalidate();
       const uniqueCount = res.uniqueCount ?? 0;
       const duplicateCount = res.duplicateCount ?? 0;
       if (uniqueCount > 0) {

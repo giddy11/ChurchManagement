@@ -5,6 +5,7 @@ import asyncHandler from "../utils/asyncHandler";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { logActivity } from "../utils/activityLogger";
 import { ActivityAction, EntityType } from "../models/activity-log.model";
+import { emitToBranch, emitToAll } from "../services/socket.service";
 
 export class UserController {
   private userService: UserService;
@@ -55,6 +56,8 @@ export class UserController {
             }
           }
         }
+        if (branchId) emitToBranch(branchId, "members:changed", { action: "created" });
+        else emitToAll("members:changed", { action: "created" });
         res.status(201).json({
           data: classToPlain(user),
           status: 201,
@@ -89,6 +92,8 @@ export class UserController {
           try { await this.userService.addUserToBranch(u.id, branchId, 'member'); } catch {}
         }
       }
+      if (branchId) emitToBranch(branchId, "members:changed", { action: "imported" });
+      else emitToAll("members:changed", { action: "imported" });
       res.status(201).json({
         data: result.created,
         status: 201,
@@ -276,6 +281,7 @@ export class UserController {
           branchId,
           role as 'member' | 'coordinator' | 'admin',
         );
+        emitToBranch(branchId, "members:changed", { action: "added" });
         res.status(200).json({ status: 200, message: 'User added to branch successfully.' });
       } catch (e: any) {
         res.status(500).json({ status: 500, message: e.message || 'Failed to add user to branch' });
@@ -636,6 +642,7 @@ export class UserController {
         { userId, branchId, role }
       );
 
+      emitToBranch(branchId, "members:changed", { action: "roleUpdated" });
       res.status(200).json({ data: membership, status: 200, message: "Member branch role updated successfully" });
     }
   );
@@ -675,6 +682,7 @@ export class UserController {
         { userId, branchId, isActive: is_active }
       );
 
+      emitToBranch(branchId, "members:changed", { action: "statusUpdated" });
       res.status(200).json({
         data: membership,
         status: 200,

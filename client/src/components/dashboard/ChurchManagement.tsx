@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,7 +42,7 @@ const ChurchManagement: React.FC = () => {
   const [viewTarget, setViewTarget] = useState<ChurchDTO | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ChurchDTO | null>(null);
 
-  useEffect(() => { load(); }, [load]);
+  // Data is loaded automatically by useQuery
 
   const filtered = churches.filter((c) =>
     c.denomination_name.toLowerCase().includes(searchQuery.toLowerCase())

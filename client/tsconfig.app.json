@@ -24,10 +24,9 @@
     "noFallthroughCasesInSwitch": false,
     "noUncheckedSideEffectImports": true,
 
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
-    },
+      "@/*": ["./src/*"]
+    }
   },
   "include": ["src", "postcss.config.js", "tailwind.config.ts"]
 }

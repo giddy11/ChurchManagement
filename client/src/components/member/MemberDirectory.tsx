@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,12 +13,7 @@ const MemberDirectory: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewTarget, setViewTarget] = useState<MemberDTO | null>(null);
   const { currentBranch } = useChurch();
-  const { members, loading, load } = useMemberCrud();
-
-  useEffect(() => {
-    if (!currentBranch?.id) return;
-    load();
-  }, [currentBranch?.id, load]);
+  const { members, loading } = useMemberCrud();
 
   const filteredMembers = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();

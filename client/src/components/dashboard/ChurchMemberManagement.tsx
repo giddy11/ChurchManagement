@@ -91,13 +91,19 @@ const EditMemberDialog: React.FC<EditMemberDialogProps> = ({ open, onOpenChange,
 
   const handleSave = async () => {
     if (!member) return;
-    const tasks: Promise<boolean>[] = [
-      onSave(member.id, { full_name: fullName, role }),
-    ];
+    const originalName = member.full_name || `${member.first_name ?? ''} ${member.last_name ?? ''}`.trim();
+    const originalRole = member.branch_role || member.role || 'member';
+    const payload: Partial<{ full_name: string; role: string }> = {};
+    if (fullName !== originalName) payload.full_name = fullName;
+    if (role !== originalRole) payload.role = role;
+
+    const tasks: Promise<boolean>[] = [];
+    if (Object.keys(payload).length > 0) tasks.push(onSave(member.id, payload));
     // Only update branch status if it actually changed
     if (isActive !== (member.branch_is_active !== false)) {
       tasks.push(onToggleBranchActive(member.id, isActive));
     }
+    if (tasks.length === 0) { onOpenChange(false); return; }
     const results = await Promise.all(tasks);
     if (results.every(Boolean)) onOpenChange(false);
   };
@@ -541,8 +547,7 @@ const ChurchMemberManagement: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
-  useEffect(() => { load(); }, [load, currentBranch]);
-  // Lazily load people when the import dialog opens so we can show the conversion notice
+  // Data is loaded automatically by useQuery; load people lazily for import dialog
   useEffect(() => { if (importOpen) loadPeople(); }, [importOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = members.filter((m) => {

@@ -6,6 +6,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from '@/components/auth/AuthProvider';
 import { SocketProvider } from '@/components/auth/SocketProvider';
 import { ChurchProvider } from '@/components/church/ChurchProvider';
+import RealtimeSyncProvider from '@/components/auth/RealtimeSyncProvider';
 import { ReloadPrompt } from '@/components/pwa/ReloadPrompt';
 import Index from './pages/Index';
 import LandingPage from './pages/LandingPage';
@@ -28,6 +29,7 @@ function AppRoutes() {
   return (
     <SocketProvider isAuthenticated={isAuthenticated}>
       <ChurchProvider>
+        <RealtimeSyncProvider>
         <Toaster />
         <BrowserRouter>
           <Routes>
@@ -76,6 +78,7 @@ function AppRoutes() {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
+        </RealtimeSyncProvider>
       </ChurchProvider>
     </SocketProvider>
   );

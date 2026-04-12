@@ -4,6 +4,7 @@ import { UserService } from "../services/user.service";
 import asyncHandler from "../utils/asyncHandler";
 import { Person } from "../models/person.model";
 import { AuthRequest } from "../middleware/auth.middleware";
+import { emitToBranch, emitToAll } from "../services/socket.service";
 
 const personService = new PersonService();
 const userService = new UserService();
@@ -55,6 +56,9 @@ export const createPerson = asyncHandler(async (req: Request, res: Response) => 
   const conflict = await personService.checkUnique(payload.email, payload.phone, undefined, payload.branch_id);
   if (conflict) { res.status(409).json({ status: 409, message: conflict }); return; }
   const person = await personService.create(payload);
+  const bid = person.branch_id;
+  if (bid) emitToBranch(bid, "people:changed", { action: "created" });
+  else emitToAll("people:changed", { action: "created" });
   res.status(201).json({ data: person, status: 201, message: "Person created" });
 });
 
@@ -96,6 +100,9 @@ export const updatePerson = asyncHandler(async (req: Request, res: Response) => 
   if (conflict) { res.status(409).json({ status: 409, message: conflict }); return; }
   const person = await personService.update(req.params.id, payload);
   if (!person) { res.status(404).json({ status: 404, message: "Person not found" }); return; }
+  const bid = person.branch_id;
+  if (bid) emitToBranch(bid, "people:changed", { action: "updated" });
+  else emitToAll("people:changed", { action: "updated" });
   res.status(200).json({ data: person, status: 200, message: "Person updated" });
 });
 
@@ -105,7 +112,10 @@ export const deletePerson = asyncHandler(async (req: Request, res: Response) => 
     res.status(400).json({ status: 400, message: "'ids' must be a non-empty array" });
     return;
   }
+  const branchId = (req as AuthRequest).branchId || undefined;
   const deleted = await personService.delete(ids);
+  if (branchId) emitToBranch(branchId, "people:changed", { action: "deleted" });
+  else emitToAll("people:changed", { action: "deleted" });
   const noun = deleted === 1 ? 'Person' : 'People';
   res.status(200).json({ status: 200, message: `${deleted} ${noun} deleted`, data: { deleted } });
 });
@@ -131,6 +141,10 @@ export const importPeople = asyncHandler(async (req: Request, res: Response) => 
 
   const result = await personService.importWithDedupe(items, branchId, memberEmailSet);
   const { valid, duplicates, invalid, alreadyMembers } = result;
+  if (valid.length > 0) {
+    if (branchId) emitToBranch(branchId, "people:changed", { action: "imported" });
+    else emitToAll("people:changed", { action: "imported" });
+  }
   res.status(200).json({
     status: 200,
     message: `${valid.length} saved, ${duplicates.length} duplicate(s), ${invalid.length} invalid, ${alreadyMembers.length} already member(s)`,
@@ -175,6 +189,13 @@ export const convertToMember = asyncHandler(async (req: Request, res: Response) 
   }
 
   await personService.markConverted(person.id, user.id);
+  if (person.branch_id) {
+    emitToBranch(person.branch_id, "people:changed", { action: "converted" });
+    emitToBranch(person.branch_id, "members:changed", { action: "converted" });
+  } else {
+    emitToAll("people:changed", { action: "converted" });
+    emitToAll("members:changed", { action: "converted" });
+  }
   res.status(201).json({
     data: user,
     status: 201,

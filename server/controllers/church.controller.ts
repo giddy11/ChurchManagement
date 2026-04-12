@@ -4,6 +4,7 @@ import asyncHandler from "../utils/asyncHandler";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { logActivity } from "../utils/activityLogger";
 import { ActivityAction, EntityType } from "../models/activity-log.model";
+import { emitToAll, emitToBranch } from "../services/socket.service";
 
 const churchService = new ChurchService();
 
@@ -33,6 +34,7 @@ export const createChurch = asyncHandler(
       { churchName: church.denomination_name }
     );
 
+    emitToAll("churches:changed", { action: "created" });
     res.status(201).json({ data: church, status: 201, message: "Church created successfully" });
   }
 );
@@ -80,6 +82,7 @@ export const updateChurch = asyncHandler(
       { churchName: church.denomination_name }
     );
 
+    emitToAll("churches:changed", { action: "updated" });
     res.json({ data: church, status: 200, message: "Church updated successfully" });
   }
 );
@@ -102,6 +105,7 @@ export const deleteChurch = asyncHandler(
       { churchName: church.denomination_name }
     );
 
+    emitToAll("churches:changed", { action: "deleted" });
     res.json({ status: 200, message: "Church deleted successfully" });
   }
 );
@@ -224,6 +228,7 @@ export const removeBranchMembers = asyncHandler(
       `Removed ${result.removed} member(s) from branch`,
       { branchId, ids, removed: result.removed }
     );
+    emitToBranch(branchId, "members:changed", { action: "removed" });
     res.status(200).json({ data: result, status: 200, message: `${result.removed} member(s) removed from branch` });
   }
 );

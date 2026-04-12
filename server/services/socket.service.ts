@@ -41,6 +41,21 @@ function handleConnection(socket: Socket) {
   const userId = socket.data.userId;
   socket.join(`user:${userId}`);
 
+  socket.on("join:branch", (branchId: string) => {
+    if (typeof branchId !== "string" || !branchId) return;
+    // Leave any previously joined branch rooms
+    for (const room of socket.rooms) {
+      if (room.startsWith("branch:")) socket.leave(room);
+    }
+    socket.join(`branch:${branchId}`);
+  });
+
+  socket.on("leave:branch", (branchId: string) => {
+    if (typeof branchId === "string" && branchId) {
+      socket.leave(`branch:${branchId}`);
+    }
+  });
+
   socket.on("disconnect", () => {
     socket.leave(`user:${userId}`);
   });
@@ -62,5 +77,11 @@ export function emitToUser(userId: string, event: string, data: any): void {
 export function emitToAll(event: string, data: any): void {
   if (io) {
     io.emit(event, data);
+  }
+}
+
+export function emitToBranch(branchId: string, event: string, data: any): void {
+  if (io && branchId) {
+    io.to(`branch:${branchId}`).emit(event, data);
   }
 }

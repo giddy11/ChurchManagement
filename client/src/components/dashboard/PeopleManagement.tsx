@@ -28,8 +28,7 @@ const PeopleManagement = () => {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
 
-  useEffect(() => { load(); }, [load]);
-  // Lazily load members when import dialog opens to check for duplicates
+  // Members are loaded automatically by useQuery; trigger when import/add dialog opens
   useEffect(() => { if (importOpen || addOpen) loadMembers(); }, [importOpen, addOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredPeople = people.filter((p) => {

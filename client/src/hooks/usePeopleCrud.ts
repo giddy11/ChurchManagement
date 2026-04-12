@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Person, PersonCreateDTO, PersonUpdateDTO, ImportPeopleResult } from '@/types/person';
 import {
   fetchPeople,
@@ -10,40 +11,34 @@ import {
 } from '@/lib/api';
 import { toast } from 'sonner';
 import { useChurch } from '@/components/church/ChurchProvider';
+import { queryKeys } from '@/lib/queryKeys';
 
 export function usePeopleCrud() {
   const { currentBranch } = useChurch();
-  const [people, setPeople] = useState<Person[]>([]);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
 
-  // currentBranch?.id in deps ensures load() gets a new reference whenever the
-  // active branch changes, which triggers any useEffect([load]) in consumers to
-  // re-fire and fetch data for the new branch (authFetch reads X-Branch-Id from
-  // localStorage at call time, so the correct branch is always used).
-  const load = useCallback(async (search?: string) => {
-    setLoading(true);
-    try {
-      const res = await fetchPeople(search);
-      console.log('Fetched people:', res.data);
-      setPeople(res.data ?? []);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to load people');
-    } finally {
-      setLoading(false);
-    }
-  }, [currentBranch?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const branchId = currentBranch?.id;
+  const { data: people = [], isLoading: loading } = useQuery({
+    queryKey: queryKeys.people(branchId),
+    queryFn: async () => {
+      const res = await fetchPeople();
+      return res.data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: queryKeys.people(branchId) });
+
+  // Keep load() for backward compatibility with components calling it directly
+  const load = invalidate;
 
   const create = async (data: PersonCreateDTO) => {
     setSaving(true);
     try {
-      const res = await createPersonApi(data);
-      // Optimistically add the newly created person to avoid a transient empty list
-      if (res?.data) {
-        setPeople((prev) => [res.data, ...prev]);
-      }
+      await createPersonApi(data);
       toast.success('Person added successfully');
-      await load();
+      await invalidate();
       return true;
     } catch (err: any) {
       toast.error(err.message || 'Failed to add person');
@@ -58,7 +53,7 @@ export function usePeopleCrud() {
     try {
       await updatePersonApi(id, data);
       toast.success('Person updated successfully');
-      await load();
+      await invalidate();
       return true;
     } catch (err: any) {
       toast.error(err.message || 'Failed to update person');
@@ -73,7 +68,7 @@ export function usePeopleCrud() {
     try {
       await deletePersonApi([id]);
       toast.success('Person deleted successfully');
-      await load();
+      await invalidate();
       return true;
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete person');
@@ -87,7 +82,7 @@ export function usePeopleCrud() {
     setSaving(true);
     try {
       const res = await importPeopleApi(rows);
-      await load();
+      await invalidate();
       const { valid, duplicates, invalid } = res.data;
       if (valid.length > 0) {
         toast.success(`${valid.length} ${valid.length === 1 ? 'person' : 'people'} imported successfully`);
@@ -108,7 +103,7 @@ export function usePeopleCrud() {
     try {
       const res = await convertPersonApi(id);
       toast.success(res.message || 'Person converted to member');
-      await load();
+      await invalidate();
       return true;
     } catch (err: any) {
       toast.error(err.message || 'Conversion failed');
@@ -123,7 +118,7 @@ export function usePeopleCrud() {
     try {
       const res = await deletePersonApi(ids);
       toast.success(res.message || `${ids.length} people deleted`);
-      await load();
+      await invalidate();
       return true;
     } catch (err: any) {
       toast.error(err.message || 'Failed to delete people');
