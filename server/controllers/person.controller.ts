@@ -20,7 +20,8 @@ function normalizePersonInput(body: any, branchId?: string): Partial<Person> {
   };
   const birthRaw = typeof body.birthdate === 'string' ? body.birthdate.trim() : undefined;
   const birthdate = birthRaw && /^\d{4}-\d{2}-\d{2}$/.test(birthRaw) ? birthRaw : undefined;
-  const gender = body.gender === 'male' || body.gender === 'female' ? body.gender : undefined;
+  const genderRaw = typeof body.gender === 'string' ? body.gender.trim().toLowerCase() : undefined;
+  const gender = genderRaw === 'male' || genderRaw === 'female' ? genderRaw : undefined;
 
   return {
     first_name: trim(body.first_name),
