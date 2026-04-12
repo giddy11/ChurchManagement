@@ -81,10 +81,11 @@ export class UserController {
         return;
       }
       const result = await this.userService.createManyUsers(users);
-      // Attach all newly created users to active branch when present
+      // Add both newly created and pre-existing users to the active branch
       const branchId = (req as any).branchId as string | null;
-      if (branchId && result.created?.length) {
-        for (const u of result.created) {
+      if (branchId) {
+        const toAdd = [...(result.created ?? []), ...(result.existing ?? [])];
+        for (const u of toAdd) {
           try { await this.userService.addUserToBranch(u.id, branchId, 'member'); } catch {}
         }
       }
@@ -95,6 +96,8 @@ export class UserController {
         uniqueCount: result.uniqueCount,
         duplicateCount: result.duplicateCount,
         duplicateData: result.duplicates,
+        convertedPersons: result.convertedPersons,
+        convertedCount: result.convertedPersons.length,
       });
     }
   );
@@ -105,7 +108,9 @@ export class UserController {
       const branchId = (req as any).branchId as string | undefined;
       const requesterId = (req as any).user?.id as string | undefined;
       const requesterRole = (req as any).user?.role as string | undefined;
+      const denominationIds = (req as any).user?.denominationIds as string[] | undefined;
       const isAdminLike = requesterRole === 'admin' || requesterRole === 'super_admin';
+      const isSuperAdmin = requesterRole === 'super_admin';
 
       // Non-admin users must be scoped to an active branch selected via X-Branch-Id.
       if (!isAdminLike && !branchId) {
@@ -115,12 +120,15 @@ export class UserController {
         });
         return;
       }
-      
+
+      // Super admins see all; others are scoped to their denomination when no branch selected
+      const scopedDenomIds = !isSuperAdmin ? denominationIds : undefined;
+
       let users;
       if (role && typeof role === 'string' && isAdminLike) {
-        users = await this.userService.getUsersByRole(role, branchId, requesterId);
+        users = await this.userService.getUsersByRole(role, branchId, requesterId, scopedDenomIds);
       } else {
-        users = await this.userService.getAllUsers(branchId, requesterId);
+        users = await this.userService.getAllUsers(branchId, requesterId, scopedDenomIds);
       }
       
       res.status(200).json({

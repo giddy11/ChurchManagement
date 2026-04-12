@@ -9,22 +9,46 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Download, Upload, FileSpreadsheet, Loader2, CheckCircle2, AlertTriangle, Copy } from 'lucide-react';
+import { Download, Upload, FileSpreadsheet, Loader2, CheckCircle2, AlertTriangle, Copy, ShieldAlert } from 'lucide-react';
 import { PERSON_IMPORT_COLUMNS } from '@/types/person';
 import type { PersonCreateDTO, ImportPeopleResult } from '@/types/person';
+import { normalizePhone } from '@/lib/utils';
+
+// ── Cell-level format validators (used for misalignment detection) ─────────
+const CELL_VALIDATORS: Partial<Record<string, (v: string) => boolean>> = {
+  birthdate: (v) => /^\d{4}-\d{2}-\d{2}$|^\d{1,2}\/\d{1,2}\/\d{4}$/.test(v),
+  gender:    (v) => ['male', 'female'].includes(v.toLowerCase()),
+  email:     (v) => v.includes('@'),
+  phone:     (v) => /^[\+\d\s\(\)\-\.]{6,}$/.test(v),
+};
+
+function isCellSuspect(col: string, value: string): boolean {
+  const validate = CELL_VALIDATORS[col];
+  return !!validate && !!value && !validate(value);
+}
+
+function rowHasColumnMismatch(row: Partial<PersonCreateDTO>): boolean {
+  return PERSON_IMPORT_COLUMNS.some((col) => isCellSuspect(col, String((row as any)[col] ?? '')));
+}
 
 interface ImportPeopleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImport: (rows: Partial<PersonCreateDTO>[]) => Promise<ImportPeopleResult | false>;
   saving?: boolean;
+  /** Emails of existing member (user) accounts — used to warn about rows that will be rejected */
+  existingMemberEmails?: string[];
 }
 
 // ── Template download ────────────────────────────────────────────────────────
 function downloadTemplate() {
   const header = PERSON_IMPORT_COLUMNS.join(',');
-  const sample = 'John,Doe,Michael,Johnny,1990-01-15,male,"123 Main St, Apt 4",Lagos,Ikeja,Nigeria,john@email.com,+234 7001234567';
-  const csv = `${header}\n${sample}`;
+  const instructions = '# INSTRUCTIONS: One person per row. Required: first_name & last_name. For optional fields leave the cell BLANK but keep the commas — do NOT delete or reorder columns.';
+  // Full example
+  const sample1 = 'John,Doe,Michael,Johnny,1990-01-15,male,"123 Main St, Apt 4",Lagos,Ikeja,Nigeria,john@email.com,+234 7001234567';
+  // Example showing how to leave optional fields empty (commas preserved)
+  const sample2 = 'Jane,Smith,,,,,,,Lagos,,jane@email.com,';
+  const csv = [header, instructions, sample1, sample2].join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -63,11 +87,15 @@ function parseCSV(text: string): Partial<PersonCreateDTO>[] {
 
   if (rows.length < 2) return [];
   const headers = rows[0].map((h) => h.trim());
-  return rows.slice(1).map((values) => {
+  // Skip comment/instruction rows (lines starting with #)
+  const dataRows = rows.slice(1).filter((r) => !r[0]?.trimStart().startsWith('#'));
+  return dataRows.map((values) => {
     const row: any = {};
     headers.forEach((h, i) => {
-      const v = (values[i] ?? '').trim();
-      if (v) row[h] = v;
+      let v = (values[i] ?? '').trim();
+      if (!v) return;
+      if (h === 'phone') v = normalizePhone(v);
+      row[h] = v;
     });
     return row;
   });
@@ -103,7 +131,7 @@ const RowTable: React.FC<{ rows: Record<string, any>[]; reasonKey?: string }> = 
 };
 
 // ── Main component ────────────────────────────────────────────────────────────
-const ImportPeopleDialog: React.FC<ImportPeopleDialogProps> = ({ open, onOpenChange, onImport, saving }) => {
+const ImportPeopleDialog: React.FC<ImportPeopleDialogProps> = ({ open, onOpenChange, onImport, saving, existingMemberEmails }) => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<Partial<PersonCreateDTO>[]>([]);
   const [fileName, setFileName] = useState('');
@@ -137,10 +165,15 @@ const ImportPeopleDialog: React.FC<ImportPeopleDialogProps> = ({ open, onOpenCha
   const validCount = result?.valid.length ?? 0;
   const dupCount = result?.duplicates.length ?? 0;
   const invalidCount = result?.invalid.length ?? 0;
+  const alreadyMemberCount = result?.alreadyMembers?.length ?? 0;
+
+  // Pre-import warning: rows whose email matches an existing member account
+  const memberEmailSet = new Set((existingMemberEmails ?? []).map((e) => e.trim().toLowerCase()));
+  const willBeRejectedRows = rows.filter((r) => (r as any).email && memberEmailSet.has((r as any).email.trim().toLowerCase()));
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-[90vw] sm:max-w-5xl bg-white">
+      <DialogContent className="max-w-[90vw] sm:max-w-7xl bg-white">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Import People</DialogTitle>
         </DialogHeader>
@@ -158,13 +191,19 @@ const ImportPeopleDialog: React.FC<ImportPeopleDialogProps> = ({ open, onOpenCha
                 <Copy className="h-4 w-4 text-yellow-600" />
                 <span className="text-sm font-medium text-yellow-700">{dupCount} duplicate{dupCount !== 1 ? 's' : ''}</span>
               </div>
+              {alreadyMemberCount > 0 && (
+                <div className="flex items-center gap-2 rounded-md border border-orange-200 bg-orange-50 px-3 py-2">
+                  <ShieldAlert className="h-4 w-4 text-orange-600" />
+                  <span className="text-sm font-medium text-orange-700">{alreadyMemberCount} already member{alreadyMemberCount !== 1 ? 's' : ''}</span>
+                </div>
+              )}
               <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2">
                 <AlertTriangle className="h-4 w-4 text-red-600" />
                 <span className="text-sm font-medium text-red-700">{invalidCount} invalid</span>
               </div>
             </div>
 
-            <Tabs defaultValue={dupCount > 0 ? 'duplicates' : invalidCount > 0 ? 'invalid' : 'valid'}>
+            <Tabs defaultValue={alreadyMemberCount > 0 ? 'alreadyMembers' : dupCount > 0 ? 'duplicates' : invalidCount > 0 ? 'invalid' : 'valid'}>
               <TabsList className="w-full">
                 <TabsTrigger value="valid" className="flex-1 gap-2">
                   Imported <Badge variant="secondary">{validCount}</Badge>
@@ -172,6 +211,11 @@ const ImportPeopleDialog: React.FC<ImportPeopleDialogProps> = ({ open, onOpenCha
                 <TabsTrigger value="duplicates" className="flex-1 gap-2">
                   Duplicates <Badge variant="secondary">{dupCount}</Badge>
                 </TabsTrigger>
+                {alreadyMemberCount > 0 && (
+                  <TabsTrigger value="alreadyMembers" className="flex-1 gap-2">
+                    Already Members <Badge variant="secondary">{alreadyMemberCount}</Badge>
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value="invalid" className="flex-1 gap-2">
                   Invalid <Badge variant="secondary">{invalidCount}</Badge>
                 </TabsTrigger>
@@ -183,6 +227,12 @@ const ImportPeopleDialog: React.FC<ImportPeopleDialogProps> = ({ open, onOpenCha
               <TabsContent value="duplicates" className="mt-3">
                 <RowTable rows={result.duplicates as any} reasonKey="reason" />
               </TabsContent>
+              {alreadyMemberCount > 0 && (
+                <TabsContent value="alreadyMembers" className="mt-3">
+                  <p className="text-xs text-gray-500 mb-2">These rows were skipped because a member account already exists for their email. People records are reserved for non-members.</p>
+                  <RowTable rows={(result.alreadyMembers ?? []) as any} reasonKey="reason" />
+                </TabsContent>
+              )}
               <TabsContent value="invalid" className="mt-3">
                 <RowTable rows={result.invalid as any} reasonKey="reason" />
               </TabsContent>
@@ -217,21 +267,50 @@ const ImportPeopleDialog: React.FC<ImportPeopleDialogProps> = ({ open, onOpenCha
             {rows.length > 0 && (
               <div className="space-y-1.5">
                 <p className="text-xs font-medium text-gray-500">Preview (first 5 rows)</p>
+                {willBeRejectedRows.length > 0 && (
+                  <div className="flex items-start gap-2 rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-800">
+                    <ShieldAlert className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    <span>
+                      <span className="font-medium">{willBeRejectedRows.length} row{willBeRejectedRows.length !== 1 ? 's' : ''}</span>
+                      {' '}will be skipped — a member account already exists for {willBeRejectedRows.length === 1 ? 'this email' : 'these emails'}:
+                      {' '}{willBeRejectedRows.map((r) => (r as any).email).join(', ')}.
+                      People records are reserved for non-members.
+                    </span>
+                  </div>
+                )}
+                {rows.slice(0, 5).some(rowHasColumnMismatch) && (
+                  <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    <span>One or more rows have values in the wrong column — likely caused by skipping optional fields without keeping the commas. Cells highlighted in amber are suspected mismatches. Fix your CSV and re-upload, or <button className="underline font-medium" onClick={downloadTemplate}>download the template</button> again.</span>
+                  </div>
+                )}
                 <div className="overflow-auto rounded border text-xs max-h-44">
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gray-50 border-b">
-                        {Object.keys(rows[0]).map((k) => (
-                          <th key={k} className="px-2 py-1.5 text-left font-medium text-gray-600 whitespace-nowrap">{k}</th>
+                        {PERSON_IMPORT_COLUMNS.map((col) => (
+                          <th key={col} className="px-2 py-1.5 text-left font-medium text-gray-600 whitespace-nowrap">{col}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {rows.slice(0, 5).map((r, i) => (
                         <tr key={i} className="border-b last:border-0">
-                          {Object.values(r).map((v, j) => (
-                            <td key={j} className="px-2 py-1.5 text-gray-700 whitespace-nowrap max-w-[120px] truncate">{String(v)}</td>
-                          ))}
+                          {PERSON_IMPORT_COLUMNS.map((col) => {
+                            const val = String((r as any)[col] ?? '');
+                            const suspect = isCellSuspect(col, val);
+                            return (
+                              <td
+                                key={col}
+                                title={suspect ? `"${val}" doesn't look like a valid ${col}` : undefined}
+                                className={`px-2 py-1.5 whitespace-nowrap max-w-[120px] truncate ${
+                                  suspect ? 'bg-amber-50 text-amber-700 font-medium' : 'text-gray-700'
+                                }`}
+                              >
+                                {val}
+                              </td>
+                            );
+                          })}
                         </tr>
                       ))}
                     </tbody>

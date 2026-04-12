@@ -68,6 +68,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = useCallback(async () => {
     clearTokens();
+    localStorage.removeItem('church_mgmt_selected_church');
+    localStorage.removeItem('church_mgmt_selected_branch');
+    localStorage.removeItem('church_mgmt_access_token');
+    localStorage.removeItem('church_mgmt_refresh_token');
     disconnectSocket();
     // Await the server logout before navigating.
     // A timeout ensures we never block indefinitely if the network is slow.

@@ -6,6 +6,7 @@ export interface ImportResult {
   valid: Person[];
   duplicates: Array<{ row: Partial<Person>; reason: string }>;
   invalid: Array<{ row: Partial<Person>; reason: string }>;
+  alreadyMembers: Array<{ row: Partial<Person>; reason: string }>;
 }
 
 export class PersonService {
@@ -21,10 +22,19 @@ export class PersonService {
     return this.repo.save(entities);
   }
 
-  async findAll(branchId?: string): Promise<Person[]> {
-    const where: any = {};
-    if (branchId) where.branch_id = branchId;
-    return this.repo.find({ where, order: { created_at: "DESC" } });
+  async findAll(branchId?: string, denominationIds?: string[]): Promise<Person[]> {
+    if (branchId) {
+      return this.repo.find({ where: { branch_id: branchId }, order: { created_at: "DESC" } });
+    }
+    if (denominationIds && denominationIds.length > 0) {
+      return this.repo.createQueryBuilder("p")
+        .innerJoin("p.branch", "b")
+        .where("b.denomination_id IN (:...denominationIds)", { denominationIds })
+        .orderBy("p.created_at", "DESC")
+        .getMany();
+    }
+    // super_admin: return all
+    return this.repo.find({ order: { created_at: "DESC" } });
   }
 
   async findById(id: string): Promise<Person | null> {
@@ -44,9 +54,14 @@ export class PersonService {
     return result.affected ?? 0;
   }
 
-  async search(term: string, branchId?: string): Promise<Person[]> {
+  async search(term: string, branchId?: string, denominationIds?: string[]): Promise<Person[]> {
     const qb = this.repo.createQueryBuilder("p");
-    if (branchId) qb.andWhere("p.branch_id = :branchId", { branchId });
+    if (branchId) {
+      qb.where("p.branch_id = :branchId", { branchId });
+    } else if (denominationIds && denominationIds.length > 0) {
+      qb.innerJoin("p.branch", "b")
+        .where("b.denomination_id IN (:...denominationIds)", { denominationIds });
+    }
     qb.andWhere(
       "(p.first_name ILIKE :t OR p.last_name ILIKE :t OR p.email ILIKE :t)",
       { t: `%${term}%` }
@@ -88,15 +103,20 @@ export class PersonService {
     return null;
   }
 
-  async importWithDedupe(items: Partial<Person>[], branchId?: string): Promise<ImportResult> {
+  async importWithDedupe(items: Partial<Person>[], branchId?: string, memberEmailSet: Set<string> = new Set()): Promise<ImportResult> {
     const duplicates: ImportResult["duplicates"] = [];
     const invalid: ImportResult["invalid"] = [];
+    const alreadyMembers: ImportResult["alreadyMembers"] = [];
     const candidates: Partial<Person>[] = [];
 
     // 1. Basic validation
     for (const item of items) {
       if (!item.first_name?.trim() || !item.last_name?.trim()) {
         invalid.push({ row: item, reason: "Missing first_name or last_name" });
+        continue;
+      }
+      if (item.email && memberEmailSet.has(item.email.trim().toLowerCase())) {
+        alreadyMembers.push({ row: item, reason: `"${item.email}" is already a member account` });
         continue;
       }
       candidates.push(item);
@@ -156,6 +176,6 @@ export class PersonService {
       saved = await this.repo.save(entities);
     }
 
-    return { valid: saved, duplicates, invalid };
+    return { valid: saved, duplicates, invalid, alreadyMembers };
   }
 }

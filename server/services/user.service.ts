@@ -8,10 +8,12 @@ import { sendMemberAddedEmail } from "../email/email.member_added";
 import { firebaseAuth } from "../config/firebase.admin";
 
 import { In } from "typeorm";
+import { Person } from "../models/person.model";
 
 export class UserService {
   private readonly userRepository = AppDataSource.getRepository(User);
   private readonly membershipRepository = AppDataSource.getRepository(require('../models/church/branch-membership.model').BranchMembership);
+  private readonly personRepository = AppDataSource.getRepository(Person);
 
   async createUserWithGeneratedPassword(
     email: string,
@@ -95,7 +97,7 @@ export class UserService {
 
   async createManyUsers(
     users: { first_name: string; last_name?: string; phone_number: string; email: string; roleName: string }[]
-  ): Promise<{ created: User[]; duplicateCount: number; uniqueCount: number; duplicates: { first_name: string; last_name?: string; phone_number: string; email: string; roleName: string }[] }> {
+  ): Promise<{ created: User[]; existing: User[]; duplicateCount: number; uniqueCount: number; duplicates: { first_name: string; last_name?: string; phone_number: string; email: string; roleName: string }[]; convertedPersons: { email: string; first_name: string; last_name: string }[] }> {
     // Get all emails to check for duplicates
     const emails = users.map((u) => u.email.trim().toLowerCase());
     const existing = await this.userRepository
@@ -124,16 +126,61 @@ export class UserService {
         if (createdUser) created.push(createdUser);
       }
     }
+    // Auto-convert any Person records whose email matches a newly created or already-existing user
+    const allProcessedEmails = users.map((u) => u.email.trim().toLowerCase());
+    const convertedPersons: { email: string; first_name: string; last_name: string }[] = [];
+    if (allProcessedEmails.length > 0) {
+      // Gather the user IDs for all processed emails (both newly created and pre-existing duplicates)
+      const allMatchedUsers = [...created, ...existing];
+      const emailToUserId = new Map<string, string>(
+        allMatchedUsers.map((u) => [u.email.trim().toLowerCase(), u.id])
+      );
+      const matchingPeople = await this.personRepository
+        .createQueryBuilder('p')
+        .where('LOWER(p.email) IN (:...emails)', { emails: allProcessedEmails })
+        .andWhere('p.converted_user_id IS NULL')
+        .getMany();
+      for (const person of matchingPeople) {
+        const userId = emailToUserId.get(person.email.trim().toLowerCase());
+        if (userId) {
+          convertedPersons.push({ email: person.email, first_name: person.first_name, last_name: person.last_name });
+          person.converted_user_id = userId;
+          await this.personRepository.save(person);
+        }
+      }
+    }
+
     return {
       created,
+      existing,
       duplicateCount: duplicateUsers.length,
       uniqueCount: uniqueUsers.length,
-      duplicates: duplicateUsers
+      duplicates: duplicateUsers,
+      convertedPersons,
     };
   }
 
-  async getAllUsers(branchId?: string, excludeUserId?: string): Promise<any[]> {
+  async getAllUsers(branchId?: string, excludeUserId?: string, denominationIds?: string[]): Promise<any[]> {
     if (!branchId) {
+      if (denominationIds && denominationIds.length > 0) {
+        // Two-step to avoid duplicate rows from multi-join: first collect scoped IDs
+        const rawIds = await this.userRepository
+          .createQueryBuilder('user')
+          .select('DISTINCT user.id', 'id')
+          .leftJoin('user.denominations', 'ud')
+          .leftJoin('user.branchMemberships', 'bm')
+          .leftJoin('bm.branch', 'bmb')
+          .where('ud.id IN (:...denominationIds) OR bmb.denomination_id IN (:...denominationIds)', { denominationIds })
+          .getRawMany();
+        const ids = rawIds.map((r: any) => r.id).filter(Boolean);
+        if (ids.length === 0) return [];
+        let qb = this.userRepository.createQueryBuilder('user')
+          .where('user.id IN (:...ids)', { ids })
+          .orderBy('user.createdAt', 'DESC');
+        if (excludeUserId) qb = qb.andWhere('user.id != :excludeUserId', { excludeUserId });
+        const users = await qb.getMany();
+        return users.map((u) => classToPlain(u));
+      }
       return this.userRepository.find({
         order: { createdAt: "DESC" },
       });
@@ -156,8 +203,27 @@ export class UserService {
     }));
   }
 
-  async getUsersByRole(roleName: string, branchId?: string, excludeUserId?: string): Promise<User[]> {
+  async getUsersByRole(roleName: string, branchId?: string, excludeUserId?: string, denominationIds?: string[]): Promise<User[]> {
     if (!branchId) {
+      if (denominationIds && denominationIds.length > 0) {
+        const rawIds = await this.userRepository
+          .createQueryBuilder('user')
+          .select('DISTINCT user.id', 'id')
+          .leftJoin('user.denominations', 'ud')
+          .leftJoin('user.branchMemberships', 'bm')
+          .leftJoin('bm.branch', 'bmb')
+          .where('(ud.id IN (:...denominationIds) OR bmb.denomination_id IN (:...denominationIds))', { denominationIds })
+          .andWhere('user.role = :roleName', { roleName })
+          .getRawMany();
+        const ids = rawIds.map((r: any) => r.id).filter(Boolean);
+        if (ids.length === 0) return [];
+        let qb = this.userRepository.createQueryBuilder('user')
+          .where('user.id IN (:...ids)', { ids })
+          .andWhere('user.role = :roleName', { roleName })
+          .orderBy('user.createdAt', 'DESC');
+        if (excludeUserId) qb = qb.andWhere('user.id != :excludeUserId', { excludeUserId });
+        return qb.getMany();
+      }
       return this.userRepository.find({
         where: { role: roleName },
         order: { createdAt: "DESC" },
@@ -451,6 +517,15 @@ export class UserService {
       .createQueryBuilder('user')
       .where('LOWER(user.email) = LOWER(:email)', { email: email.trim() })
       .getOne();
+  }
+
+  async findUsersByEmails(emails: string[]): Promise<User[]> {
+    if (emails.length === 0) return [];
+    const normalized = emails.map((e) => e.trim().toLowerCase());
+    return this.userRepository
+      .createQueryBuilder('user')
+      .where('LOWER(user.email) IN (:...emails)', { emails: normalized })
+      .getMany();
   }
 
   // ─── Branch helpers ─────────────────────────────────────────────────────

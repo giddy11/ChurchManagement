@@ -31,7 +31,7 @@ function buildAuthResponse(result: { user: any; tokens: any }) {
 
 export const register = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const { idToken, full_name, denomination_name, description, location, state, country, address } = req.body;
+    const { idToken, full_name, phone_number, denomination_name, description, location, state, country, address } = req.body;
     if (!idToken || !full_name) {
       res.status(400).json({
         status: 400,
@@ -49,7 +49,7 @@ export const register = asyncHandler(
         state,
         country,
         address,
-      });
+      }, phone_number);
 
       const roleName = result.user.role || 'admin';
       const permissions = getPermissionsForRole(roleName as string);

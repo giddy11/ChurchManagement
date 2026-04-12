@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePeopleCrud } from '@/hooks/usePeopleCrud';
 import type { Person } from '@/types/person';
 import { PERSON_IMPORT_COLUMNS } from '@/types/person';
+import { useMemberCrud } from '@/hooks/useMemberCrud';
 import AddPersonDialog from './AddPersonDialog';
 import EditPersonDialog from './EditPersonDialog';
 import ImportPeopleDialog from './ImportPeopleDialog';
@@ -15,6 +16,7 @@ import PersonDetailsDialog from './PersonDetailsDialog';
 
 const PeopleManagement = () => {
   const { people, loading, saving, load, create, update, remove, removeMany, importPeople, convert } = usePeopleCrud();
+  const { members, load: loadMembers } = useMemberCrud();
   const [searchTerm, setSearchTerm] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Person | null>(null);
@@ -27,6 +29,8 @@ const PeopleManagement = () => {
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
 
   useEffect(() => { load(); }, [load]);
+  // Lazily load members when import dialog opens to check for duplicates
+  useEffect(() => { if (importOpen || addOpen) loadMembers(); }, [importOpen, addOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredPeople = people.filter((p) => {
     const term = searchTerm.trim().toLowerCase();
@@ -168,9 +172,9 @@ const PeopleManagement = () => {
       </Card>
 
        {/* Dialogs */}
-       <AddPersonDialog open={addOpen} onOpenChange={setAddOpen} onSave={create} saving={saving} />
+       <AddPersonDialog open={addOpen} onOpenChange={setAddOpen} onSave={create} saving={saving} existingMemberEmails={members.map((m) => m.email).filter(Boolean)} />
        <EditPersonDialog open={!!editTarget} onOpenChange={(o) => { if (!o) setEditTarget(null); }} person={editTarget} onSave={update} saving={saving} />
-       <ImportPeopleDialog open={importOpen} onOpenChange={setImportOpen} onImport={importPeople} saving={saving} />
+       <ImportPeopleDialog open={importOpen} onOpenChange={setImportOpen} onImport={importPeople} saving={saving} existingMemberEmails={members.map((m) => m.email).filter(Boolean)} />
       <PersonDetailsDialog open={!!viewTarget} onOpenChange={(o) => { if (!o) setViewTarget(null); }} person={viewTarget} />
 
       <ConfirmDialog

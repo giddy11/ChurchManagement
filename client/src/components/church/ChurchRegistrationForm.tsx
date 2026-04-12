@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useRegister } from '@/hooks/useAuthQuery';
+import { Country } from 'country-state-city';
+import { PhoneField, isoToFlag } from '@/components/dashboard/AddPersonDialog';
 
 interface ChurchRegistrationFormProps {
   onSwitchToLogin: () => void;
@@ -21,6 +23,15 @@ export const ChurchRegistrationForm: React.FC<ChurchRegistrationFormProps> = ({ 
   const [error, setError] = useState('');
   const { loginWithResponse } = useAuth();
   const registerMutation = useRegister();
+  const phoneOptions = React.useMemo(() =>
+    Country.getAllCountries().map((c) => ({
+      isoCode: c.isoCode,
+      name: c.name,
+      code: `+${c.phonecode}`,
+      flag: isoToFlag(c.isoCode),
+    })),
+    []
+  );
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -59,6 +70,7 @@ export const ChurchRegistrationForm: React.FC<ChurchRegistrationFormProps> = ({ 
         email: formData.email,
         full_name: fullName,
         password: formData.password,
+        phone_number: formData.phone || undefined,
         church: {
           denomination_name: formData.denominationName,
           description: formData.denominationDescription || undefined,
@@ -186,14 +198,11 @@ export const ChurchRegistrationForm: React.FC<ChurchRegistrationFormProps> = ({ 
             </div>
 
             <div style={styles.formGroup}>
-              <label htmlFor="phone" style={styles.label}>Phone Number</label>
-              <input
-                id="phone"
-                type="tel"
-                placeholder="(555) 123-4567"
+              <PhoneField
                 value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-                style={styles.input}
+                onChange={(v) => handleInputChange('phone', v)}
+                options={phoneOptions}
+                countryName=""
               />
             </div>
 

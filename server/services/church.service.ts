@@ -65,8 +65,9 @@ export class ChurchService {
     country?: string;
     pastor_name?: string;
     description?: string;
+    image?: string;
     is_headquarters?: boolean;
-    created_by?: string; // user id of the creator
+    created_by?: string;
   }): Promise<Branch> {
     // Ensure denomination exists
     const denom = await this.denomRepo.findOneBy({ id: data.denomination_id });
@@ -136,7 +137,7 @@ export class ChurchService {
 
   async updateBranch(
     id: string,
-    data: Partial<Pick<Branch, "name" | "address" | "city" | "state" | "country" | "pastor_name" | "description" | "is_headquarters">>
+    data: Partial<Pick<Branch, "name" | "address" | "city" | "state" | "country" | "pastor_name" | "description" | "image" | "is_headquarters">>
   ): Promise<Branch | null> {
     const branch = await this.branchRepo.findOneBy({ id });
     if (!branch) return null;

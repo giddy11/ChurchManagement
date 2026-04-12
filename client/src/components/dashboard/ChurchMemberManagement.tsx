@@ -31,6 +31,7 @@ import {
 import { useChurch } from '@/components/church/ChurchProvider';
 import { useMemberCrud } from '@/hooks/useMemberCrud';
 import type { MemberDTO } from '@/hooks/useMemberCrud';
+import { usePeopleCrud } from '@/hooks/usePeopleCrud';
 import AddMemberDialog from './AddMemberDialog';
 import ImportMembersDialog from './ImportMembersDialog';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
@@ -527,6 +528,7 @@ const AddFromUsersDialog: React.FC<AddFromUsersDialogProps> = ({
 const ChurchMemberManagement: React.FC = () => {
   const { currentChurch, currentBranch, effectiveRole } = useChurch();
   const { members, loading, saving, load, create, update, setBranchStatus, remove, removeMany, importMembers } = useMemberCrud();
+  const { people, load: loadPeople } = usePeopleCrud();
 
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
@@ -540,6 +542,8 @@ const ChurchMemberManagement: React.FC = () => {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   useEffect(() => { load(); }, [load, currentBranch]);
+  // Lazily load people when the import dialog opens so we can show the conversion notice
+  useEffect(() => { if (importOpen) loadPeople(); }, [importOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = members.filter((m) => {
     const term = search.trim().toLowerCase();
@@ -725,6 +729,7 @@ const ChurchMemberManagement: React.FC = () => {
         onOpenChange={setImportOpen}
         onImport={importMembers}
         saving={saving}
+        existingPersonEmails={people.map((p) => p.email).filter(Boolean)}
       />
 
       <ConfirmDialog

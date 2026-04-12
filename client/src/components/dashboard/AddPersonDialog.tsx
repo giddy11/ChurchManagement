@@ -22,7 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format } from "date-fns";
-import { User, Pencil, Calendar as CalendarIcon, Loader2, ChevronDown, AlertCircle, CheckCircle } from 'lucide-react';
+import { User, Pencil, Calendar as CalendarIcon, Loader2, ChevronDown, AlertCircle, CheckCircle, ShieldAlert } from 'lucide-react';
 import type { PersonCreateDTO } from '@/types/person';
 import { Country, State } from 'country-state-city';
 import { uploadToCloudinary } from '@/lib/cloudinary';
@@ -34,6 +34,8 @@ interface AddPersonDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (data: PersonCreateDTO) => Promise<boolean>;
   saving?: boolean;
+  /** Emails of existing member (user) accounts — used to warn before submission */
+  existingMemberEmails?: string[];
 }
 
 const emptyForm: PersonCreateDTO = {
@@ -48,7 +50,7 @@ const normalizeGender = (value?: string): 'male' | 'female' | undefined => {
   return undefined;
 };
 
-const AddPersonDialog: React.FC<AddPersonDialogProps> = ({ open, onOpenChange, onSave, saving }) => {
+const AddPersonDialog: React.FC<AddPersonDialogProps> = ({ open, onOpenChange, onSave, saving, existingMemberEmails }) => {
   const [form, setForm] = useState<PersonCreateDTO>({ ...emptyForm });
   const [birthdateDate, setBirthdateDate] = useState<Date>();
   const [countries] = useState(() => Country.getAllCountries());
@@ -58,6 +60,9 @@ const AddPersonDialog: React.FC<AddPersonDialogProps> = ({ open, onOpenChange, o
   const [searchResult, setSearchResult] = useState<Person | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+
+  const memberEmailSet = new Set((existingMemberEmails ?? []).map((e) => e.trim().toLowerCase()));
+  const emailIsMember = !!(form.email && form.email.includes('@') && memberEmailSet.has(form.email.trim().toLowerCase()));
   const phoneOptions = React.useMemo(() => countries.map((c) => ({ isoCode: c.isoCode, name: c.name, code: `+${c.phonecode}`, flag: isoToFlag(c.isoCode) })), [countries]);
 
   const onCountryChange = (code: string) => {
@@ -212,7 +217,18 @@ const AddPersonDialog: React.FC<AddPersonDialogProps> = ({ open, onOpenChange, o
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Add Person</DialogTitle>
         </DialogHeader>
-        {searchResult && (
+        {emailIsMember && (
+          <div className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+            <ShieldAlert className="h-5 w-5 text-orange-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-orange-900">Already a Member</p>
+              <p className="text-xs text-orange-700">
+                A member account already exists for <span className="font-medium">{form.email}</span>. People records are reserved for non-members.
+              </p>
+            </div>
+          </div>
+        )}
+        {!emailIsMember && searchResult && (
           <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <CheckCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
@@ -246,7 +262,7 @@ const AddPersonDialog: React.FC<AddPersonDialogProps> = ({ open, onOpenChange, o
           emailSearchLoading={searchLoading}
         />
         <DialogFooter className="bg-white p-4 -mx-6 -mb-6 border-t border-gray-100 mt-6">
-          <Button onClick={handleSave} disabled={saving || !form.first_name || !form.last_name} className="bg-app-primary hover:bg-app-primary-hover text-app-primary-foreground font-medium px-8">
+          <Button onClick={handleSave} disabled={saving || !form.first_name || !form.last_name || emailIsMember} className="bg-app-primary hover:bg-app-primary-hover text-app-primary-foreground font-medium px-8">
             {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving…</> : 'Save'}
           </Button>
         </DialogFooter>

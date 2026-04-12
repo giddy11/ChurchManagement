@@ -71,7 +71,8 @@ export class AuthService {
   async register(
     idToken: string,
     full_name: string,
-    church: ChurchFields
+    church: ChurchFields,
+    phone_number?: string
   ): Promise<{ user: UserResponse; church: Church; tokens: AuthTokens }> {
     if (!idToken || !full_name) {
       throw new Error("All fields are required");
@@ -92,6 +93,7 @@ export class AuthService {
     const user = this.userRepository.create({
       email: email.toLowerCase().trim(),
       full_name: full_name.trim(),
+      phone_number: phone_number?.trim() || undefined,
       role: isFirst ? 'super_admin' : 'admin',
     });
 

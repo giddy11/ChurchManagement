@@ -9,22 +9,44 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Download, Upload, FileSpreadsheet, Loader2, CheckCircle2, AlertTriangle, Copy } from 'lucide-react';
+import { Download, Upload, FileSpreadsheet, Loader2, CheckCircle2, AlertTriangle, Copy, UserCheck } from 'lucide-react';
 import type { ImportMembersResult } from '@/hooks/useMemberCrud';
+import { normalizePhone } from '@/lib/utils';
 
-const MEMBER_IMPORT_COLUMNS = ['first_name', 'last_name', 'email', 'phone_number', 'role'];
+const MEMBER_IMPORT_COLUMNS = ['first_name', 'last_name', 'email', 'phone_number'] as const;
+type MemberImportCol = typeof MEMBER_IMPORT_COLUMNS[number];
+
+// ── Cell-level format validators ───────────────────────────────────────────────
+const CELL_VALIDATORS: Partial<Record<MemberImportCol, (v: string) => boolean>> = {
+  email:        (v) => v.includes('@'),
+  phone_number: (v) => /^[\+\d\s\(\)\-\.]{6,}$/.test(v),
+};
+
+function isCellSuspect(col: MemberImportCol, value: string): boolean {
+  const validate = CELL_VALIDATORS[col];
+  return !!validate && !!value && !validate(value);
+}
+
+function rowHasColumnMismatch(row: Record<string, string>): boolean {
+  return MEMBER_IMPORT_COLUMNS.some((col) => isCellSuspect(col, row[col] ?? ''));
+}
 
 interface ImportMembersDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImport: (rows: { first_name: string; last_name: string; email: string; role?: string; phone_number?: string }[]) => Promise<ImportMembersResult | false>;
   saving?: boolean;
+  /** Emails of existing Person records — used to highlight rows that will be auto-converted */
+  existingPersonEmails?: string[];
 }
 
 function downloadTemplate() {
   const header = MEMBER_IMPORT_COLUMNS.join(',');
-  const sample = 'John,Doe,john@example.com,+234 700 000 0000,member';
-  const csv = `${header}\n${sample}`;
+  // const instructions = '# INSTRUCTIONS: One member per row. Required: first_name, last_name, email. phone_number is optional — leave it blank but keep the comma.';
+  const sample1 = 'John,Doe,john@example.com,+234 700 000 0000';
+  // Example with optional phone_number empty (comma preserved)
+  const sample2 = 'Jane,Smith,jane@example.com,';
+  const csv = [header, /*instructions,*/ sample1, sample2].join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -61,11 +83,15 @@ function parseCSV(text: string): Record<string, string>[] {
   if (rows.length < 2) return [];
 
   const headers = rows[0].map((h) => h.trim());
-  return rows.slice(1).map((values) => {
+  // Skip comment/instruction rows (lines starting with #)
+  const dataRows = rows.slice(1).filter((r) => !r[0]?.trimStart().startsWith('#'));
+  return dataRows.map((values) => {
     const row: Record<string, string> = {};
     headers.forEach((h, i) => {
-      const v = (values[i] ?? '').trim();
-      if (v) row[h] = v;
+      let v = (values[i] ?? '').trim();
+      if (!v) return;
+      if (h === 'phone_number') v = normalizePhone(v);
+      row[h] = v;
     });
     return row;
   });
@@ -99,7 +125,7 @@ const RowTable: React.FC<{ rows: Record<string, any>[]; reasonKey?: string }> = 
   );
 };
 
-const ImportMembersDialog: React.FC<ImportMembersDialogProps> = ({ open, onOpenChange, onImport, saving }) => {
+const ImportMembersDialog: React.FC<ImportMembersDialogProps> = ({ open, onOpenChange, onImport, saving, existingPersonEmails }) => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [rows, setRows] = useState<Record<string, string>[]>([]);
   const [fileName, setFileName] = useState('');
@@ -120,7 +146,9 @@ const ImportMembersDialog: React.FC<ImportMembersDialogProps> = ({ open, onOpenC
   };
 
   const handleImport = async () => {
-    const validRows = rows.filter((r) => r.first_name && r.last_name && r.email) as any[];
+    const validRows = rows
+      .filter((r) => r.first_name && r.last_name && r.email)
+      .map((r) => ({ first_name: r.first_name, last_name: r.last_name, email: r.email, phone_number: r.phone_number, role: 'member' }));
     const res = await onImport(validRows);
     if (res !== false) {
       setResult(res);
@@ -131,6 +159,11 @@ const ImportMembersDialog: React.FC<ImportMembersDialogProps> = ({ open, onOpenC
 
   const createdCount = result?.uniqueCount ?? 0;
   const dupCount = result?.duplicateCount ?? 0;
+  const convertedCount = result?.convertedCount ?? 0;
+
+  // Pre-import: which preview rows match existing Person records
+  const personEmailSet = new Set((existingPersonEmails ?? []).map((e) => e.trim().toLowerCase()));
+  const willConvertRows = rows.filter((r) => r.email && personEmailSet.has(r.email.trim().toLowerCase()));
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -146,17 +179,28 @@ const ImportMembersDialog: React.FC<ImportMembersDialogProps> = ({ open, onOpenC
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                 <span className="text-sm font-medium text-green-700">{createdCount} imported</span>
               </div>
+              {convertedCount > 0 && (
+                <div className="flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2">
+                  <UserCheck className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-700">{convertedCount} converted from People</span>
+                </div>
+              )}
               <div className="flex items-center gap-2 rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2">
                 <Copy className="h-4 w-4 text-yellow-600" />
                 <span className="text-sm font-medium text-yellow-700">{dupCount} duplicate{dupCount !== 1 ? 's' : ''}</span>
               </div>
             </div>
 
-            <Tabs defaultValue={dupCount > 0 ? 'duplicates' : 'created'}>
+            <Tabs defaultValue={convertedCount > 0 ? 'converted' : dupCount > 0 ? 'duplicates' : 'created'}>
               <TabsList className="w-full">
                 <TabsTrigger value="created" className="flex-1 gap-2">
                   Imported <Badge variant="secondary">{createdCount}</Badge>
                 </TabsTrigger>
+                {convertedCount > 0 && (
+                  <TabsTrigger value="converted" className="flex-1 gap-2">
+                    Converted <Badge variant="secondary">{convertedCount}</Badge>
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value="duplicates" className="flex-1 gap-2">
                   Duplicates <Badge variant="secondary">{dupCount}</Badge>
                 </TabsTrigger>
@@ -164,6 +208,12 @@ const ImportMembersDialog: React.FC<ImportMembersDialogProps> = ({ open, onOpenC
               <TabsContent value="created" className="mt-3">
                 <RowTable rows={result.created as any} />
               </TabsContent>
+              {convertedCount > 0 && (
+                <TabsContent value="converted" className="mt-3">
+                  <p className="text-xs text-gray-500 mb-2">These people existed in your People list and have been converted to member accounts.</p>
+                  <RowTable rows={result.convertedPersons as any} />
+                </TabsContent>
+              )}
               <TabsContent value="duplicates" className="mt-3">
                 <RowTable rows={result.duplicates.map((d) => ({ ...d, row: { email: d.email } }))} reasonKey="reason" />
               </TabsContent>
@@ -197,21 +247,49 @@ const ImportMembersDialog: React.FC<ImportMembersDialogProps> = ({ open, onOpenC
             {rows.length > 0 && (
               <div className="space-y-1.5">
                 <p className="text-xs font-medium text-gray-500">Preview (first 5 rows)</p>
+                {willConvertRows.length > 0 && (
+                  <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                    <UserCheck className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    <span>
+                      <span className="font-medium">{willConvertRows.length} row{willConvertRows.length !== 1 ? 's' : ''}</span>
+                      {' '}match{willConvertRows.length === 1 ? 'es' : ''} existing People records
+                      ({willConvertRows.map((r) => r.email).join(', ')}) — {willConvertRows.length === 1 ? 'this person' : 'these people'} will be converted to member accounts on import.
+                    </span>
+                  </div>
+                )}
+                {rows.slice(0, 5).some(rowHasColumnMismatch) && (
+                  <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    <span>One or more rows have values in the wrong column — likely caused by skipping optional fields without keeping the commas. Cells highlighted in amber are suspected mismatches. Fix your CSV and re-upload, or <button className="underline font-medium" onClick={downloadTemplate}>download the template</button> again.</span>
+                  </div>
+                )}
                 <div className="overflow-auto rounded border text-xs max-h-44">
                   <table className="w-full">
                     <thead>
                       <tr className="bg-gray-50 border-b">
-                        {Object.keys(rows[0]).map((k) => (
-                          <th key={k} className="px-2 py-1.5 text-left font-medium text-gray-600 whitespace-nowrap">{k}</th>
+                        {MEMBER_IMPORT_COLUMNS.map((col) => (
+                          <th key={col} className="px-2 py-1.5 text-left font-medium text-gray-600 whitespace-nowrap">{col}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {rows.slice(0, 5).map((r, i) => (
                         <tr key={i} className="border-b last:border-0">
-                          {Object.values(r).map((v, j) => (
-                            <td key={j} className="px-2 py-1.5 text-gray-700 whitespace-nowrap max-w-[120px] truncate">{String(v)}</td>
-                          ))}
+                          {MEMBER_IMPORT_COLUMNS.map((col) => {
+                            const val = r[col] ?? '';
+                            const suspect = isCellSuspect(col, val);
+                            return (
+                              <td
+                                key={col}
+                                title={suspect ? `"${val}" doesn't look like a valid ${col}` : undefined}
+                                className={`px-2 py-1.5 whitespace-nowrap max-w-[120px] truncate ${
+                                  suspect ? 'bg-amber-50 text-amber-700 font-medium' : 'text-gray-700'
+                                }`}
+                              >
+                                {val}
+                              </td>
+                            );
+                          })}
                         </tr>
                       ))}
                     </tbody>
@@ -235,7 +313,7 @@ const ImportMembersDialog: React.FC<ImportMembersDialogProps> = ({ open, onOpenC
               <Button
                 onClick={handleImport}
                 disabled={saving || rows.length === 0}
-                className="bg-teal-600 hover:bg-teal-700 text-white"
+                className="bg-app-primary hover:bg-app-primary-hover text-app-primary-foreground"
               >
                 {saving
                   ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Importing…</>

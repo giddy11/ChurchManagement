@@ -37,7 +37,7 @@ import { fetchChurches } from '@/lib/api';
 import type { ChurchDTO, BranchDTO } from '@/lib/api';
 import { useBranchCrud } from '@/hooks/useBranchCrud';
 import BranchFormDialog from '@/components/church/BranchFormDialog';
-import ChurchViewDialog from '@/components/church/ChurchViewDialog';
+import BranchDetailsDialog from '@/components/church/BranchDetailsDialog';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
 import { useChurch } from '@/components/church/ChurchProvider';
 
@@ -55,7 +55,7 @@ const BranchManagement: React.FC = () => {
   // Dialog state
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<BranchDTO | null>(null);
-  const [viewTarget, setViewTarget] = useState<ChurchDTO | null>(null);
+  const [viewTarget, setViewTarget] = useState<BranchDTO | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<BranchDTO | null>(null);
 
   const { branches, loading, saving, load, create, update, remove } = useBranchCrud(selectedDenomId);
@@ -182,9 +182,9 @@ const BranchManagement: React.FC = () => {
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : viewMode === 'card' ? (
-        <CardView branches={filtered} onEdit={openEdit} onDelete={openDelete} />
+        <CardView branches={filtered} onEdit={openEdit} onDelete={openDelete} onView={(b) => setViewTarget(b)} />
       ) : (
-        <TableView branches={filtered} onEdit={openEdit} onDelete={openDelete} />
+        <TableView branches={filtered} onEdit={openEdit} onDelete={openDelete} onView={(b) => setViewTarget(b)} />
       )}
 
       <BranchFormDialog
@@ -194,10 +194,10 @@ const BranchManagement: React.FC = () => {
         initial={editTarget}
         loading={saving}
       />
-      <ChurchViewDialog
+      <BranchDetailsDialog
         open={!!viewTarget}
         onOpenChange={() => setViewTarget(null)}
-        church={viewTarget}
+        branch={viewTarget}
       />
       <ConfirmDialog
         open={!!deleteTarget}
@@ -225,26 +225,15 @@ const Header: React.FC<{
       <p className="text-sm text-gray-500 mt-1">Manage local church branches for each denomination</p>
     </div>
     <div className="flex items-center gap-2">
-      <div className="border rounded-md flex">
-        <Button
-          variant={viewMode === 'card' ? 'secondary' : 'ghost'}
-          size="icon"
-          className="h-9 w-9 rounded-r-none"
-          onClick={() => onViewChange('card')}
-          title="Card view"
-        >
-          <LayoutGrid className="h-4 w-4" />
-        </Button>
-        <Button
-          variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-          size="icon"
-          className="h-9 w-9 rounded-l-none"
-          onClick={() => onViewChange('table')}
-          title="Table view"
-        >
-          <LayoutList className="h-4 w-4" />
-        </Button>
-      </div>
+      <Button
+        variant="outline"
+        size="icon"
+        className="h-9 w-9"
+        onClick={() => onViewChange(viewMode === 'card' ? 'table' : 'card')}
+        title={viewMode === 'card' ? 'Switch to table view' : 'Switch to card view'}
+      >
+        {viewMode === 'card' ? <LayoutList className="h-4 w-4" /> : <LayoutGrid className="h-4 w-4" />}
+      </Button>
       <Button onClick={onAdd} disabled={disabled}>
         <Plus className="h-4 w-4 mr-2" />
         Add Branch
@@ -274,19 +263,23 @@ interface ListProps {
   branches: BranchDTO[];
   onEdit: (b: BranchDTO) => void;
   onDelete: (b: BranchDTO) => void;
+  onView: (b: BranchDTO) => void;
 }
 
-const CardView: React.FC<ListProps> = ({ branches, onEdit, onDelete }) => {
+const CardView: React.FC<ListProps> = ({ branches, onEdit, onDelete, onView }) => {
   if (branches.length === 0) return <EmptyState />;
   return (
     <div className="space-y-3">
       {branches.map((branch) => (
-        <Card key={branch.id} className="hover:shadow-md transition-shadow">
+        <Card key={branch.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => onView(branch)}>
           <CardContent className="p-4">
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-3 min-w-0 flex-1">
-                <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <GitBranch className="h-5 w-5 text-white" />
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 overflow-hidden bg-green-600">
+                  {branch.image
+                    ? <img src={branch.image} alt={branch.name} className="w-full h-full object-cover" />
+                    : <GitBranch className="h-5 w-5 text-white" />
+                  }
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -322,7 +315,7 @@ const CardView: React.FC<ListProps> = ({ branches, onEdit, onDelete }) => {
   );
 };
 
-const TableView: React.FC<ListProps> = ({ branches, onEdit, onDelete }) => {
+const TableView: React.FC<ListProps> = ({ branches, onEdit, onDelete, onView }) => {
   if (branches.length === 0) return <EmptyState />;
   return (
     <Card>
@@ -341,7 +334,7 @@ const TableView: React.FC<ListProps> = ({ branches, onEdit, onDelete }) => {
             </TableHeader>
             <TableBody>
               {branches.map((branch) => (
-                <TableRow key={branch.id}>
+                <TableRow key={branch.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onView(branch)}>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       {branch.name}
@@ -373,12 +366,13 @@ const ActionButtons: React.FC<{
   branch: BranchDTO;
   onEdit: (b: BranchDTO) => void;
   onDelete: (b: BranchDTO) => void;
-}> = ({ branch, onEdit, onDelete }) => (
-  <div className="flex gap-1">
-    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(branch)} title="Edit">
+  onClick?: (e: React.MouseEvent) => void;
+}> = ({ branch, onEdit, onDelete, onClick }) => (
+  <div className="flex gap-1" onClick={onClick}>
+    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onEdit(branch); }} title="Edit">
       <Edit className="h-4 w-4" />
     </Button>
-    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700" onClick={() => onDelete(branch)} title="Delete">
+    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-700" onClick={(e) => { e.stopPropagation(); onDelete(branch); }} title="Delete">
       <Trash2 className="h-4 w-4" />
     </Button>
   </div>

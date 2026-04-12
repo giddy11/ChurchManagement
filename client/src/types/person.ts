@@ -41,4 +41,5 @@ export interface ImportPeopleResult {
   valid: Person[];
   duplicates: Array<{ row: Record<string, any>; reason: string }>;
   invalid: Array<{ row: Record<string, any>; reason: string }>;
+  alreadyMembers: Array<{ row: Record<string, any>; reason: string }>;
 }

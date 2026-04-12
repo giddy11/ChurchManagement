@@ -150,7 +150,7 @@ export const deleteMembersApi = (churchId: string, branchId: string, ids: string
   });
 
 export const importMembersApi = (rows: { first_name: string; last_name: string; email: string; role?: string; phone_number?: string }[]) =>
-  request<{ data: MemberDTO[]; status: number; message: string; uniqueCount: number; duplicateCount: number; duplicateData: any[] }>('/user/import', {
+  request<{ data: MemberDTO[]; status: number; message: string; uniqueCount: number; duplicateCount: number; duplicateData: any[]; convertedPersons: { email: string; first_name: string; last_name: string }[]; convertedCount: number }>('/user/import', {
     method: 'POST',
     body: JSON.stringify(rows.map((r) => ({ ...r, roleName: r.role || 'member' }))),
   });
@@ -165,6 +165,7 @@ export interface BranchDTO {
   country?: string;
   pastor_name?: string;
   description?: string;
+  image?: string;
   is_headquarters: boolean;
   denomination_id: string;
   created_at: string;

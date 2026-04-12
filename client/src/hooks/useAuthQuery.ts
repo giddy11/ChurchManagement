@@ -64,6 +64,7 @@ export function useRegister() {
       email: string;
       full_name: string;
       password: string;
+      phone_number?: string;
       church?: {
         denomination_name: string;
         description?: string;
@@ -73,7 +74,7 @@ export function useRegister() {
         address?: string;
       };
     }): Promise<RegisterResponse> =>
-      apiRegister(vars.email, vars.full_name, vars.password, vars.church),
+      apiRegister(vars.email, vars.full_name, vars.password, vars.church, vars.phone_number),
     onSuccess: (data) => handleAuthSuccess(data as unknown as AuthResponse, queryClient),
   });
 }

@@ -209,14 +209,15 @@ export async function apiRegister(
     state?: string;
     country?: string;
     address?: string;
-  }
+  },
+  phone_number?: string
 ): Promise<RegisterResponse> {
   let firebaseUser: import('firebase/auth').User | null = null;
   try {
     const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
     firebaseUser = credential.user;
     const idToken = await firebaseUser.getIdToken();
-    const res = await axios.post(`${API_BASE}/auth/signup`, { idToken, full_name, ...(church ?? {}) }, { headers: { "Content-Type": "application/json" } });
+    const res = await axios.post(`${API_BASE}/auth/signup`, { idToken, full_name, phone_number, ...(church ?? {}) }, { headers: { "Content-Type": "application/json" } });
     saveTokensFromResponse(res);
     return res.data.data;
   } catch (err: any) {
@@ -258,6 +259,10 @@ export async function apiLogout(): Promise<void> {
     await axios.post(`${API_BASE}/auth/logout`, {}, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
   } catch {}
   clearTokens();
+  localStorage.removeItem('church_mgmt_selected_church');
+  localStorage.removeItem('church_mgmt_selected_branch');
+  localStorage.removeItem('church_mgmt_access_token');
+  localStorage.removeItem('church_mgmt_refresh_token');
 }
 
 export async function apiFetchProfile(): Promise<any> {

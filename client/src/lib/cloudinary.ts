@@ -5,7 +5,7 @@ const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET as string;
  * Uploads a file to Cloudinary using an unsigned upload preset.
  * Returns the secure URL of the uploaded image.
  */
-export async function uploadToCloudinary(file: File, folder = 'people'): Promise<string> {
+export async function uploadToCloudinary(file: File, folder = import.meta.env.VITE_CLOUDINARY_PEOPLE as string): Promise<string> {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('upload_preset', UPLOAD_PRESET);

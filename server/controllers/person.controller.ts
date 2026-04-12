@@ -44,6 +44,14 @@ function normalizePersonInput(body: any, branchId?: string): Partial<Person> {
 export const createPerson = asyncHandler(async (req: Request, res: Response) => {
   const branchId = (req as AuthRequest).branchId || req.body.branch_id;
   const payload = normalizePersonInput(req.body, branchId || undefined);
+  // Block if email already belongs to a member (user) account
+  if (payload.email) {
+    const existingUser = await userService.findUserByEmail(payload.email);
+    if (existingUser) {
+      res.status(409).json({ status: 409, message: `A member account already exists for "${payload.email}". People records are for non-members only.` });
+      return;
+    }
+  }
   const conflict = await personService.checkUnique(payload.email, payload.phone, undefined, payload.branch_id);
   if (conflict) { res.status(409).json({ status: 409, message: conflict }); return; }
   const person = await personService.create(payload);
@@ -51,11 +59,16 @@ export const createPerson = asyncHandler(async (req: Request, res: Response) => 
 });
 
 export const getPeople = asyncHandler(async (req: Request, res: Response) => {
-  const branchId = (req as AuthRequest).branchId || undefined;
+  const authReq = req as AuthRequest;
+  const branchId = authReq.branchId || undefined;
+  const role = authReq.user?.role;
+  const denominationIds = authReq.user?.denominationIds;
+  // Super admins see everything; all others are scoped to their denomination when no branch selected
+  const scopedDenomIds = role !== 'super_admin' ? denominationIds : undefined;
   const { search } = req.query;
   const people = search
-    ? await personService.search(String(search), branchId ?? undefined)
-    : await personService.findAll(branchId ?? undefined);
+    ? await personService.search(String(search), branchId, scopedDenomIds)
+    : await personService.findAll(branchId, scopedDenomIds);
   res.status(200).json({ data: people, status: 200, message: "People fetched" });
 });
 
@@ -107,12 +120,21 @@ export const importPeople = asyncHandler(async (req: Request, res: Response) => 
   }
   const branchId = (req as AuthRequest).branchId || undefined;
   const items = rows.map((r) => normalizePersonInput(r, branchId));
-  const result = await personService.importWithDedupe(items, branchId);
-  const { valid, duplicates, invalid } = result;
+
+  // Gather emails from the batch and check which ones already have member accounts
+  const candidateEmails = items.map((i) => i.email).filter(Boolean) as string[];
+  let memberEmailSet = new Set<string>();
+  if (candidateEmails.length > 0) {
+    const matchedUsers = await userService.findUsersByEmails(candidateEmails);
+    matchedUsers.forEach((u) => memberEmailSet.add(u.email.trim().toLowerCase()));
+  }
+
+  const result = await personService.importWithDedupe(items, branchId, memberEmailSet);
+  const { valid, duplicates, invalid, alreadyMembers } = result;
   res.status(200).json({
     status: 200,
-    message: `${valid.length} saved, ${duplicates.length} duplicate(s), ${invalid.length} invalid`,
-    data: { valid, duplicates, invalid },
+    message: `${valid.length} saved, ${duplicates.length} duplicate(s), ${invalid.length} invalid, ${alreadyMembers.length} already member(s)`,
+    data: { valid, duplicates, invalid, alreadyMembers },
   });
 });
 

@@ -10,6 +10,17 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Camera, Loader2 } from 'lucide-react';
+import { Country, State } from 'country-state-city';
+import { uploadToCloudinary } from '@/lib/cloudinary';
 import type { BranchDTO } from '@/lib/api';
 
 interface BranchFormData {
@@ -20,6 +31,7 @@ interface BranchFormData {
   country: string;
   pastor_name: string;
   description: string;
+  image: string;
   is_headquarters: boolean;
 }
 
@@ -31,6 +43,7 @@ const EMPTY: BranchFormData = {
   country: '',
   pastor_name: '',
   description: '',
+  image: '',
   is_headquarters: false,
 };
 
@@ -41,6 +54,8 @@ interface Props {
   initial?: BranchDTO | null;
   loading?: boolean;
 }
+
+const countries = Country.getAllCountries();
 
 const BranchFormDialog: React.FC<Props> = ({ open, onOpenChange, onSubmit, initial, loading }) => {
   const isEdit = !!initial;
@@ -53,17 +68,52 @@ const BranchFormDialog: React.FC<Props> = ({ open, onOpenChange, onSubmit, initi
     country: b.country ?? '',
     pastor_name: b.pastor_name ?? '',
     description: b.description ?? '',
+    image: b.image ?? '',
     is_headquarters: b.is_headquarters ?? false,
   });
 
   const [form, setForm] = useState<BranchFormData>(() => (initial ? toForm(initial) : { ...EMPTY }));
+  const [uploading, setUploading] = useState(false);
+  const [states, setStates] = useState<{ name: string; isoCode: string }[]>(() => {
+    if (initial?.country) {
+      const matched = countries.find((c) => c.name === initial.country);
+      return matched ? State.getStatesOfCountry(matched.isoCode).map((s) => ({ name: s.name, isoCode: s.isoCode })) : [];
+    }
+    return [];
+  });
 
   React.useEffect(() => {
-    if (open) setForm(initial ? toForm(initial) : { ...EMPTY });
+    if (open) {
+      const base = initial ? toForm(initial) : { ...EMPTY };
+      setForm(base);
+      if (base.country) {
+        const matched = countries.find((c) => c.name === base.country);
+        setStates(matched ? State.getStatesOfCountry(matched.isoCode).map((s) => ({ name: s.name, isoCode: s.isoCode })) : []);
+      } else {
+        setStates([]);
+      }
+    }
   }, [open, initial]);
 
   const set = (key: keyof BranchFormData, value: string | boolean) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  const onCountryChange = (isoCode: string) => {
+    const country = countries.find((c) => c.isoCode === isoCode);
+    set('country', country?.name || '');
+    setStates(State.getStatesOfCountry(isoCode).map((s) => ({ name: s.name, isoCode: s.isoCode })));
+    set('state', '');
+  };
+
+  const handleImagePick = async (file: File) => {
+    try {
+      setUploading(true);
+      const url = await uploadToCloudinary(file, 'branches');
+      set('image', url);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +127,19 @@ const BranchFormDialog: React.FC<Props> = ({ open, onOpenChange, onSubmit, initi
           <DialogTitle>{isEdit ? 'Edit Branch' : 'Add New Branch'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          {/* Branch image picker */}
+          <div className="flex justify-center">
+            <div className="relative">
+              <Avatar className="h-24 w-24 rounded-lg border-2 border-dashed border-gray-300">
+                <AvatarImage src={form.image || ''} className="object-cover rounded-lg" />
+                <AvatarFallback className="bg-gray-100 rounded-lg text-gray-400 text-xs">No image</AvatarFallback>
+              </Avatar>
+              <label className="absolute bottom-0 right-0 h-7 w-7 rounded-full bg-app-primary hover:bg-app-primary-hover text-white border-2 border-white grid place-items-center cursor-pointer">
+                {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImagePick(f); }} />
+              </label>
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="bf-name">Branch Name *</Label>
             <Input id="bf-name" placeholder="e.g. Lagos Central Branch" value={form.name}
@@ -104,14 +167,37 @@ const BranchFormDialog: React.FC<Props> = ({ open, onOpenChange, onSubmit, initi
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="bf-state">State</Label>
-              <Input id="bf-state" placeholder="Lagos State" value={form.state}
-                onChange={(e) => set('state', e.target.value)} />
+              <Label htmlFor="bf-country">Country</Label>
+              <Select
+                value={countries.find((c) => c.name === form.country)?.isoCode || ''}
+                onValueChange={onCountryChange}
+              >
+                <SelectTrigger id="bf-country">
+                  <SelectValue placeholder="Select Country" />
+                </SelectTrigger>
+                <SelectContent className="bg-white max-h-72 overflow-auto">
+                  {countries.map((c) => (
+                    <SelectItem key={c.isoCode} value={c.isoCode}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="bf-country">Country</Label>
-              <Input id="bf-country" placeholder="Nigeria" value={form.country}
-                onChange={(e) => set('country', e.target.value)} />
+              <Label htmlFor="bf-state">State</Label>
+              <Select
+                value={form.state || ''}
+                onValueChange={(v) => set('state', v)}
+                disabled={states.length === 0}
+              >
+                <SelectTrigger id="bf-state">
+                  <SelectValue placeholder={states.length === 0 ? 'Select country first' : 'Select State'} />
+                </SelectTrigger>
+                <SelectContent className="bg-white max-h-72 overflow-auto">
+                  {states.map((s) => (
+                    <SelectItem key={s.isoCode} value={s.name}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

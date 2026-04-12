@@ -19,6 +19,8 @@ export interface ImportMembersResult {
   duplicates: { email: string; reason: string }[];
   uniqueCount: number;
   duplicateCount: number;
+  convertedPersons: { email: string; first_name: string; last_name: string }[];
+  convertedCount: number;
 }
 
 export function useMemberCrud() {
@@ -143,6 +145,8 @@ export function useMemberCrud() {
         })),
         uniqueCount,
         duplicateCount,
+        convertedPersons: res.convertedPersons ?? [],
+        convertedCount: res.convertedCount ?? 0,
       };
     } catch (err: any) {
       toast.error(err.message || 'Import failed');

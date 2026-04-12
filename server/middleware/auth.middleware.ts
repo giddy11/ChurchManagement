@@ -15,6 +15,7 @@ export interface AuthRequest extends Request {
         id: string;
         email: string;
         role: string;
+        denominationIds?: string[];
         effectivePermissions?: string[];
     };
     branchId?: string | null;
@@ -65,11 +66,15 @@ export const authMiddleware = (userService: UserService) => {
             }
 
             const effectivePermissions = getPermissionsForRole(user.role || 'member');
+            const denominationIds: string[] = ((user as any).denominations ?? [])
+                .map((d: any) => d.id)
+                .filter(Boolean);
 
             req.user = {
                 id: user.id,
                 email: user.email,
                 role: user.role || 'member',
+                denominationIds,
                 effectivePermissions,
             };
 
