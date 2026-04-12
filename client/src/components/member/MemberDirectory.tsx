@@ -1,29 +1,71 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Search, Loader2 } from 'lucide-react';
-import { useMemberCrud } from '@/hooks/useMemberCrud';
 import { useChurch } from '@/components/church/ChurchProvider';
+import { fetchMembersApi } from '@/lib/api';
 import type { MemberDTO } from '@/lib/api';
 import MemberDetailsDialog from './MemberDetailsDialog';
 
+const PAGE_SIZE = 20;
+
 const MemberDirectory: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [viewTarget, setViewTarget] = useState<MemberDTO | null>(null);
   const { currentBranch } = useChurch();
-  const { members, loading } = useMemberCrud();
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const filteredMembers = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    if (!q) return members;
+  // Debounce search input (400 ms)
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm), 400);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
 
-    return members.filter((member) => {
-      const name = getDisplayName(member).toLowerCase();
-      return name.includes(q) || member.email.toLowerCase().includes(q);
-    });
-  }, [members, searchTerm]);
+  const branchId = currentBranch?.id;
+
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['directory', branchId ?? 'all', debouncedSearch],
+    queryFn: ({ pageParam }) =>
+      fetchMembersApi({ page: pageParam as number, limit: PAGE_SIZE, search: debouncedSearch || undefined }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const totalPages = Math.ceil(lastPage.total / PAGE_SIZE);
+      return lastPage.page < totalPages ? lastPage.page + 1 : undefined;
+    },
+    enabled: !!branchId,
+    staleTime: 30 * 1000,
+  });
+
+  const allMembers = data?.pages.flatMap((p) => p.data) ?? [];
+  const total = data?.pages[0]?.total ?? 0;
+
+  // Trigger next page load when sentinel div enters the viewport
+  const onIntersect = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage();
+      }
+    },
+    [hasNextPage, isFetchingNextPage, fetchNextPage],
+  );
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(onIntersect, { threshold: 0.1 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [onIntersect]);
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -68,7 +110,7 @@ const MemberDirectory: React.FC = () => {
           </p>
         </div>
         <Badge variant="secondary" className="text-xs md:text-sm self-start sm:self-auto">
-          {filteredMembers.length} Members
+          {total > 0 ? `${allMembers.length} / ${total} Members` : 'Members'}
         </Badge>
       </div>
 
@@ -96,7 +138,7 @@ const MemberDirectory: React.FC = () => {
         </CardContent>
       </Card>
 
-      {loading && currentBranch && (
+      {isLoading && currentBranch && (
         <Card>
           <CardContent className="p-8 text-center flex items-center justify-center gap-2 text-gray-600">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -106,12 +148,12 @@ const MemberDirectory: React.FC = () => {
       )}
 
       {/* Members Grid */}
-      {!loading && currentBranch && (
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredMembers.map((member) => {
-          const displayName = getDisplayName(member);
-          const displayRole = member.branch_role || member.role || 'member';
-          return (
+      {!isLoading && currentBranch && (
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {allMembers.map((member) => {
+            const displayName = getDisplayName(member);
+            const displayRole = member.branch_role || member.role || 'member';
+            return (
               <Card key={member.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setViewTarget(member)}>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
@@ -131,11 +173,21 @@ const MemberDirectory: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
-        );})}
-      </div>
+            );
+          })}
+        </div>
       )}
 
-      {!loading && currentBranch && filteredMembers.length === 0 && (
+      {/* Sentinel element — triggers next page when it scrolls into view */}
+      <div ref={sentinelRef} className="h-4" />
+
+      {isFetchingNextPage && (
+        <div className="flex justify-center py-4">
+          <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+        </div>
+      )}
+
+      {!isLoading && currentBranch && allMembers.length === 0 && (
         <Card>
           <CardContent className="p-8 text-center">
             <p className="text-gray-500">No members found matching your search.</p>
