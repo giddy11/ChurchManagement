@@ -111,7 +111,7 @@ export class PersonService {
 
     // 1. Basic validation
     for (const item of items) {
-      if (!item.first_name?.trim() || !item.last_name?.trim()) {
+      if (!item.first_name?.trim() && !item.last_name?.trim()) {
         invalid.push({ row: item, reason: "Missing first_name or last_name" });
         continue;
       }
@@ -122,12 +122,10 @@ export class PersonService {
       candidates.push(item);
     }
 
-    // 2. Bulk-fetch existing emails & phones in one query each
+    // 2. Bulk-fetch existing emails in one query
     const emails = candidates.filter((i) => i.email).map((i) => i.email!.toLowerCase());
-    const phones = candidates.filter((i) => i.phone).map((i) => i.phone!);
 
     const existingEmailSet = new Set<string>();
-    const existingPhoneSet = new Set<string>();
 
     if (emails.length > 0) {
       const query = this.repo
@@ -137,35 +135,20 @@ export class PersonService {
       const found = await query.getMany();
       found.forEach((p) => p.email && existingEmailSet.add(p.email.toLowerCase()));
     }
-    if (phones.length > 0) {
-      const query = this.repo
-        .createQueryBuilder("p")
-        .where("p.phone IN (:...phones)", { phones });
-      if (branchId) query.andWhere("p.branch_id = :branchId", { branchId });
-      const found = await query.getMany();
-      found.forEach((p) => p.phone && existingPhoneSet.add(p.phone));
-    }
 
-    // 3. Classify each candidate (also dedup within the batch itself)
+    // 3. Classify each candidate (dedup emails within the batch)
     const batchEmailSet = new Set<string>();
-    const batchPhoneSet = new Set<string>();
     const toSave: Partial<Person>[] = [];
 
     for (const item of candidates) {
       const email = item.email?.toLowerCase();
-      const phone = item.phone;
 
       if (email && (existingEmailSet.has(email) || batchEmailSet.has(email))) {
         duplicates.push({ row: item, reason: `Email "${item.email}" already exists` });
         continue;
       }
-      if (phone && (existingPhoneSet.has(phone) || batchPhoneSet.has(phone))) {
-        duplicates.push({ row: item, reason: `Phone "${item.phone}" already exists` });
-        continue;
-      }
 
       if (email) batchEmailSet.add(email);
-      if (phone) batchPhoneSet.add(phone);
       toSave.push({ ...item, branch_id: branchId || item.branch_id });
     }
 
