@@ -12,7 +12,7 @@ export interface MemberAddedContext {
 export async function sendMemberAddedEmail(to: string, ctx: MemberAddedContext) {
   const { fullName, email, password, branchName, churchName } = ctx;
   const displayOrg = branchName ?? churchName ?? "your church";
-  const loginUrl = process.env.CLIENT_URL || "http://localhost:5173";
+  const loginUrl = process.env.URL || "http://localhost:5173";
 
   const subject = `Welcome to ${displayOrg} — Church Flow`;
 

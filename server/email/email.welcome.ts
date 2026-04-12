@@ -3,7 +3,7 @@ import { churchFlowEmail, styles } from "./email.layout";
 
 export async function sendWelcomeEmail(to: string, firstName?: string) {
   const name = firstName || "there";
-  const loginUrl = process.env.CLIENT_URL || "http://localhost:5173";
+  const loginUrl = process.env.URL || "http://localhost:5173";
   const subject = "Welcome to Church Flow!";
 
   const html = churchFlowEmail(`

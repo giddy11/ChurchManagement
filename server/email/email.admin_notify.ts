@@ -11,7 +11,7 @@ export async function sendInviteJoinNotification(
   branchName: string
 ) {
   const subject = `New member joined ${branchName} — Church Flow`;
-  const loginUrl = process.env.CLIENT_URL || "http://localhost:5173";
+  const loginUrl = process.env.URL || "http://localhost:5173";
 
   const html = churchFlowEmail(`
     <h2 style="${styles.heading}">New Member Joined</h2>
@@ -44,7 +44,7 @@ export async function sendJoinRequestNotification(
   message?: string
 ) {
   const subject = `New join request for ${branchName} — Church Flow`;
-  const loginUrl = process.env.CLIENT_URL || "http://localhost:5173";
+  const loginUrl = process.env.URL || "http://localhost:5173";
 
   const html = churchFlowEmail(`
     <h2 style="${styles.heading}">New Join Request</h2>
@@ -83,7 +83,7 @@ export async function sendJoinDecisionNotification(
   branchName: string,
   decision: "approved" | "rejected"
 ) {
-  const loginUrl = process.env.CLIENT_URL || "http://localhost:5173";
+  const loginUrl = process.env.URL || "http://localhost:5173";
   const approved = decision === "approved";
 
   const subject = approved
