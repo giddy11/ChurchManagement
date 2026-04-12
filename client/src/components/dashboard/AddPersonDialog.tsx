@@ -298,7 +298,12 @@ export const PhoneField: React.FC<{ value: string; onChange: (v: string) => void
   const countryCodes = options.map((o) => ({ code: o.code, flag: o.flag }));
 
   const update = (nextCc: string, nextLocal: string) => {
-    const digits = nextLocal.replace(/[^0-9]/g, '');
+    let digits = nextLocal.replace(/[^0-9]/g, '');
+    // Strip leading country code digits if the user included them (e.g. typed 2349069577255 while +234 is selected)
+    const ccDigits = nextCc.replace(/\D/g, '');
+    if (digits.startsWith(ccDigits)) {
+      digits = digits.slice(ccDigits.length);
+    }
     onChange(`${nextCc}${digits}`);
   };
 
