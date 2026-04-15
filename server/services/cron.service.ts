@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import { AppDataSource } from "../config/database";
-import { Event, EventStatus } from "../models/event";
+import { Event, EventStatus, RecurrencePattern, MonthlyRecurrenceType } from "../models/event";
 import { Logger } from "../utils/logger";
 
 const logger = new Logger({ level: "info" });
@@ -72,6 +72,176 @@ async function closeElapsedEvents(): Promise<void> {
   }
 }
 
+// ── Recurring-event helpers ────────────────────────────────────────────────
+
+/** Return the next ISO date string (YYYY-MM-DD) for a weekly pattern with specific days. */
+function nextWeeklyDate(fromDate: Date, days: number[], weekMultiplier: number): Date {
+  const sorted = [...days].sort((a, b) => a - b);
+  const dow = fromDate.getDay();
+  const later = sorted.find((d) => d > dow);
+  if (later !== undefined) {
+    const next = new Date(fromDate);
+    next.setDate(next.getDate() + (later - dow));
+    return next;
+  }
+  // Wrap to first matching day in the next cycle
+  const next = new Date(fromDate);
+  next.setDate(next.getDate() + (7 * weekMultiplier - dow + sorted[0]));
+  return next;
+}
+
+/** Return the date of the Nth occurrence of a weekday in a given year/month. */
+function nthWeekdayOfMonth(year: number, month: number, weekday: number, nth: number): Date | null {
+  const first = new Date(year, month, 1);
+  const offset = (weekday - first.getDay() + 7) % 7;
+  const date = new Date(year, month, 1 + offset + (nth - 1) * 7);
+  return date.getMonth() === month ? date : null;
+}
+
+/** Return the last occurrence of a weekday in a given year/month. */
+function lastWeekdayOfMonth(year: number, month: number, weekday: number): Date {
+  const last = new Date(year, month + 1, 0); // last day of month
+  const offset = (last.getDay() - weekday + 7) % 7;
+  last.setDate(last.getDate() - offset);
+  return last;
+}
+
+const ORDINAL_MAP: Record<string, number> = { first: 1, second: 2, third: 3, fourth: 4 };
+const DAY_MAP: Record<string, number> = {
+  sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+  thursday: 4, friday: 5, saturday: 6,
+};
+
+/** Calculate the next occurrence date for a recurring event one step forward. */
+function getNextOccurrenceDate(event: Event): Date | null {
+  const current = new Date(event.date + "T00:00:00");
+
+  switch (event.recurrence_pattern) {
+    case RecurrencePattern.DAILY: {
+      const next = new Date(current);
+      next.setDate(next.getDate() + 1);
+      return next;
+    }
+
+    case RecurrencePattern.WEEKLY: {
+      if (event.recurrence_days?.length) {
+        return nextWeeklyDate(current, event.recurrence_days, 1);
+      }
+      const next = new Date(current);
+      next.setDate(next.getDate() + 7);
+      return next;
+    }
+
+    case RecurrencePattern.EVERY_2_WEEKS: {
+      if (event.recurrence_days?.length) {
+        return nextWeeklyDate(current, event.recurrence_days, 2);
+      }
+      const next = new Date(current);
+      next.setDate(next.getDate() + 14);
+      return next;
+    }
+
+    case RecurrencePattern.MONTHLY: {
+      const y = current.getFullYear();
+      const m = current.getMonth() + 1; // next month
+      if (event.monthly_type === MonthlyRecurrenceType.DAY_OF_MONTH && event.monthly_day) {
+        const lastDayOfNextMonth = new Date(y, m + 1, 0).getDate();
+        return new Date(y, m, Math.min(event.monthly_day, lastDayOfNextMonth));
+      }
+      if (event.monthly_type === MonthlyRecurrenceType.DAY_OF_WEEK && event.monthly_week_descriptor) {
+        const parts = event.monthly_week_descriptor.toLowerCase().split("_");
+        const weekday = DAY_MAP[parts[parts.length - 1]];
+        if (weekday === undefined) return null;
+        if (parts[0] === "last") return lastWeekdayOfMonth(y, m, weekday);
+        const nth = ORDINAL_MAP[parts[0]];
+        if (!nth) return null;
+        return nthWeekdayOfMonth(y, m, weekday, nth);
+      }
+      // fallback: same day next month
+      const next = new Date(current);
+      next.setMonth(next.getMonth() + 1);
+      return next;
+    }
+
+    case RecurrencePattern.QUARTERLY: {
+      const next = new Date(current);
+      next.setMonth(next.getMonth() + 3);
+      return next;
+    }
+
+    case RecurrencePattern.YEARLY: {
+      const next = new Date(current);
+      next.setFullYear(next.getFullYear() + 1);
+      return next;
+    }
+
+    default:
+      return null;
+  }
+}
+
+/**
+ * For each CLOSED recurring event, advance its date to the next valid
+ * occurrence and re-publish it, unless the recurrence end date has passed.
+ */
+async function scheduleRecurringEvents(): Promise<void> {
+  const repo = AppDataSource.getRepository(Event);
+
+  // Only fetch the columns we need to minimise memory footprint
+  const events = await repo.find({
+    where: { is_recurring: true, status: EventStatus.CLOSED },
+    select: ["id", "date", "recurrence_pattern", "recurrence_days",
+             "monthly_type", "monthly_day", "monthly_week_descriptor",
+             "recurrence_end_date"],
+  });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Compute all required updates in JS first, then flush in one batch
+  const updates: Array<{ id: string; date: string }> = [];
+
+  for (const event of events) {
+    if (!event.recurrence_pattern) continue;
+
+    if (event.recurrence_end_date && new Date(event.recurrence_end_date) < today) continue;
+
+    // Advance using only the date string — no object spread needed
+    let nextDate = getNextOccurrenceDate(event);
+    let iterations = 0;
+    while (nextDate && nextDate < today && iterations < 365) {
+      // Temporarily mutate only the date field on a plain stub, avoiding a full spread
+      const stub = { date: nextDate.toISOString().split("T")[0], recurrence_pattern: event.recurrence_pattern,
+                     recurrence_days: event.recurrence_days, monthly_type: event.monthly_type,
+                     monthly_day: event.monthly_day, monthly_week_descriptor: event.monthly_week_descriptor } as Event;
+      nextDate = getNextOccurrenceDate(stub);
+      iterations++;
+    }
+
+    if (!nextDate) continue;
+    if (event.recurrence_end_date && nextDate > new Date(event.recurrence_end_date)) continue;
+
+    updates.push({ id: event.id, date: nextDate.toISOString().split("T")[0] });
+  }
+
+  if (updates.length === 0) return;
+
+  // Single bulk UPDATE using CASE … WHEN to avoid N round-trips
+  await AppDataSource.createQueryBuilder()
+    .update(Event)
+    .set({
+      status: EventStatus.PUBLISHED,
+      is_published: true,
+      publish_at: null,
+      date: () =>
+        `CASE id ${updates.map((u) => `WHEN '${u.id}' THEN '${u.date}'`).join(" ")} END`,
+    })
+    .whereInIds(updates.map((u) => u.id))
+    .execute();
+
+  logger.info(`[CronService] Rescheduled ${updates.length} recurring event(s)`);
+}
+
 export function startCronJobs(): void {
   // Run every minute
   cron.schedule("* * * * *", async () => {
@@ -81,6 +251,8 @@ export function startCronJobs(): void {
       await markOngoingEvents();
       // Close events after ongoing check so a same-minute event can be marked first
       await closeElapsedEvents();
+      // Reschedule recurring events whose latest occurrence just closed
+      await scheduleRecurringEvents();
     } catch (err) {
       logger.error("[CronService] Error during scheduled jobs:", err);
     }
