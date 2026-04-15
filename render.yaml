@@ -50,3 +50,5 @@ services:
         sync: false
       - key: DB_SSL
         value: "true"
+      - key: APP_TIMEZONE
+        value: "Africa/Lagos"

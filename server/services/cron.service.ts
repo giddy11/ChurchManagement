@@ -5,6 +5,10 @@ import { Logger } from "../utils/logger";
 
 const logger = new Logger({ level: "info" });
 
+// Event times are stored in local (church) time. Render servers run UTC,
+// so we must convert NOW() to the local timezone before comparing.
+const TZ = process.env.APP_TIMEZONE || "Africa/Lagos";
+
 /**
  * Promote events whose scheduled publish_at has arrived:
  *   status = PUBLISHED, is_published = false, publish_at <= NOW()
@@ -40,8 +44,8 @@ async function markOngoingEvents(): Promise<void> {
     .set({ status: EventStatus.ONGOING })
     .where("status = :published", { published: EventStatus.PUBLISHED })
     .andWhere("is_published = true")
-    .andWhere("(date::text || ' ' || time_from)::timestamp <= NOW()")
-    .andWhere("(date::text || ' ' || time_to)::timestamp >= NOW()")
+    .andWhere("(date::text || ' ' || time_from)::timestamp <= (NOW() AT TIME ZONE :tz)", { tz: TZ })
+    .andWhere("(date::text || ' ' || time_to)::timestamp >= (NOW() AT TIME ZONE :tz)", { tz: TZ })
     .execute();
 
   if (result.affected && result.affected > 0) {
@@ -60,7 +64,7 @@ async function closeElapsedEvents(): Promise<void> {
     .update(Event)
     .set({ status: EventStatus.CLOSED, is_published: false })
     .where("status IN (:...statuses)", { statuses: [EventStatus.PUBLISHED, EventStatus.ONGOING] })
-    .andWhere("(date::text || ' ' || time_to)::timestamp < NOW()")
+    .andWhere("(date::text || ' ' || time_to)::timestamp < (NOW() AT TIME ZONE :tz)", { tz: TZ })
     .execute();
 
   if (result.affected && result.affected > 0) {

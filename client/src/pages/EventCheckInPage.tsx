@@ -49,32 +49,52 @@ export const EventCheckInPage: React.FC = () => {
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
 
   useEffect(() => {
     if (!eventId) return;
+    if (localStorage.getItem(`checkin_${eventId}`)) setAlreadySubmitted(true);
     fetchPublicEventApi(eventId)
       .then((res) => setEvent(res.data))
       .catch((err) => setLoadError(err.message || "Failed to load event"));
   }, [eventId]);
 
-  // When the event is loaded and requires location, proactively request GPS
-  useEffect(() => {
-    if (!event?.require_location) return;
-    if (coords) return; // already have it
+  const doGetLocation = () => {
     setLocating(true);
     setLocationError(null);
-    navigator.geolocation?.getCurrentPosition(
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by your browser.");
+      setLocating(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
       (pos) => {
         setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setLocating(false);
       },
-      (err) => {
-        setLocationError("Location access denied. You must enable location to check in to this event.");
+      () => {
+        setLocationError('Location access was denied. Please enable location for this site in your browser settings, then tap "Try Again".');
         setLocating(false);
       },
       { enableHighAccuracy: true, timeout: 15000 },
     );
-  }, [event?.require_location, coords]);
+  };
+
+  // When the event is loaded and requires location, proactively request GPS
+  useEffect(() => {
+    if (!event?.require_location || coords) return;
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: "geolocation" as PermissionName }).then((result) => {
+        if (result.state === "denied") {
+          setLocationError('Location access has been blocked by your browser. Please enable location for this site in your browser settings, then tap "Try Again".');
+          return;
+        }
+        doGetLocation();
+      });
+    } else {
+      doGetLocation();
+    }
+  }, [event?.require_location]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const update = (key: keyof typeof EMPTY_FORM, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -122,6 +142,7 @@ export const EventCheckInPage: React.FC = () => {
         check_in_lat: position?.lat,
         check_in_lng: position?.lng,
       });
+      localStorage.setItem(`checkin_${eventId!}`, "1");
       setSuccess(true);
     } catch (err: any) {
       setSubmitError(err.message || "Check-in failed. Please try again.");
@@ -151,15 +172,21 @@ export const EventCheckInPage: React.FC = () => {
 
   const { open: attendanceOpen, reason: closedReason } = isAttendanceOpen(event);
 
-  if (success) {
+  if (success || alreadySubmitted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <div className="bg-white rounded-2xl shadow-sm border p-8 max-w-sm w-full text-center space-y-4">
           <div className="flex justify-center">
             <CheckCircle className="h-16 w-16 text-green-500" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900">You're checked in!</h2>
-          <p className="text-sm text-gray-600">Your attendance for <strong>{event.title}</strong> has been recorded. Welcome!</p>
+          <h2 className="text-xl font-bold text-gray-900">
+            {alreadySubmitted && !success ? "Already checked in" : "You're checked in!"}
+          </h2>
+          <p className="text-sm text-gray-600">
+            {alreadySubmitted && !success
+              ? `You have already submitted attendance for ${event?.title ?? "this event"} from this device.`
+              : <>Your attendance for <strong>{event!.title}</strong> has been recorded. Welcome!</>}
+          </p>
         </div>
       </div>
     );
@@ -194,7 +221,12 @@ export const EventCheckInPage: React.FC = () => {
               ) : locationError ? (
                 <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                  <span>{locationError}</span>
+                  <div className="flex-1 space-y-1.5">
+                    <p>{locationError}</p>
+                    <button type="button" onClick={doGetLocation} className="text-xs font-semibold underline">
+                      Try Again
+                    </button>
+                  </div>
                 </div>
               ) : coords ? (
                 <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 flex items-center gap-2">

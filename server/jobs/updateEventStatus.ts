@@ -17,6 +17,9 @@ import { Logger } from "../utils/logger";
 
 const logger = new Logger({ level: "info" });
 
+// Event times are stored in local (church) time; compare against local NOW()
+const TZ = process.env.APP_TIMEZONE || "Africa/Lagos";
+
 async function publishScheduledEvents(): Promise<void> {
   const repo = AppDataSource.getRepository(Event);
   const result = await repo
@@ -41,8 +44,8 @@ async function markOngoingEvents(): Promise<void> {
     .set({ status: EventStatus.ONGOING })
     .where("status = :published", { published: EventStatus.PUBLISHED })
     .andWhere("is_published = true")
-    .andWhere("(date::text || ' ' || time_from)::timestamp <= NOW()")
-    .andWhere("(date::text || ' ' || time_to)::timestamp >= NOW()")
+    .andWhere("(date::text || ' ' || time_from)::timestamp <= (NOW() AT TIME ZONE :tz)", { tz: TZ })
+    .andWhere("(date::text || ' ' || time_to)::timestamp >= (NOW() AT TIME ZONE :tz)", { tz: TZ })
     .execute();
 
   const count = result.affected ?? 0;
@@ -56,7 +59,7 @@ async function closeElapsedEvents(): Promise<void> {
     .update(Event)
     .set({ status: EventStatus.CLOSED, is_published: false })
     .where("status IN (:...statuses)", { statuses: [EventStatus.PUBLISHED, EventStatus.ONGOING] })
-    .andWhere("(date::text || ' ' || time_to)::timestamp < NOW()")
+    .andWhere("(date::text || ' ' || time_to)::timestamp < (NOW() AT TIME ZONE :tz)", { tz: TZ })
     .execute();
 
   const count = result.affected ?? 0;

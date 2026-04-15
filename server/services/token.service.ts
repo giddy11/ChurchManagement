@@ -4,8 +4,8 @@ import { User } from "../models/user.model";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 const REFRESH_SECRET = process.env.REFRESH_SECRET || "your-refresh-secret-key";
-const ACCESS_TOKEN_EXPIRY = "15m";
-const REFRESH_TOKEN_EXPIRY = "7d";
+const ACCESS_TOKEN_EXPIRY = process.env.ACCESS_TOKEN_EXPIRY || "15m";
+const REFRESH_TOKEN_EXPIRY = process.env.REFRESH_TOKEN_EXPIRY || "7d";
 
 export interface TokenPayload {
   id: string;
@@ -19,7 +19,7 @@ export class TokenService {
     return jwt.sign(
       { id: user.id, email: user.email, role: user.role, type: "access" },
       JWT_SECRET,
-      { expiresIn: ACCESS_TOKEN_EXPIRY }
+      { expiresIn: ACCESS_TOKEN_EXPIRY as jwt.SignOptions["expiresIn"] }
     );
   }
 
@@ -27,7 +27,7 @@ export class TokenService {
     return jwt.sign(
       { id: user.id, email: user.email, type: "refresh" },
       REFRESH_SECRET,
-      { expiresIn: REFRESH_TOKEN_EXPIRY }
+      { expiresIn: REFRESH_TOKEN_EXPIRY as jwt.SignOptions["expiresIn"] }
     );
   }
 
