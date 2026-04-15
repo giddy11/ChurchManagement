@@ -14,6 +14,7 @@ dotenv.config();
 import { AppDataSource } from "../config/database";
 import { Event, EventStatus } from "../models/event";
 import { Logger } from "../utils/logger";
+import { scheduleRecurringEvents } from "../services/cron.service";
 
 const logger = new Logger({ level: "info" });
 
@@ -74,7 +75,7 @@ async function run(): Promise<void> {
     await publishScheduledEvents();
     await markOngoingEvents();
     await closeElapsedEvents();
-
+    await scheduleRecurringEvents();
     logger.info("[updateEventStatus] Done");
     process.exit(0);
   } catch (err) {

@@ -184,7 +184,7 @@ function getNextOccurrenceDate(event: Event): Date | null {
  * For each CLOSED recurring event, advance its date to the next valid
  * occurrence and re-publish it, unless the recurrence end date has passed.
  */
-async function scheduleRecurringEvents(): Promise<void> {
+export async function scheduleRecurringEvents(): Promise<void> {
   const repo = AppDataSource.getRepository(Event);
 
   // Only fetch the columns we need to minimise memory footprint
