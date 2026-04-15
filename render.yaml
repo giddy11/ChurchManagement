@@ -38,7 +38,15 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DB_URL
+      - key: DB_HOST
+        sync: false   # e.g. church-flow-xxx.aivencloud.com
+      - key: DB_PORT
+        sync: false   # e.g. 15698
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
         sync: false
       - key: DB_SSL
         value: "true"
