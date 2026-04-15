@@ -6,6 +6,7 @@
     "build": "tsc",
     "start": "node -r tsconfig-paths/register dist/server.js",
     "dev": "nodemon ./server.ts",
+    "job:events": "ts-node jobs/updateEventStatus.ts",
     "prepare": "npm run build",
     "migration:generate": "npm run typeorm migration:generate -- -d ./config/database.ts",
     "migration:run": "npm run typeorm migration:run -- -d ./config/database.ts",

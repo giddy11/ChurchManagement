@@ -19,7 +19,10 @@ const startServer = async () => {
     }
     logger.info('Database connected successfully');
 
-    startCronJobs();
+    // Only run built-in cron in local/dev — Render's native cron job handles production
+    // if (process.env.NODE_ENV !== 'production') {
+    //   startCronJobs();
+    // }
 
     httpServer.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
