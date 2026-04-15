@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Church, Menu, X, PartyPopper } from 'lucide-react';
 
@@ -10,16 +11,22 @@ interface LandingHeaderProps {
 const LandingHeader: React.FC<LandingHeaderProps> = ({ onGetStarted, onLogin }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [bannerVisible, setBannerVisible] = useState(true);
+  const navigate = useNavigate();
 
   const navLinks = [
     { label: 'Features', href: '#features' },
     { label: 'How It Works', href: '#how-it-works' },
+    { label: 'Denominations', href: '/denominations' },
     { label: 'Testimonials', href: '#testimonials' },
     // { label: 'Pricing', href: '#pricing' },
   ];
 
   const scrollTo = (href: string) => {
     setMobileOpen(false);
+    if (href.startsWith('/')) {
+      navigate(href);
+      return;
+    }
     const el = document.querySelector(href);
     el?.scrollIntoView({ behavior: 'smooth' });
   };

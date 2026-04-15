@@ -1,10 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Church, Mail, MapPin, Phone } from 'lucide-react';
 
 const footerLinks = {
   Product: [
     { label: 'Features', href: '#features' },
     { label: 'How It Works', href: '#how-it-works' },
+    { label: 'Denominations', href: '/denominations' },
     // { label: 'Pricing', href: '#pricing' },
     { label: 'Testimonials', href: '#testimonials' },
   ],
@@ -30,6 +32,7 @@ const footerLinks = {
 
 const LandingFooter: React.FC = () => {
   const currentYear = new Date().getFullYear();
+  const navigate = useNavigate();
 
   return (
     <footer className="bg-gray-900 text-gray-400">
@@ -71,12 +74,21 @@ const LandingFooter: React.FC = () => {
               <ul className="space-y-3">
                 {links.map((link) => (
                   <li key={link.label}>
-                    <a
-                      href={link.href}
-                      className="text-sm hover:text-white transition-colors duration-200"
-                    >
-                      {link.label}
-                    </a>
+                    {link.href.startsWith('/') ? (
+                      <button
+                        onClick={() => navigate(link.href)}
+                        className="text-sm hover:text-white transition-colors duration-200"
+                      >
+                        {link.label}
+                      </button>
+                    ) : (
+                      <a
+                        href={link.href}
+                        className="text-sm hover:text-white transition-colors duration-200"
+                      >
+                        {link.label}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>

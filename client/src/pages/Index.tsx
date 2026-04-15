@@ -177,23 +177,10 @@ export default function IndexPage() {
 
       <div className="w-full max-w-md animate-in fade-in slide-in-from-bottom duration-700 delay-200">
         {mode === 'login' && (
-          <>
-            <LoginForm
-              onSwitchToRegister={() => go('register')}
-              onSwitchToForgotPassword={() => go('forgot-password')}
-            />
-            <div className="mt-4 text-center">
-              <p className="text-sm text-muted-foreground">
-                Want to register your denomination?{' '}
-                <button
-                  className="text-blue-600 hover:underline font-medium"
-                  onClick={() => go('register-church')}
-                >
-                  Register Denomination
-                </button>
-              </p>
-            </div>
-          </>
+          <LoginForm
+            onSwitchToRegister={() => go('register')}
+            onSwitchToForgotPassword={() => go('forgot-password')}
+          />
         )}
         {mode === 'register' && (
           <RegisterForm onSwitchToLogin={() => go('login')} />

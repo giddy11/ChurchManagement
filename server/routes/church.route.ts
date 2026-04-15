@@ -20,7 +20,7 @@ import {
   deactivateInviteLink,
 } from "../controllers/join.controller";
 import { UserController } from "../controllers/user.controller";
-import { authMiddleware, adminMiddleware } from "../middleware/auth.middleware";
+import { authMiddleware, adminMiddleware, superAdminMiddleware } from "../middleware/auth.middleware";
 import { UserService } from "../services/user.service";
 import type { RequestHandler } from "express";
 
@@ -32,7 +32,7 @@ const userController = new UserController();
 router.get("/check-name", checkDenominationName);
 router.get("/", auth, adminMiddleware, getChurches);
 router.get("/:id", auth, adminMiddleware, getChurchById);
-router.post("/", auth, adminMiddleware, createChurch);
+router.post("/", auth, superAdminMiddleware, createChurch);
 router.put("/:id", auth, adminMiddleware, updateChurch);
 router.delete("/:id", auth, adminMiddleware, deleteChurch);
 

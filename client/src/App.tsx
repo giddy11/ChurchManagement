@@ -14,6 +14,7 @@ import Dashboard from './pages/Dashboard';
 import SuperAdmin from './pages/SuperAdmin';
 import NotFound from './pages/NotFound';
 import JoinPage from './pages/JoinPage';
+import DenominationsPage from './pages/DenominationsPage';
 import EventCheckInPage from './pages/EventCheckInPage';
 import ProtectedRoute from '@/components/auth/RouteGuard';
 
@@ -79,6 +80,7 @@ function AppRoutes() {
             <Route path="/member/settings/directory" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['super_admin']}><SuperAdmin /></ProtectedRoute>} />
             <Route path="/join" element={<JoinPage />} />
+            <Route path="/denominations" element={<DenominationsPage />} />
             <Route path="/checkin/:eventId" element={<EventCheckInPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

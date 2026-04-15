@@ -141,3 +141,15 @@ export const adminMiddleware: RequestHandler = (req, res, next) => {
     }
     next();
 };
+
+export const superAdminMiddleware: RequestHandler = (req, res, next) => {
+    const authReq = req as AuthRequest;
+    if (!authReq.user || authReq.user.role !== 'super_admin') {
+        res.status(403).json({
+            statusCode: 403,
+            message: "Access denied. Super admin role required."
+        });
+        return;
+    }
+    next();
+};

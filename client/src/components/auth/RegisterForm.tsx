@@ -75,9 +75,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
             </div>
           )}
 
-
-          <p style={styles.sectionTitle}>Admin Account</p>
-
           <div style={styles.gridRow}>
             <div style={styles.formGroup}>
               <label htmlFor="firstName" style={styles.label}>First Name *</label>

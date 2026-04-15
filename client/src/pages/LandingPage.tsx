@@ -19,7 +19,7 @@ const LandingPage: React.FC = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const handleGetStarted = () => navigate('/register-church');
+  const handleGetStarted = () => navigate('/denominations');
   const handleLogin = () => navigate('/login');
   const handleLearnMore = () => {
     document.querySelector('#how-it-works')?.scrollIntoView({ behavior: 'smooth' });
