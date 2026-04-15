@@ -82,7 +82,7 @@ const ConfirmDialog: React.FC<Props> = ({
         <div className="mx-6 my-4 border-t border-gray-200" />
         <AlertDialogFooter className="px-6 pb-6 gap-3 sm:gap-2 flex-row justify-end">
           <AlertDialogCancel disabled={loading} className="flex-1 sm:flex-none min-w-[90px]">Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm} disabled={loading} className={`flex-1 sm:flex-none min-w-[90px] gap-2 text-app-primary-foreground font-medium disabled:opacity-60 ${s.action}`}>
+          <AlertDialogAction onClick={(e) => { e.preventDefault(); onConfirm(); }} disabled={loading} className={`flex-1 sm:flex-none min-w-[90px] gap-2 text-app-primary-foreground font-medium disabled:opacity-60 ${s.action}`}>
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />

@@ -87,8 +87,8 @@ export class EventService {
       .addOrderBy("e.time_from", "ASC");
 
     if (!include_unpublished) {
-      qb.andWhere("e.status = :published", { published: EventStatus.PUBLISHED });
-      qb.andWhere("(e.is_published = true OR e.publish_at <= NOW())");
+      qb.andWhere("e.status IN (:...visibleStatuses)", { visibleStatuses: [EventStatus.PUBLISHED, EventStatus.ONGOING] });
+      qb.andWhere("(e.is_published = true OR e.publish_at <= NOW() OR e.status = :ongoing)", { ongoing: EventStatus.ONGOING });
     }
     if (category) {
       qb.andWhere("e.category = :category", { category });

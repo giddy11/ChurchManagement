@@ -150,3 +150,51 @@ export const getAttendanceSummary = asyncHandler(async (req, res) => {
   const summary = await attendanceService.getAttendanceSummary(req.params.eventId);
   res.json({ status: 200, data: summary });
 });
+
+// ── Public / Guest (QR code) ───────────────────────────────────
+
+export const getPublicEventInfo = asyncHandler(async (req, res) => {
+  const info = await attendanceService.getPublicEventInfo(req.params.eventId);
+  if (!info) throw new CustomError("Event not found", 404);
+  res.json({ status: 200, data: info });
+});
+
+export const guestCheckIn = asyncHandler(async (req, res) => {
+  const { event_date, first_name, last_name, email, phone, country, state, address, comments, check_in_lat, check_in_lng } = req.body;
+  const eventId = req.params.eventId;
+  if (!first_name || !last_name) throw new CustomError("First name and last name are required", 400);
+  if (!event_date) throw new CustomError("Event date is required", 400);
+
+  const record = await attendanceService.markGuestAttendance({
+    event_id: eventId,
+    event_date,
+    first_name: first_name.trim(),
+    last_name: last_name.trim(),
+    email: email?.trim() || undefined,
+    phone: phone?.trim() || undefined,
+    country: country?.trim() || undefined,
+    state: state?.trim() || undefined,
+    address: address?.trim() || undefined,
+    comments: comments?.trim() || undefined,
+    check_in_lat,
+    check_in_lng,
+  });
+
+  res.status(201).json({ status: 201, data: record, message: "Attendance marked successfully" });
+});
+
+export const getGuestAttendance = asyncHandler(async (req, res) => {
+  const authReq = req as AuthRequest;
+  const { eventId } = req.params;
+  const eventDate = req.query.event_date as string;
+  if (!eventDate) throw new CustomError("event_date query param is required", 400);
+
+  const event = await eventService.findById(eventId);
+  if (!event) throw new CustomError("Event not found", 404);
+
+  const canManage = authReq.user.role === "super_admin" || await eventService.canManageEvent(authReq.user.id, event.branch_id);
+  if (!canManage) throw new CustomError("Only admins or coordinators can view guest attendance", 403);
+
+  const records = await attendanceService.getGuestAttendance(eventId, eventDate);
+  res.json({ status: 200, data: records });
+});

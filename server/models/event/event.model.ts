@@ -43,6 +43,7 @@ export enum EventVisibility {
 export enum EventStatus {
   DRAFT = "draft",
   PUBLISHED = "published",
+  ONGOING = "ongoing",
   CANCELLED = "cancelled",
   CLOSED = "closed",
 }

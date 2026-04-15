@@ -55,6 +55,7 @@ export type EventVisibility = (typeof EventVisibility)[keyof typeof EventVisibil
 export const EventStatus = {
   DRAFT: "draft",
   PUBLISHED: "published",
+  ONGOING: "ongoing",
   CANCELLED: "cancelled",
   CLOSED: "closed",
 } as const;
@@ -63,6 +64,7 @@ export type EventStatus = (typeof EventStatus)[keyof typeof EventStatus];
 export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
   [EventStatus.DRAFT]: "Draft",
   [EventStatus.PUBLISHED]: "Published",
+  [EventStatus.ONGOING]: "Ongoing",
   [EventStatus.CANCELLED]: "Cancelled",
   [EventStatus.CLOSED]: "Closed",
 };

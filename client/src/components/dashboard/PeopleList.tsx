@@ -36,7 +36,7 @@ const PeopleList: React.FC<PeopleListProps> = ({ people, onView, onEdit, onDelet
   return (
     <>
       {/* Card view: always on mobile, or when toggled */}
-      <div className={showTable ? 'hidden' : showCards ? 'block' : 'md:hidden'}>
+      <div className={showCards ? 'block' : 'block md:hidden'}>
         <div className="space-y-3">
         <div className="flex items-center gap-2 px-1 pb-1 border-b">
           <Checkbox
@@ -65,8 +65,8 @@ const PeopleList: React.FC<PeopleListProps> = ({ people, onView, onEdit, onDelet
         </div>
         </div>
       </div>
-      {/* Table view: always on desktop, or when toggled */}
-      <div className={showCards ? 'hidden' : showTable ? 'block rounded-md border' : 'hidden md:block rounded-md border'}>
+      {/* Table view: hidden on mobile, shown on desktop unless card mode */}
+      <div className={showCards ? 'hidden' : 'hidden md:block rounded-md border'}>
         <table className="w-full caption-bottom text-sm">
           <thead className="[&_tr]:border-b">
             <tr className="border-b hover:bg-muted/50">

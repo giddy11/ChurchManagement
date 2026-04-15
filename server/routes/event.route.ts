@@ -9,6 +9,9 @@ import {
   removeAttendance,
   getEventAttendance,
   getAttendanceSummary,
+  getPublicEventInfo,
+  guestCheckIn,
+  getGuestAttendance,
 } from "../controllers/event.controller";
 import { authMiddleware, adminMiddleware } from "../middleware/auth.middleware";
 import { UserService } from "../services/user.service";
@@ -29,5 +32,10 @@ router.post("/:eventId/attendance", auth, markAttendance);
 router.get("/:eventId/attendance", auth, getEventAttendance);
 router.get("/:eventId/attendance/summary", auth, getAttendanceSummary);
 router.delete("/:eventId/attendance/:userId", auth, removeAttendance);
+router.get("/:eventId/guest-attendance", auth, getGuestAttendance);
+
+// ─── Public / Guest (no auth — QR code check-in) ────────────────
+router.get("/:eventId/public", getPublicEventInfo);
+router.post("/:eventId/guest-checkin", guestCheckIn);
 
 export default router;

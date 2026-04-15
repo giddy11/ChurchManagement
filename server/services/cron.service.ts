@@ -28,7 +28,29 @@ async function publishScheduledEvents(): Promise<void> {
 }
 
 /**
- * Close published events whose end time has elapsed:
+ * Mark published events whose start time has arrived as ONGOING:
+ *   status = PUBLISHED, is_published = true, (date || ' ' || time_from)::timestamp <= NOW()
+ *   AND (date || ' ' || time_to)::timestamp >= NOW()
+ */
+async function markOngoingEvents(): Promise<void> {
+  const repo = AppDataSource.getRepository(Event);
+  const result = await repo
+    .createQueryBuilder()
+    .update(Event)
+    .set({ status: EventStatus.ONGOING })
+    .where("status = :published", { published: EventStatus.PUBLISHED })
+    .andWhere("is_published = true")
+    .andWhere("(date::text || ' ' || time_from)::timestamp <= NOW()")
+    .andWhere("(date::text || ' ' || time_to)::timestamp >= NOW()")
+    .execute();
+
+  if (result.affected && result.affected > 0) {
+    logger.info(`[CronService] Marked ${result.affected} event(s) as ongoing`);
+  }
+}
+
+/**
+ * Close published/ongoing events whose end time has elapsed:
  *   (date || ' ' || time_to)::timestamp < NOW()
  */
 async function closeElapsedEvents(): Promise<void> {
@@ -37,7 +59,7 @@ async function closeElapsedEvents(): Promise<void> {
     .createQueryBuilder()
     .update(Event)
     .set({ status: EventStatus.CLOSED, is_published: false })
-    .where("status = :published", { published: EventStatus.PUBLISHED })
+    .where("status IN (:...statuses)", { statuses: [EventStatus.PUBLISHED, EventStatus.ONGOING] })
     .andWhere("(date::text || ' ' || time_to)::timestamp < NOW()")
     .execute();
 
@@ -51,7 +73,9 @@ export function startCronJobs(): void {
   cron.schedule("* * * * *", async () => {
     try {
       await publishScheduledEvents();
-      // Close events after publish check so a same-minute event can be published first
+      // Mark events as ongoing once their start time arrives
+      await markOngoingEvents();
+      // Close events after ongoing check so a same-minute event can be marked first
       await closeElapsedEvents();
     } catch (err) {
       logger.error("[CronService] Error during scheduled jobs:", err);

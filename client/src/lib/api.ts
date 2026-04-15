@@ -41,7 +41,7 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   console.log(`API Request: ${endpoint}`, options);
   const res = await authFetch(endpoint, options);
   if (res.status < 200 || res.status >= 300) {
-    throw new Error(res.data?.message || `Request failed: ${res.status}`);
+    throw new Error(res.data?.message || res.data?.error || `Request failed: ${res.status}`);
   }
   return res.data;
 }
@@ -568,4 +568,71 @@ export const removeAttendanceApi = (eventId: string, userId: string, eventDate: 
   request<{ status: number; message: string }>(`/events/${eventId}/attendance/${userId}?event_date=${eventDate}`, {
     method: 'DELETE',
   });
+
+// ─── Public / Guest (QR code check-in) ──────────────────────────────────────
+const API_BASE_PUBLIC = import.meta.env.VITE_API_URL || 'http://localhost:7777/api';
+
+export interface PublicEventInfo {
+  id: string;
+  title: string;
+  date: string;
+  time_from: string;
+  time_to: string;
+  location: string;
+  accept_attendance: boolean;
+  require_location: boolean;
+  attendance_status: string | null;
+  attendance_opens_at: string | null;
+  attendance_closes_at: string | null;
+}
+
+export interface GuestCheckInInput {
+  event_date: string;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  phone?: string;
+  country?: string;
+  state?: string;
+  address?: string;
+  comments?: string;
+  check_in_lat?: number;
+  check_in_lng?: number;
+}
+
+export async function fetchPublicEventApi(eventId: string): Promise<{ data: PublicEventInfo; status: number }> {
+  const res = await fetch(`${API_BASE_PUBLIC}/events/${eventId}/public`);
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || json.message || 'Event not found');
+  return json;
+}
+
+export async function guestCheckInApi(eventId: string, body: GuestCheckInInput): Promise<{ status: number; message: string }> {
+  const res = await fetch(`${API_BASE_PUBLIC}/events/${eventId}/guest-checkin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || json.message || 'Check-in failed');
+  return json;
+}
+
+export interface GuestAttendeeRecord {
+  id: string;
+  event_id: string;
+  event_date: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone: string | null;
+  country: string | null;
+  state: string | null;
+  address: string | null;
+  comments: string | null;
+  checked_in_at: string;
+}
+
+export const fetchGuestAttendanceApi = (eventId: string, eventDate: string) =>
+  request<{ data: GuestAttendeeRecord[]; status: number }>(`/events/${eventId}/guest-attendance?event_date=${eventDate}`);
 

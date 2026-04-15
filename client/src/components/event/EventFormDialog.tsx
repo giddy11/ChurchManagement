@@ -92,7 +92,8 @@ function toFormData(ev: EventDTO): CreateEventInput {
 }
 
 export const EventFormDialog: React.FC<Props> = ({ open, onOpenChange, onSubmit, initial, loading }) => {
-  const isEdit = !!initial;
+  const isEdit = !!initial && !!initial.id;
+  const isDuplicate = !!initial && !initial.id;
   const [form, setForm] = useState<CreateEventInput>(EMPTY_FORM);
 
   useEffect(() => {
@@ -113,7 +114,7 @@ export const EventFormDialog: React.FC<Props> = ({ open, onOpenChange, onSubmit,
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Event" : "Create Event"}</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit Event" : isDuplicate ? "Duplicate Event" : "Create Event"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5 mt-2">
@@ -186,9 +187,11 @@ export const EventFormDialog: React.FC<Props> = ({ open, onOpenChange, onSubmit,
               value={form.status}
               onChange={(e) => update("status", e.target.value as EventStatus)}
             >
-              {Object.entries(EVENT_STATUS_LABELS).map(([val, label]) => (
-                <option key={val} value={val}>{label}</option>
-              ))}
+              {Object.entries(EVENT_STATUS_LABELS)
+                .filter(([val]) => val !== EventStatus.ONGOING)
+                .map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
             </select>
             <p className="text-xs text-muted-foreground">Save as Draft to keep it hidden until you're ready to publish.</p>
           </div>
@@ -205,7 +208,7 @@ export const EventFormDialog: React.FC<Props> = ({ open, onOpenChange, onSubmit,
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={!isValid || loading}>{loading ? "Saving…" : isEdit ? "Update" : "Create"}</Button>
+            <Button type="submit" disabled={!isValid || loading}>{loading ? "Saving…" : isEdit ? "Update" : isDuplicate ? "Duplicate" : "Create"}</Button>
           </div>
         </form>
       </DialogContent>

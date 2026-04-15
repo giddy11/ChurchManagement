@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useEventAttendance, useAttendanceActions } from "@/hooks/useAttendance";
+import { useEventAttendance, useAttendanceActions, useGuestAttendance } from "@/hooks/useAttendance";
 import { useChurch } from "@/components/church/ChurchProvider";
 import { useProfile } from "@/hooks/useAuthQuery";
 import { fetchMembersApi, type MemberDTO } from "@/lib/api";
@@ -66,22 +66,38 @@ const MemberAttendanceView: React.FC<{ event: EventDTO }> = ({ event }) => {
   const { data: profile } = useProfile();
   const { records, isLoading } = useEventAttendance(event.id, today);
   const { loading, markPresent } = useAttendanceActions(event.id, today);
+  const [checkInError, setCheckInError] = useState<string | null>(null);
+  const [checkInSuccess, setCheckInSuccess] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   const { open: attendanceOpen, reason } = isAttendanceOpen(event);
   const alreadyMarked = !!profile?.id && records.some((r) => r.user_id === profile.id);
 
   const handleCheckIn = async () => {
-    if (event.require_location) {
-      let position: GeolocationPosition;
-      try {
-        position = await getCurrentPosition();
-      } catch {
-        toast.error("Location access is required to check in. Please enable location and try again.");
-        return;
+    setCheckInError(null);
+    setCheckInSuccess(false);
+    try {
+      let result;
+      if (event.require_location) {
+        let position: GeolocationPosition;
+        try {
+          setLocating(true);
+          position = await getCurrentPosition();
+        } catch {
+          setCheckInError("Location access is required to check in. Please enable location and try again.");
+          return;
+        } finally {
+          setLocating(false);
+        }
+        result = await markPresent({ check_in_lat: position.coords.latitude, check_in_lng: position.coords.longitude });
+      } else {
+        result = await markPresent();
       }
-      await markPresent({ check_in_lat: position.coords.latitude, check_in_lng: position.coords.longitude });
-    } else {
-      await markPresent();
+      if (result) {
+        setCheckInSuccess(true);
+      }
+    } catch (err: any) {
+      setCheckInError(err.message || "Failed to mark attendance");
     }
   };
 
@@ -96,7 +112,7 @@ const MemberAttendanceView: React.FC<{ event: EventDTO }> = ({ event }) => {
     );
   }
 
-  if (alreadyMarked) {
+  if (alreadyMarked || checkInSuccess) {
     return (
       <div className="flex flex-col items-center gap-3 py-8 text-center">
         <CheckCircle className="h-10 w-10 text-green-500" />
@@ -113,8 +129,16 @@ const MemberAttendanceView: React.FC<{ event: EventDTO }> = ({ event }) => {
           <MapPin className="h-4 w-4" /> You must be at the venue to check in.
         </p>
       )}
-      <Button size="lg" onClick={handleCheckIn} disabled={loading} className="w-full sm:w-auto">
-        {loading
+      {/* {checkInError && (
+        <div className="w-full rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-start gap-2">
+          <XCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-500" />
+          <span>{checkInError}</span>
+        </div>
+      )} */}
+      <Button size="lg" onClick={handleCheckIn} disabled={loading || locating} className="w-full sm:w-auto">
+        {locating
+          ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Getting location…</>
+          : loading
           ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Checking in…</>
           : <><CheckCircle className="h-4 w-4 mr-2" />Mark My Attendance</>}
       </Button>
@@ -127,6 +151,7 @@ const AdminAttendanceView: React.FC<{ event: EventDTO }> = ({ event }) => {
   const today = new Date().toISOString().split("T")[0];
   const [selectedDate, setSelectedDate] = useState(today);
   const { records, isLoading } = useEventAttendance(event.id, selectedDate);
+  const { guests, isLoading: guestsLoading } = useGuestAttendance(event.id, selectedDate);
   const { loading, markPresent, removeRecord } = useAttendanceActions(event.id, selectedDate);
 
   // Member search state
@@ -182,9 +207,15 @@ const AdminAttendanceView: React.FC<{ event: EventDTO }> = ({ event }) => {
         <TabsList className="w-full">
           <TabsTrigger value="mark" className="flex-1">Mark Attendance</TabsTrigger>
           <TabsTrigger value="attendees" className="flex-1">
-            Attendees
+            Members
             {records.length > 0 && (
               <Badge variant="secondary" className="ml-2 text-xs">{records.length}</Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="guests" className="flex-1">
+            Guests
+            {guests.length > 0 && (
+              <Badge variant="secondary" className="ml-2 text-xs">{guests.length}</Badge>
             )}
           </TabsTrigger>
         </TabsList>
@@ -298,6 +329,39 @@ const AdminAttendanceView: React.FC<{ event: EventDTO }> = ({ event }) => {
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
                   </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </TabsContent>
+
+        {/* ── Guests tab (QR check-ins) ── */}
+        <TabsContent value="guests" className="mt-4">
+          {guestsLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : guests.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">No guest check-ins for this date.</p>
+          ) : (
+            <ul className="divide-y rounded-md border overflow-hidden max-h-72 overflow-y-auto">
+              {guests.map((g) => (
+                <li key={g.id} className="flex items-center gap-3 px-3 py-2.5 text-sm bg-background hover:bg-muted/40">
+                  <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0 text-xs font-semibold uppercase text-muted-foreground">
+                    {g.first_name.charAt(0)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium truncate">{g.first_name} {g.last_name}</p>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
+                      {g.email && <span className="text-xs text-muted-foreground truncate">{g.email}</span>}
+                      {g.phone && <span className="text-xs text-muted-foreground">{g.phone}</span>}
+                      {(g.state || g.country) && (
+                        <span className="text-xs text-muted-foreground">{[g.state, g.country].filter(Boolean).join(", ")}</span>
+                      )}
+                    </div>
+                    {g.comments && <p className="text-xs text-muted-foreground italic mt-0.5 truncate">"{g.comments}"</p>}
+                  </div>
+                  <Badge variant="outline" className="text-[10px] shrink-0 text-blue-600 border-blue-200 bg-blue-50">QR</Badge>
                 </li>
               ))}
             </ul>

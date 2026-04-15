@@ -5,9 +5,10 @@ import { EventCard } from "./EventCard";
 import { EventFormDialog } from "./EventFormDialog";
 import { useEventList, useEventCrud } from "@/hooks/useEventCrud";
 import { useChurch } from "@/components/church/ChurchProvider";
-import { EVENT_CATEGORY_LABELS, EventCategory, type EventDTO, type CreateEventInput } from "@/types/event";
+import { EVENT_CATEGORY_LABELS, EventCategory, EventStatus, type EventDTO, type CreateEventInput } from "@/types/event";
 import { Plus } from "lucide-react";
 import { EventAttendanceDialog } from "./EventAttendanceDialog";
+import { EventQRDialog } from "./EventQRDialog";
 
 export const EventListPage: React.FC = () => {
   const { branchRole, effectiveRole } = useChurch();
@@ -20,11 +21,13 @@ export const EventListPage: React.FC = () => {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<EventDTO | null>(null);
+  const [duplicateSource, setDuplicateSource] = useState<EventDTO | null>(null);
   const [attendanceEvent, setAttendanceEvent] = useState<EventDTO | null>(null);
+  const [qrEvent, setQrEvent] = useState<EventDTO | null>(null);
 
   const handleCreate = async (data: CreateEventInput) => {
     const result = await create(data);
-    if (result) setFormOpen(false);
+    if (result) { setFormOpen(false); setDuplicateSource(null); }
   };
 
   const handleUpdate = async (data: CreateEventInput) => {
@@ -36,6 +39,21 @@ export const EventListPage: React.FC = () => {
   const handleDelete = async (ev: EventDTO) => {
     if (!confirm(`Delete "${ev.title}"?`)) return;
     await remove(ev.id);
+  };
+
+  const handleDuplicate = (ev: EventDTO) => {
+    const dup: EventDTO = {
+      ...ev,
+      id: "",
+      title: `Copy of ${ev.title}`,
+      date: "",
+      status: EventStatus.DRAFT,
+      is_published: false,
+      publish_at: null,
+      created_at: "",
+      updated_at: "",
+    };
+    setDuplicateSource(dup);
   };
 
   const totalPages = Math.max(1, Math.ceil(total / 25));
@@ -82,6 +100,8 @@ export const EventListPage: React.FC = () => {
               canManage={canManage}
               onEdit={() => setEditTarget(ev)}
               onDelete={() => handleDelete(ev)}
+              onDuplicate={() => handleDuplicate(ev)}
+              onShowQR={() => setQrEvent(ev)}
               onViewAttendance={() => setAttendanceEvent(ev)}
             />
           ))}
@@ -100,12 +120,20 @@ export const EventListPage: React.FC = () => {
       {/* Create dialog */}
       <EventFormDialog open={formOpen} onOpenChange={setFormOpen} onSubmit={handleCreate} loading={saving} />
 
+      {/* Duplicate dialog */}
+      <EventFormDialog open={!!duplicateSource} onOpenChange={(open) => { if (!open) setDuplicateSource(null); }} onSubmit={handleCreate} initial={duplicateSource} loading={saving} />
+
       {/* Edit dialog */}
       <EventFormDialog open={!!editTarget} onOpenChange={(open) => { if (!open) setEditTarget(null); }} onSubmit={handleUpdate} initial={editTarget} loading={saving} />
 
       {/* Attendance dialog */}
       {attendanceEvent && (
         <EventAttendanceDialog event={attendanceEvent} open={!!attendanceEvent} onOpenChange={(open) => { if (!open) setAttendanceEvent(null); }} />
+      )}
+
+      {/* QR Code dialog */}
+      {qrEvent && (
+        <EventQRDialog event={qrEvent} open={!!qrEvent} onOpenChange={(open) => { if (!open) setQrEvent(null); }} />
       )}
     </div>
   );

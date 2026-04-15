@@ -9,13 +9,15 @@ import {
   type EventDTO,
   type EventCategory,
 } from "@/types/event";
-import { Calendar, Clock, MapPin, Repeat } from "lucide-react";
+import { Calendar, Clock, MapPin, Repeat, Copy, QrCode } from "lucide-react";
 
 interface Props {
   event: EventDTO;
   canManage: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  onDuplicate: () => void;
+  onShowQR: () => void;
   onViewAttendance: () => void;
 }
 
@@ -26,13 +28,14 @@ function formatTime(t: string) {
   return `${hour % 12 || 12}:${m} ${ampm}`;
 }
 
-export const EventCard: React.FC<Props> = ({ event, canManage, onEdit, onDelete, onViewAttendance }) => {
+export const EventCard: React.FC<Props> = ({ event, canManage, onEdit, onDelete, onDuplicate, onShowQR, onViewAttendance }) => {
   const isPast = new Date(event.date) < new Date(new Date().toDateString());
   const categoryLabel = EVENT_CATEGORY_LABELS[event.category] ?? event.category;
 
   const statusBadge: Record<EventStatus, { label: string; className: string }> = {
     [EventStatus.DRAFT]:     { label: "Draft",     className: "bg-yellow-100 text-yellow-800 border-yellow-200" },
     [EventStatus.PUBLISHED]: { label: "Published",  className: "bg-green-100 text-green-800 border-green-200" },
+    [EventStatus.ONGOING]:   { label: "Ongoing",    className: "bg-blue-100 text-blue-800 border-blue-200 animate-pulse" },
     [EventStatus.CANCELLED]: { label: "Cancelled",  className: "bg-red-100 text-red-800 border-red-200" },
     [EventStatus.CLOSED]:    { label: "Closed",     className: "bg-gray-100 text-gray-700 border-gray-200" },
   };
@@ -81,6 +84,10 @@ export const EventCard: React.FC<Props> = ({ event, canManage, onEdit, onDelete,
           )}
           {canManage && (
             <>
+              {event.accept_attendance && (
+                <Button size="sm" variant="outline" onClick={onShowQR}><QrCode className="h-3.5 w-3.5 mr-1" />QR Code</Button>
+              )}
+              <Button size="sm" variant="outline" onClick={onDuplicate}><Copy className="h-3.5 w-3.5 mr-1" />Duplicate</Button>
               <Button size="sm" variant="outline" onClick={onEdit}>Edit</Button>
               <Button size="sm" variant="destructive" onClick={onDelete}>Delete</Button>
             </>

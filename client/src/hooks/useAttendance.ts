@@ -7,6 +7,8 @@ import {
   fetchEventAttendanceApi,
   fetchAttendanceSummaryApi,
   removeAttendanceApi,
+  fetchGuestAttendanceApi,
+  type GuestAttendeeRecord,
 } from "@/lib/api";
 import type { EventAttendanceDTO } from "@/types/event";
 
@@ -58,8 +60,9 @@ export function useAttendanceActions(eventId: string, eventDate: string) {
       invalidate();
       return res.data;
     } catch (err: any) {
-      toast.error(err.message || "Failed to mark attendance");
-      return null;
+      const message = err.message || "Failed to mark attendance";
+      toast.error(message);
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -81,4 +84,18 @@ export function useAttendanceActions(eventId: string, eventDate: string) {
   };
 
   return { loading, markPresent, removeRecord };
+}
+
+export function useGuestAttendance(eventId: string, eventDate: string) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["guestAttendance", eventId, eventDate],
+    queryFn: async () => {
+      const res = await fetchGuestAttendanceApi(eventId, eventDate);
+      return (res.data ?? []) as GuestAttendeeRecord[];
+    },
+    enabled: !!eventId && !!eventDate,
+    staleTime: 30_000,
+  });
+
+  return { guests: data ?? [], isLoading };
 }

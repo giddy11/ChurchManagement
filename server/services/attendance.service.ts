@@ -1,6 +1,7 @@
 import { Repository } from "typeorm";
 import { AppDataSource } from "../config/database";
 import { EventAttendance } from "../models/event/event-attendance.model";
+import { GuestAttendance } from "../models/event/guest-attendance.model";
 import { Event } from "../models/event/event.model";
 import { BranchMembership, BranchRole } from "../models/church";
 import CustomError from "../utils/customError";
@@ -14,13 +15,30 @@ export interface MarkAttendanceDTO {
   check_in_lng?: number;
 }
 
+export interface GuestAttendanceDTO {
+  event_id: string;
+  event_date: string;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  phone?: string;
+  country?: string;
+  state?: string;
+  address?: string;
+  comments?: string;
+  check_in_lat?: number;
+  check_in_lng?: number;
+}
+
 export class AttendanceService {
   private readonly attendanceRepo: Repository<EventAttendance>;
+  private readonly guestRepo: Repository<GuestAttendance>;
   private readonly eventRepo: Repository<Event>;
   private readonly membershipRepo: Repository<BranchMembership>;
 
   constructor() {
     this.attendanceRepo = AppDataSource.getRepository(EventAttendance);
+    this.guestRepo = AppDataSource.getRepository(GuestAttendance);
     this.eventRepo = AppDataSource.getRepository(Event);
     this.membershipRepo = AppDataSource.getRepository(BranchMembership);
   }
@@ -121,5 +139,61 @@ export class AttendanceService {
       Math.sin(dLat / 2) ** 2 +
       Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  // ── Guest attendance (QR code check-in) ───────────────────────
+
+  async getPublicEventInfo(eventId: string): Promise<{ id: string; title: string; date: string; time_from: string; time_to: string; location: string; accept_attendance: boolean; require_location: boolean; attendance_status: string | null; attendance_opens_at: Date | null; attendance_closes_at: Date | null } | null> {
+    const event = await this.eventRepo.findOneBy({ id: eventId });
+    if (!event) return null;
+    return {
+      id: event.id,
+      title: event.title,
+      date: event.date,
+      time_from: event.time_from,
+      time_to: event.time_to,
+      location: event.location,
+      accept_attendance: event.accept_attendance,
+      require_location: event.require_location,
+      attendance_status: event.attendance_status,
+      attendance_opens_at: event.attendance_opens_at,
+      attendance_closes_at: event.attendance_closes_at,
+    };
+  }
+
+  async markGuestAttendance(dto: GuestAttendanceDTO): Promise<GuestAttendance> {
+    const event = await this.eventRepo.findOneBy({ id: dto.event_id });
+    if (!event) throw new CustomError("Event not found", 404);
+    if (!event.accept_attendance) throw new CustomError("This event does not accept attendance", 400);
+
+    // ── Attendance window ───────────────────────────────────────
+    if (event.attendance_status === "closed") {
+      throw new CustomError("Attendance is currently closed for this event", 400);
+    }
+    if (event.attendance_status === "scheduled") {
+      const now = new Date();
+      const opens = event.attendance_opens_at ? new Date(event.attendance_opens_at) : null;
+      const closes = event.attendance_closes_at ? new Date(event.attendance_closes_at) : null;
+      if (opens !== null && now < opens) {
+        throw new CustomError(`Attendance opens at ${opens.toLocaleString()}`, 400);
+      }
+      if (closes !== null && now > closes) {
+        throw new CustomError(`Attendance has closed (window ended at ${closes.toLocaleString()})`, 400);
+      }
+    }
+
+    if (event.require_location) {
+      this.validateLocation(event, dto.check_in_lat, dto.check_in_lng);
+    }
+
+    const record = this.guestRepo.create(dto);
+    return this.guestRepo.save(record);
+  }
+
+  async getGuestAttendance(eventId: string, eventDate: string): Promise<GuestAttendance[]> {
+    return this.guestRepo.find({
+      where: { event_id: eventId, event_date: eventDate },
+      order: { checked_in_at: "ASC" },
+    });
   }
 }
