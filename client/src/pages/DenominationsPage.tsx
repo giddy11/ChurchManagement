@@ -10,15 +10,22 @@ import {
   Send,
   User,
   Building2,
-  Globe,
-  Phone,
   MessageSquare,
   ChevronDown,
   ChevronUp,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { fetchPublicDenominations } from '@/lib/api';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Country, State } from 'country-state-city';
+import { fetchPublicDenominations, submitDenominationRequestApi } from '@/lib/api';
+import { PhoneField, isoToFlag } from '@/components/dashboard/AddPersonDialog';
 
 interface BranchInfo {
   id: string;
@@ -40,6 +47,8 @@ interface DenominationInfo {
 
 const ADMIN_EMAIL = 'theunitedchurchflow@gmail.com';
 
+const allCountries = Country.getAllCountries();
+
 const DenominationsPage: React.FC = () => {
   const navigate = useNavigate();
   const [denominations, setDenominations] = useState<DenominationInfo[]>([]);
@@ -47,6 +56,21 @@ const DenominationsPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showRequestForm, setShowRequestForm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [states, setStates] = useState<{ name: string; isoCode: string }[]>([]);
+
+  const phoneOptions = React.useMemo(
+    () =>
+      allCountries.map((c) => ({
+        isoCode: c.isoCode,
+        name: c.name,
+        code: `+${c.phonecode}`,
+        flag: isoToFlag(c.isoCode),
+      })),
+    []
+  );
 
   // Request form state
   const [form, setForm] = useState({
@@ -56,6 +80,7 @@ const DenominationsPage: React.FC = () => {
     phone: '',
     address: '',
     city: '',
+    state: '',
     country: '',
     denominationName: '',
     reason: '',
@@ -88,29 +113,53 @@ const DenominationsPage: React.FC = () => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmitRequest = (e: React.FormEvent) => {
+  const handleCountryChange = (isoCode: string) => {
+    const country = allCountries.find((c) => c.isoCode === isoCode);
+    setForm((prev) => ({ ...prev, country: country?.name || '', state: '' }));
+    setStates(State.getStatesOfCountry(isoCode).map((s) => ({ name: s.name, isoCode: s.isoCode })));
+  };
+
+  const handleStateChange = (stateName: string) => {
+    setForm((prev) => ({ ...prev, state: stateName }));
+  };
+
+  const handleSubmitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
+    setSubmitError('');
 
-    const subject = encodeURIComponent(
-      `Denomination Request: ${form.denominationName}`
-    );
-    const body = encodeURIComponent(
-      `Hello ChurchFlow Team,\n\n` +
-        `I would like to request that the following denomination be added to ChurchFlow:\n\n` +
-        `Denomination Name: ${form.denominationName}\n\n` +
-        `--- My Details ---\n` +
-        `First Name: ${form.firstName}\n` +
-        `Last Name: ${form.lastName}\n` +
-        `Email: ${form.email}\n` +
-        `Phone: ${form.phone}\n` +
-        `Address: ${form.address}\n` +
-        `City: ${form.city}\n` +
-        `Country: ${form.country}\n\n` +
-        `Reason / Additional Info:\n${form.reason}\n\n` +
-        `Thank you.`
-    );
-
-    window.open(`mailto:${ADMIN_EMAIL}?subject=${subject}&body=${body}`, '_self');
+    try {
+      await submitDenominationRequestApi({
+        denomination_name: form.denominationName,
+        first_name: form.firstName,
+        last_name: form.lastName,
+        email: form.email,
+        phone: form.phone || undefined,
+        address: form.address || undefined,
+        city: form.city || undefined,
+        state: form.state || undefined,
+        country: form.country || undefined,
+        reason: form.reason || undefined,
+      });
+      setSubmitSuccess(true);
+      setForm({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        address: '',
+        city: '',
+        state: '',
+        country: '',
+        denominationName: '',
+        reason: '',
+      });
+      setStates([]);
+    } catch (err: any) {
+      setSubmitError(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const isFormValid =
@@ -389,7 +438,7 @@ const DenominationsPage: React.FC = () => {
                     Request a Denomination
                   </h2>
                   <p className="text-xs text-gray-500">
-                    We'll email the admin on your behalf
+                    Submit your request for admin review
                   </p>
                 </div>
               </div>
@@ -402,6 +451,27 @@ const DenominationsPage: React.FC = () => {
             </div>
 
             {/* Form */}
+            {submitSuccess ? (
+              <div className="p-6 text-center">
+                <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                  <Send className="h-8 w-8 text-green-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Request Submitted!</h3>
+                <p className="text-sm text-gray-500 mb-6">
+                  Your denomination request has been submitted successfully. You will receive an email
+                  with your login credentials once the admin reviews and approves your request.
+                </p>
+                <Button
+                  onClick={() => {
+                    setShowRequestForm(false);
+                    setSubmitSuccess(false);
+                  }}
+                  variant="outline"
+                >
+                  Close
+                </Button>
+              </div>
+            ) : (
             <form onSubmit={handleSubmitRequest} className="p-6 space-y-5">
               {/* Denomination Name */}
               <div>
@@ -484,17 +554,12 @@ const DenominationsPage: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Phone Number
                 </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={form.phone}
-                    onChange={handleFormChange}
-                    placeholder="+234 800 000 0000"
-                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all text-sm"
-                  />
-                </div>
+                <PhoneField
+                  value={form.phone}
+                  onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
+                  options={phoneOptions}
+                  countryName={form.country}
+                />
               </div>
 
               {/* Address */}
@@ -515,37 +580,62 @@ const DenominationsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* City & Country */}
+              {/* City & Country & State */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    City
-                  </label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={form.city}
-                    onChange={handleFormChange}
-                    placeholder="Lagos"
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all text-sm"
-                  />
-                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     Country
                   </label>
-                  <div className="relative">
-                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      type="text"
-                      name="country"
-                      value={form.country}
-                      onChange={handleFormChange}
-                      placeholder="Nigeria"
-                      className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all text-sm"
-                    />
-                  </div>
+                  <Select
+                    value={allCountries.find((c) => c.name === form.country)?.isoCode || ''}
+                    onValueChange={handleCountryChange}
+                  >
+                    <SelectTrigger className="w-full rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 text-sm">
+                      <SelectValue placeholder="Select Country" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white max-h-72 overflow-auto">
+                      {allCountries.map((c) => (
+                        <SelectItem key={c.isoCode} value={c.isoCode}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    State / Region
+                  </label>
+                  <Select
+                    value={form.state || ''}
+                    onValueChange={handleStateChange}
+                    disabled={states.length === 0}
+                  >
+                    <SelectTrigger className="w-full rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 text-sm">
+                      <SelectValue placeholder={states.length === 0 ? 'Select country first' : 'Select State'} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white max-h-72 overflow-auto">
+                      {states.map((s) => (
+                        <SelectItem key={s.isoCode} value={s.name}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  City
+                </label>
+                <input
+                  type="text"
+                  name="city"
+                  value={form.city}
+                  onChange={handleFormChange}
+                  placeholder="Lagos"
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all text-sm"
+                />
               </div>
 
               {/* Reason */}
@@ -570,22 +660,31 @@ const DenominationsPage: React.FC = () => {
               <div className="flex items-start gap-3 p-3.5 rounded-lg bg-blue-50 border border-blue-100">
                 <Mail className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-blue-700 leading-relaxed">
-                  This will open your email client with a pre-filled message to{' '}
-                  <strong>{ADMIN_EMAIL}</strong>. The admin will review your
-                  request and register the denomination within 24–48 hours.
+                  Your request will be reviewed by the ChurchFlow admin team.
+                  Once approved, your account and denomination will be created automatically,
+                  and login credentials will be sent to your email.
                 </p>
               </div>
+
+              {/* Error message */}
+              {submitError && (
+                <div className="flex items-start gap-3 p-3.5 rounded-lg bg-red-50 border border-red-100">
+                  <X className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-700 leading-relaxed">{submitError}</p>
+                </div>
+              )}
 
               {/* Submit */}
               <Button
                 type="submit"
-                disabled={!isFormValid}
+                disabled={!isFormValid || submitting}
                 className="w-full py-3 gap-2 text-sm font-semibold"
               >
                 <Send className="h-4 w-4" />
-                Send Request via Email
+                {submitting ? 'Submitting...' : 'Submit Request'}
               </Button>
             </form>
+            )}
           </div>
         </div>
       )}

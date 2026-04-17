@@ -3,7 +3,7 @@ import { DataSource } from "typeorm";
 import { User } from "../models/user.model";
 import dotenv from "dotenv";
 import { ActivityLog } from "../models/activity-log.model";
-import { Denomination, Branch, BranchMembership, BranchJoinRequest, BranchInvite } from "../models/church";
+import { Denomination, Branch, BranchMembership, BranchJoinRequest, BranchInvite, DenominationRequest } from "../models/church";
 import { Person } from "../models/person.model";
 import { Event, EventAttendance, GuestAttendance } from "../models/event";
 dotenv.config();
@@ -27,6 +27,7 @@ export const AppDataSource = new DataSource({
                 BranchMembership,
                 BranchJoinRequest,
                 BranchInvite,
+                DenominationRequest,
                 Person,
                 Event,
                 EventAttendance,

@@ -8,10 +8,11 @@ import {
   Shield,
   ChevronLeft,
   ChevronRight,
+  Church,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export type DevSection = 'overview' | 'analytics' | 'users' | 'activity' | 'system';
+export type DevSection = 'overview' | 'analytics' | 'users' | 'activity' | 'system' | 'requests';
 
 interface NavItem {
   id: DevSection;
@@ -24,6 +25,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'users', label: 'Users', icon: Users },
   { id: 'activity', label: 'Activity Logs', icon: Activity },
+  { id: 'requests', label: 'Requests', icon: Church },
   { id: 'system', label: 'System', icon: Server },
 ];
 

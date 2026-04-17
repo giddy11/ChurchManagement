@@ -525,6 +525,70 @@ export const deactivateInviteLinkApi = (churchId: string, branchId: string, invi
     method: 'DELETE',
   });
 
+// ─── Denomination Requests ──────────────────────────────────────────────────
+
+export interface DenominationRequestDTO {
+  id: string;
+  denomination_name: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  reason?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewed_by?: string;
+  reviewed_at?: string;
+  rejection_reason?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Public — submit a denomination request (no auth) */
+export const submitDenominationRequestApi = (data: {
+  denomination_name: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  reason?: string;
+}) =>
+  fetch(`${JOIN_API_BASE}/denomination-requests`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }).then(async (r) => {
+    const json = await r.json();
+    if (!r.ok) throw new Error(json.message || 'Failed to submit request');
+    return json as { status: number; data: DenominationRequestDTO; message: string };
+  });
+
+/** Super admin — list denomination requests */
+export const fetchDenominationRequests = (status?: string) => {
+  const qs = status ? `?status=${status}` : '';
+  return request<{ data: DenominationRequestDTO[]; status: number }>(`/denomination-requests${qs}`);
+};
+
+/** Super admin — approve a denomination request */
+export const approveDenominationRequestApi = (id: string) =>
+  request<{ data: any; status: number; message: string }>(`/denomination-requests/${id}/approve`, {
+    method: 'POST',
+  });
+
+/** Super admin — reject a denomination request */
+export const rejectDenominationRequestApi = (id: string, rejection_reason: string) =>
+  request<{ data: DenominationRequestDTO; status: number; message: string }>(`/denomination-requests/${id}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ rejection_reason }),
+  });
+
 // ─── Events ─────────────────────────────────────────────────────────────────
 import type { EventDTO, CreateEventInput, UpdateEventInput, EventAttendanceDTO, AttendanceSummaryItem } from '@/types/event';
 

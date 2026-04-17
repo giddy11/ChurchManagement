@@ -19,6 +19,7 @@ import AnalyticsPanel from '@/components/dashboard/dev-console/AnalyticsPanel';
 import UsersPanel from '@/components/dashboard/dev-console/UsersPanel';
 import ActivityPanel from '@/components/dashboard/dev-console/ActivityPanel';
 import SystemPanel from '@/components/dashboard/dev-console/SystemPanel';
+import DenominationRequestsPanel from '@/components/dashboard/dev-console/DenominationRequestsPanel';
 import type { DisplayUser, UserStats, RoleInfo, HealthInfo, ActivityLog, BackendUser } from '@/components/dashboard/dev-console/types';
 
 const SuperAdmin = () => {
@@ -92,6 +93,7 @@ const SuperAdmin = () => {
           {section === 'system' && (
             <SystemPanel roles={roles} health={health} stats={stats} userCount={displayUsers.length} activityTotal={0} loading={loading} onRefresh={loadBackendData} />
           )}
+          {section === 'requests' && <DenominationRequestsPanel />}
         </main>
       </div>
     </div>

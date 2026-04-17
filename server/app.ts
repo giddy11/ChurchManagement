@@ -8,6 +8,7 @@ import churchRoutes from './routes/church.route';
 import personRoutes from './routes/person.route';
 import joinRoutes from './routes/join.route';
 import eventRoutes from './routes/event.route';
+import denominationRequestRoutes from './routes/denomination-request.route';
 import { errorHandler } from './middleware/error_handler.middleware';
 import { setupMiddleware } from './middleware';
 
@@ -24,6 +25,7 @@ app.use('/api/churches', churchRoutes);
 app.use('/api/people', personRoutes);
 app.use('/api/join', joinRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/denomination-requests', denominationRequestRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
