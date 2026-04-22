@@ -20,6 +20,7 @@ export const config: AppConfig = {
           'http://localhost:3001',
           'http://localhost:3002',
           'https://churchmanagement-m27h.onrender.com',
-          'https://theunitedchurch.online'
+          'https://theunitedchurch.online',
+          'https://www.theunitedchurch.online'
         ],
 };
