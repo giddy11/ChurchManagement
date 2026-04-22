@@ -36,8 +36,8 @@ const releases: Release[] = [
     ],
   },
   {
-    period: 'Coming Soon',
-    tag: 'Coming Soon',
+    period: 'April 2026',
+    tag: 'Released',
     title: 'Event Management',
     description:
       'A full-featured event system built for churches — from Sunday services to large-scale revivals.',
@@ -84,6 +84,55 @@ const releases: Release[] = [
       },
     ],
   },
+  // {
+  //   period: 'Coming Soon',
+  //   tag: 'Coming Soon',
+  //   title: 'Event Management',
+  //   description:
+  //     'A full-featured event system built for churches — from Sunday services to large-scale revivals.',
+  //   features: [
+  //     {
+  //       icon: <CalendarDays className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />,
+  //       text: 'Create & manage events across categories: Church Service, Midweek, Youth, Women, Men, Children, Revival, and General.',
+  //     },
+  //     {
+  //       icon: <Repeat className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />,
+  //       text: 'Recurring events — set schedules as daily, weekly, bi-weekly, monthly, quarterly, or yearly so regular services are never missed.',
+  //     },
+  //     {
+  //       icon: <Users className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />,
+  //       text: 'Attendance tracking — members can check in themselves, or admins can mark presence and absence from a live roster.',
+  //     },
+  //     {
+  //       icon: <QrCode className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />,
+  //       text: 'QR code check-in — generate a shareable QR code for each event so attendees can check in instantly.',
+  //     },
+  //     {
+  //       icon: <MapPin className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />,
+  //       text: 'Location-verified attendance — optionally require GPS confirmation to prevent remote check-ins.',
+  //     },
+  //     {
+  //       icon: <Users className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />,
+  //       text: 'Guest check-in with custom fields — collect names, phone numbers, addresses, and more from first-time visitors at the door.',
+  //     },
+  //     {
+  //       icon: <Clock className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />,
+  //       text: 'Scheduled publishing — draft events privately, then set them to auto-publish at a chosen date and time.',
+  //     },
+  //     {
+  //       icon: <Eye className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />,
+  //       text: 'Visibility control — publish events publicly or restrict them to members only.',
+  //     },
+  //     {
+  //       icon: <Image className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />,
+  //       text: 'Event image uploads — add a banner or flyer to make event cards visually distinct.',
+  //     },
+  //     {
+  //       icon: <Copy className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />,
+  //       text: 'Duplicate events — clone any existing event as a starting point to save time when creating similar ones.',
+  //     },
+  //   ],
+  // },
 ];
 
 const tagStyles: Record<Release['tag'], { badge: string; border: string; dot: string }> = {

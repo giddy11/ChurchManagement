@@ -11,60 +11,60 @@ interface Testimonial {
 }
 
 const testimonials: Testimonial[] = [
+  // {
+  //   name: 'Pastor James Okoro',
+  //   role: 'Senior Pastor',
+  //   church: 'Grace Community Church',
+  //   content:
+  //     'ChurchFlow transformed how we manage our 12 branches across Nigeria. The multi-branch support and member tracking is exactly what we needed. Our admin staff saves over 15 hours per week.',
+  //   rating: 5,
+  //   avatar: 'JO',
+  // },
   {
-    name: 'Pastor James Okoro',
-    role: 'Senior Pastor',
-    church: 'Grace Community Church',
-    content:
-      'ChurchFlow transformed how we manage our 12 branches across Nigeria. The multi-branch support and member tracking is exactly what we needed. Our admin staff saves over 15 hours per week.',
-    rating: 5,
-    avatar: 'JO',
-  },
-  {
-    name: 'Rev. Sarah Williams',
+    name: 'Rev. Owei Owei Tongu',
     role: 'Church Administrator',
-    church: 'New Life Fellowship',
+    church: 'Shining Light Baptist Church',
     content:
       'Setting up our church took less than 5 minutes. Adding members, organizing departments, and managing roles is incredibly intuitive. Our volunteers picked it up without any training.',
     rating: 5,
-    avatar: 'SW',
+    avatar: 'OT',
   },
-  {
-    name: 'Bishop Michael Adeyemi',
-    role: 'General Overseer',
-    church: 'Sunrise Ministries International',
-    content:
-      'With churches in 3 countries, we needed a platform that could scale. ChurchFlow handles our 5,000+ members across 20 branches seamlessly. The analytics give us clear visibility.',
-    rating: 5,
-    avatar: 'MA',
-  },
-  {
-    name: 'Pastor Linda Nguyen',
-    role: 'Lead Pastor',
-    church: 'Hope Assembly',
-    content:
-      'The role-based access control is perfect. Our branch pastors manage their own locations while I maintain oversight of the entire ministry. Exactly the control we needed.',
-    rating: 5,
-    avatar: 'LN',
-  },
-  {
-    name: 'Deacon Emmanuel Balogun',
-    role: 'IT Coordinator',
-    church: 'Faith Tabernacle',
-    content:
-      'As someone who evaluated many church management tools, ChurchFlow stands out for its clean design and multi-church architecture. The activity logs give us full transparency.',
-    rating: 5,
-    avatar: 'EB',
-  },
-  {
-    name: 'Pastor Grace Okonkwo',
-    role: 'Associate Pastor',
-    church: 'Dominion Chapel',
-    content:
-      'Our members love being able to log in and see which churches they belong to in one place. The church selector makes switching between communities effortless.',
-    rating: 4,
-    avatar: 'GO',
-  },
+  // {
+  //   name: 'Bishop Michael Adeyemi',
+  //   role: 'General Overseer',
+  //   church: 'Sunrise Ministries International',
+  //   content:
+  //     'With churches in 3 countries, we needed a platform that could scale. ChurchFlow handles our 5,000+ members across 20 branches seamlessly. The analytics give us clear visibility.',
+  //   rating: 5,
+  //   avatar: 'MA',
+  // },
+  // {
+  //   name: 'Pastor Linda Nguyen',
+  //   role: 'Lead Pastor',
+  //   church: 'Hope Assembly',
+  //   content:
+  //     'The role-based access control is perfect. Our branch pastors manage their own locations while I maintain oversight of the entire ministry. Exactly the control we needed.',
+  //   rating: 5,
+  //   avatar: 'LN',
+  // },
+  // {
+  //   name: 'Deacon Emmanuel Balogun',
+  //   role: 'IT Coordinator',
+  //   church: 'Faith Tabernacle',
+  //   content:
+  //     'As someone who evaluated many church management tools, ChurchFlow stands out for its clean design and multi-church architecture. The activity logs give us full transparency.',
+  //   rating: 5,
+  //   avatar: 'EB',
+  // },
+  // {
+  //   name: 'Pastor Grace Okonkwo',
+  //   role: 'Associate Pastor',
+  //   church: 'Dominion Chapel',
+  //   content:
+  //     'Our members love being able to log in and see which churches they belong to in one place. The church selector makes switching between communities effortless.',
+  //   rating: 4,
+  //   avatar: 'GO',
+  // },
 ];
 
 const TestimonialsSection: React.FC = () => {

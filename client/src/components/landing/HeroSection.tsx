@@ -32,7 +32,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onLearnMore }) 
             className="mb-6 px-4 py-1.5 text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200"
           >
             <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-            Trusted by 2,000+ Congregations Worldwide
+            Trusted by 4+ Congregations Worldwide
           </Badge>
 
           {/* Headline */}
@@ -72,9 +72,9 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onLearnMore }) 
 
           {/* Social proof stats */}
           <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-12 max-w-2xl mx-auto">
-            <StatItem icon={Church} value="2,000+" label="Churches" />
-            <StatItem icon={Users} value="150K+" label="Members Managed" />
-            <StatItem icon={MapPin} value="45+" label="Countries" />
+            <StatItem icon={Church} value="3+" label="Churches" />
+            <StatItem icon={Users} value="30+" label="Members Managed" />
+            <StatItem icon={MapPin} value="1+" label="Countries" />
           </div>
         </div>
 

@@ -22,7 +22,7 @@ const CTASection: React.FC<CTASectionProps> = ({ onGetStarted }) => {
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 mb-8">
               <Sparkles className="h-4 w-4 text-yellow-300" />
               <span className="text-sm text-white/90 font-medium">
-                Join 2,000+ churches already on ChurchFlow
+                Join 4+ churches already on ChurchFlow
               </span>
             </div>
 
