@@ -159,7 +159,7 @@ const BranchManagement: React.FC = () => {
             <SelectTrigger className="w-full sm:w-72">
               <SelectValue placeholder="Select a denomination" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white">
               {denominations.map((d) => (
                 <SelectItem key={d.id} value={d.id}>{d.denomination_name}</SelectItem>
               ))}

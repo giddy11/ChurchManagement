@@ -2,10 +2,11 @@ import { randomUUID } from "crypto";
 import { classToPlain } from "class-transformer";
 import { AppDataSource } from "../config/database";
 import { User } from "../models/user.model";
-import { UserSettings } from "../types/user";
+import { UserSettings, Gender } from "../types/user";
 import emailService from "../email/email.service";
 import { sendMemberAddedEmail } from "../email/email.member_added";
 import { firebaseAuth } from "../config/firebase.admin";
+import { normalizeEmail } from "../utils/email";
 
 import { In } from "typeorm";
 import { Person } from "../models/person.model";
@@ -16,7 +17,7 @@ export class UserService {
   private readonly personRepository = AppDataSource.getRepository(Person);
 
   async createUserWithGeneratedPassword(
-    email: string,
+    rawEmail: string,
     roleName: string,
     first_name?: string,
     last_name?: string,
@@ -24,6 +25,11 @@ export class UserService {
     username?: string,
     context?: { branchName?: string; churchName?: string }
   ): Promise<User | null> {
+    // Normalize email up-front so DB rows, Firebase records, and welcome
+    // emails all reference the canonical lower-case form.
+    const email = normalizeEmail(rawEmail);
+    if (!email) throw new Error("A valid email address is required");
+
     // 1. Guard: reject duplicate email early
     const exists = await this.userRepository.findOne({ where: { email } });
     if (exists) throw new Error('User with this email already exists');
@@ -404,6 +410,18 @@ export class UserService {
     id: string,
     data: {
       full_name?: string;
+      first_name?: string;
+      last_name?: string;
+      middle_name?: string;
+      nick_name?: string;
+      phone_number?: string;
+      dob?: string | Date | null;
+      gender?: string;
+      address_line?: string;
+      city?: string;
+      state?: string;
+      country?: string;
+      postal_code?: string;
       role?: string;
       is_active?: boolean;
       departmentId?: number;
@@ -412,11 +430,54 @@ export class UserService {
   ): Promise<Omit<User, "password"> | null> {
     const user = await this.userRepository.findOne({
       where: { id },
-      relations: ["groups", "department"],
     });
     if (!user) return null;
 
-    if (data.full_name !== undefined) user.full_name = data.full_name;
+    // Whitelist of fields an admin is allowed to edit. Email, password,
+    // refresh tokens, role escalation flags etc. are intentionally excluded
+    // from this generic profile-update path.
+    const stringFields: Array<keyof typeof data & keyof User> = [
+      "full_name",
+      "first_name",
+      "last_name",
+      "middle_name",
+      "nick_name",
+      "phone_number",
+      "address_line",
+      "city",
+      "state",
+      "country",
+      "postal_code",
+    ];
+    for (const field of stringFields) {
+      const incoming = (data as any)[field];
+      if (incoming !== undefined) {
+        const trimmed = typeof incoming === "string" ? incoming.trim() : incoming;
+        (user as any)[field] = trimmed === "" ? null : trimmed;
+      }
+    }
+
+    if (data.dob !== undefined) {
+      if (data.dob === null || data.dob === "") {
+        user.dob = null as any;
+      } else {
+        const d = data.dob instanceof Date ? data.dob : new Date(data.dob);
+        user.dob = isNaN(d.getTime()) ? user.dob : (d as any);
+      }
+    }
+
+    if (data.gender !== undefined) {
+      const g = typeof data.gender === "string" ? data.gender.trim().toUpperCase() : "";
+      (user as any).gender = g === Gender.MALE || g === Gender.FEMALE || g === Gender.OTHER ? g as Gender : null;
+    }
+
+    // Auto-derive full_name when first/last changed but full_name was not
+    // explicitly provided, so the column never goes out of sync.
+    if (data.full_name === undefined && (data.first_name !== undefined || data.last_name !== undefined)) {
+      const composed = [user.first_name, user.last_name].filter(Boolean).join(" ").trim();
+      if (composed) user.full_name = composed;
+    }
+
     if (data.is_active !== undefined) user.is_active = data.is_active;
     if (data.role !== undefined) user.role = data.role;
 
@@ -442,13 +503,7 @@ export class UserService {
     status?: string;
   }): Promise<User[]> {
     const query = this.userRepository
-      .createQueryBuilder("user")
-      .leftJoinAndSelect("user.role", "role")
-      .leftJoinAndSelect("role.permissions", "rolePermissions")
-      .leftJoinAndSelect("user.groups", "groups")
-      .leftJoinAndSelect("groups.permissions", "groupPermissions")
-      .leftJoinAndSelect("user.permissions", "permissions")
-      .leftJoinAndSelect("user.department", "department");
+      .createQueryBuilder("user");
 
     if (filters.search) {
       query.andWhere(
@@ -458,7 +513,7 @@ export class UserService {
     }
 
     if (filters.role && filters.role !== "all") {
-      query.andWhere("role.name = :role", { role: filters.role });
+      query.andWhere("user.role = :role", { role: filters.role });
     }
 
     if (filters.status) {

@@ -302,13 +302,43 @@ export class UserController {
   updateUserInfo = asyncHandler(
     async (req: Request, res: Response): Promise<void> => {
       const { id } = req.params;
-      const { full_name, role, is_active, departmentId, groupIds } = req.body;
+      const {
+        full_name,
+        first_name,
+        last_name,
+        middle_name,
+        nick_name,
+        phone_number,
+        dob,
+        gender,
+        address_line,
+        city,
+        state,
+        country,
+        postal_code,
+        role,
+        is_active,
+        departmentId,
+        groupIds,
+      } = req.body;
       const userService = new UserService();
       try {
       const updatedUser = await userService.updateUserInfo(
         id,
         {
           full_name,
+          first_name,
+          last_name,
+          middle_name,
+          nick_name,
+          phone_number,
+          dob,
+          gender,
+          address_line,
+          city,
+          state,
+          country,
+          postal_code,
           role,
           is_active,
             departmentId,

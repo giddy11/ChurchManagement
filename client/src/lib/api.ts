@@ -95,9 +95,18 @@ export interface MemberDTO {
   full_name?: string;
   first_name?: string;
   last_name?: string;
+  middle_name?: string;
+  nick_name?: string;
   profile_img?: string;
   profile_image?: string;
   phone_number?: string;
+  dob?: string | null;
+  gender?: string | null;
+  address_line?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  postal_code?: string | null;
   role: string;
   /** Role within the current branch (from BranchMembership.role) */
   branch_role?: string;
@@ -129,9 +138,23 @@ export const createMemberApi = (data: {
     body: JSON.stringify(data),
   });
 
-export const updateMemberApi = (id: string, data: Partial<{
+export type UpdateMemberPayload = Partial<{
   full_name: string;
-}>) =>
+  first_name: string;
+  last_name: string;
+  middle_name: string;
+  nick_name: string;
+  phone_number: string;
+  dob: string | null;
+  gender: string | null;
+  address_line: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  postal_code: string | null;
+}>;
+
+export const updateMemberApi = (id: string, data: UpdateMemberPayload) =>
   request<{ data: MemberDTO; status: number; message: string }>(`/user/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),

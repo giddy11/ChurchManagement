@@ -62,7 +62,7 @@ const BranchDetailsDialog: React.FC<BranchDetailsDialogProps> = ({ open, onOpenC
                     <Star className="h-3 w-3 mr-1" />HQ
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="border-app-primary-light text-app-selected-text">Branch</Badge>
+                  <Badge variant="outline" className="border-app-primary-light text-app-selected-text mr-5">Branch</Badge>
                 )}
               </div>
             </div>

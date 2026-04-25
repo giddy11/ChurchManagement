@@ -5,6 +5,7 @@ import asyncHandler from "../utils/asyncHandler";
 import { Person } from "../models/person.model";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { emitToBranch, emitToAll } from "../services/socket.service";
+import { normalizeEmail } from "../utils/email";
 
 const personService = new PersonService();
 const userService = new UserService();
@@ -57,7 +58,7 @@ function normalizePersonInput(body: any, branchId?: string): Partial<Person> {
     state: nz(trim(body.state)),
     city: nz(trim(body.city)),
     country: nz(trim(body.country)),
-    email: nz(trim(body.email)),
+    email: normalizeEmail(body.email),
     phone: nz(normalizePhone(body.phone)),
     profile_image: nz(trim(body.profile_image)),
     branch_id: branchId || nz(trim(body.branch_id)),

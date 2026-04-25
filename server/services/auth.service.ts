@@ -8,6 +8,7 @@ import { sendPasswordResetOtpEmail } from "../email/sendPasswordResetOtpEmail";
 import { TokenService } from "./token.service";
 import { GoogleAuthService, GoogleProfile } from "./google-auth.service";
 import CustomError from "../utils/customError";
+import { normalizeEmail } from "../utils/email";
 
 type UserResponse = Omit<
   User,
@@ -80,7 +81,7 @@ export class AuthService {
 
     // Verify Firebase ID token to get email
     const decoded = await firebaseAuth.verifyIdToken(idToken);
-    const email = decoded.email;
+    const email = normalizeEmail(decoded.email);
     if (!email) throw new Error("Firebase token missing email");
 
     const existingUser = await this.userRepository.findOne({ where: { email } });
@@ -100,7 +101,7 @@ export class AuthService {
     const isFirst = await this.isFirstUser();
 
     const user = this.userRepository.create({
-      email: email.toLowerCase().trim(),
+      email,
       full_name: full_name.trim(),
       phone_number: phone_number?.trim() || undefined,
       role: isFirst ? 'super_admin' : 'admin',
@@ -146,7 +147,7 @@ export class AuthService {
     }
 
     const decoded = await firebaseAuth.verifyIdToken(idToken);
-    const email = decoded.email;
+    const email = normalizeEmail(decoded.email);
     if (!email) throw new Error("Firebase token missing email");
 
     const existingUser = await this.userRepository.findOne({ where: { email } });
@@ -155,7 +156,7 @@ export class AuthService {
     const isFirst = await this.isFirstUser();
 
     const user = this.userRepository.create({
-      email: email.toLowerCase().trim(),
+      email,
       full_name: full_name.trim(),
       role: isFirst ? 'super_admin' : 'member',
     });
@@ -174,7 +175,7 @@ export class AuthService {
     idToken: string
   ): Promise<{ user: UserResponse; tokens: AuthTokens }> {
     const decoded = await firebaseAuth.verifyIdToken(idToken);
-    const email = decoded.email;
+    const email = normalizeEmail(decoded.email);
     if (!email) throw new Error("Firebase token missing email");
 
     const user = await this.findUserWithRelations({ email });
@@ -188,9 +189,11 @@ export class AuthService {
   }
 
   async login(
-    email: string,
+    rawEmail: string,
     password: string
   ): Promise<{ user: UserResponse; tokens: AuthTokens }> {
+    const email = normalizeEmail(rawEmail);
+    if (!email) throw new Error("Invalid email or password.");
     const user = await this.findUserWithRelations({ email });
     if (!user) throw new Error("Invalid email or password.");
     if (!user.password_hash) throw new Error("Password not set for this account.");
@@ -209,6 +212,7 @@ export class AuthService {
     idToken: string
   ): Promise<{ user: UserResponse; tokens: AuthTokens; isNewUser: boolean }> {
     const profile = await this.googleAuthService.verifyIdToken(idToken);
+    profile.email = normalizeEmail(profile.email) ?? profile.email;
     let user = await this.findUserWithRelations({ google_id: profile.googleId });
     let isNewUser = false;
 
@@ -239,7 +243,7 @@ export class AuthService {
   private async createGoogleUser(profile: GoogleProfile): Promise<User> {
     const isFirst = await this.isFirstUser();
     const newUser = this.userRepository.create({
-      email: profile.email.toLowerCase().trim(),
+      email: normalizeEmail(profile.email)!,
       full_name: profile.fullName,
       first_name: profile.firstName,
       last_name: profile.lastName,
@@ -280,9 +284,11 @@ export class AuthService {
   }
 
   async verifyTwoFactorCode(
-    email: string,
+    rawEmail: string,
     code: string
   ): Promise<{ tokens: AuthTokens; user: UserResponse }> {
+    const email = normalizeEmail(rawEmail);
+    if (!email) throw new Error("Invalid email or no 2FA code requested.");
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user || !user.two_factor_code) {
       throw new Error("Invalid email or no 2FA code requested.");
@@ -305,7 +311,9 @@ export class AuthService {
     return { tokens, user: this.stripSensitiveFields(user) };
   }
 
-  async initiatePasswordReset(email: string): Promise<{ otpSent: boolean }> {
+  async initiatePasswordReset(rawEmail: string): Promise<{ otpSent: boolean }> {
+    const email = normalizeEmail(rawEmail);
+    if (!email) return { otpSent: true };
     const user = await this.userRepository.findOne({ where: { email } });
 
     if (!user) {
@@ -359,7 +367,9 @@ export class AuthService {
     return { otpSent: emailSent };
   }
 
-    async verifyPasswordResetOtp(email: string, otp: string): Promise<{ isValid: boolean }> {
+    async verifyPasswordResetOtp(rawEmail: string, otp: string): Promise<{ isValid: boolean }> {
+    const email = normalizeEmail(rawEmail);
+    if (!email) throw new Error("User not found");
     const user = await this.userRepository.findOne({ where: { email } });
 
     if (!user) {
@@ -376,7 +386,9 @@ export class AuthService {
     };
   }
 
-  async setNewPassword(email: string, newPassword: string): Promise<{ success: boolean }> {
+  async setNewPassword(rawEmail: string, newPassword: string): Promise<{ success: boolean }> {
+    const email = normalizeEmail(rawEmail);
+    if (!email) throw new Error("User not found");
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
       throw new Error("User not found");

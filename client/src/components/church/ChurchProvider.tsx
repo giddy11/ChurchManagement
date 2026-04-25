@@ -79,12 +79,22 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
 
   // Derive all branches the user belongs to from profile.branchMemberships
   useEffect(() => {
-    // While the profile query is fetching (or stale with no membership data yet),
-    // keep memberships as not ready to avoid a flash of "No branch assigned".
+    // The profile query refetches periodically (window focus / staleTime).
+    // Once memberships have been resolved at least once, keep the ready flag
+    // true on subsequent background refetches so the sidebar doesn't flicker
+    // back to a loader several minutes after login.
     const memberships = (profile as any)?.branchMemberships as Array<{ branch?: Branch }> | undefined;
     const hasMemberships = Array.isArray(memberships) && memberships.length > 0;
-    if (profileFetching || (!hasMemberships && profileStale)) {
-      setIsMembershipsReady(false);
+    const hasProfileData = profile != null;
+
+    if (!hasProfileData && profileFetching) {
+      // Initial load — no profile data yet. Keep loader showing.
+      if (!isMembershipsReady) setIsMembershipsReady(false);
+      return;
+    }
+    if (!hasProfileData && !hasMemberships && profileStale) {
+      // No data and the cache is stale — still resolving.
+      if (!isMembershipsReady) setIsMembershipsReady(false);
       return;
     }
 

@@ -72,6 +72,52 @@ async function closeElapsedEvents(): Promise<void> {
   }
 }
 
+/**
+ * Auto-open event attendance once the event start time has been reached.
+ * Skips events whose attendance was manually set to "open" or "closed".
+ */
+async function openAttendanceAtStart(): Promise<void> {
+  const repo = AppDataSource.getRepository(Event);
+  const result = await repo
+    .createQueryBuilder()
+    .update(Event)
+    .set({ attendance_status: "open" })
+    .where("accept_attendance = true")
+    .andWhere("(date::text || ' ' || time_from)::timestamp <= (NOW() AT TIME ZONE :tz)", { tz: TZ })
+    .andWhere(
+      "(date::text || ' ' || time_to)::timestamp + interval '2 hours' > (NOW() AT TIME ZONE :tz)",
+      { tz: TZ }
+    )
+    .andWhere("(attendance_status IS NULL OR attendance_status = 'scheduled')")
+    .execute();
+
+  if (result.affected && result.affected > 0) {
+    logger.info(`[CronService] Opened attendance for ${result.affected} event(s)`);
+  }
+}
+
+/**
+ * Auto-close event attendance once 2 hours have elapsed past the event end time.
+ */
+async function closeAttendanceAfterEnd(): Promise<void> {
+  const repo = AppDataSource.getRepository(Event);
+  const result = await repo
+    .createQueryBuilder()
+    .update(Event)
+    .set({ attendance_status: "closed" })
+    .where("accept_attendance = true")
+    .andWhere(
+      "(date::text || ' ' || time_to)::timestamp + interval '2 hours' <= (NOW() AT TIME ZONE :tz)",
+      { tz: TZ }
+    )
+    .andWhere("(attendance_status IS NULL OR attendance_status <> 'closed')")
+    .execute();
+
+  if (result.affected && result.affected > 0) {
+    logger.info(`[CronService] Closed attendance for ${result.affected} event(s)`);
+  }
+}
+
 // ── Recurring-event helpers ────────────────────────────────────────────────
 
 /** Return the next ISO date string (YYYY-MM-DD) for a weekly pattern with specific days. */
@@ -251,6 +297,9 @@ export function startCronJobs(): void {
       await markOngoingEvents();
       // Close events after ongoing check so a same-minute event can be marked first
       await closeElapsedEvents();
+      // Attendance window automation
+      await openAttendanceAtStart();
+      await closeAttendanceAfterEnd();
       // Reschedule recurring events whose latest occurrence just closed
       await scheduleRecurringEvents();
     } catch (err) {

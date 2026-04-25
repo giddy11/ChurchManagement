@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { MemberDTO } from '@/lib/api';
+import type { MemberDTO, UpdateMemberPayload } from '@/lib/api';
 import {
   fetchMembersApi,
   createMemberApi,
@@ -85,7 +85,7 @@ export function useMemberCrud() {
     }
   };
 
-  const update = async (id: string, data: Partial<{ full_name: string; role: string }>) => {
+  const update = async (id: string, data: UpdateMemberPayload & { role?: string }) => {
     setSaving(true);
     try {
       const { role, ...userFields } = data;

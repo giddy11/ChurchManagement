@@ -67,6 +67,58 @@ async function closeElapsedEvents(): Promise<void> {
   logger.info(`[updateEventStatus] Closed: ${count}`);
 }
 
+/**
+ * Auto-open event attendance once the event start time has been reached.
+ *
+ * Targets only events that:
+ *   • accept attendance,
+ *   • have not been manually marked "closed" (we never override an admin override),
+ *   • are inside the window: [start, end + 2h),
+ *   • are not already in the desired state.
+ */
+async function openAttendanceAtStart(): Promise<void> {
+  const repo = AppDataSource.getRepository(Event);
+  const result = await repo
+    .createQueryBuilder()
+    .update(Event)
+    .set({ attendance_status: "open" })
+    .where("accept_attendance = true")
+    .andWhere("(date::text || ' ' || time_from)::timestamp <= (NOW() AT TIME ZONE :tz)", { tz: TZ })
+    .andWhere(
+      "(date::text || ' ' || time_to)::timestamp + interval '2 hours' > (NOW() AT TIME ZONE :tz)",
+      { tz: TZ }
+    )
+    .andWhere("(attendance_status IS NULL OR attendance_status = 'scheduled')")
+    .execute();
+
+  const count = result.affected ?? 0;
+  logger.info(`[updateEventStatus] Attendance opened: ${count}`);
+}
+
+/**
+ * Auto-close event attendance once 2 hours have elapsed past the event end time.
+ *
+ * Only flips events whose attendance is not already "closed" so we don't
+ * thrash the database on every cron tick.
+ */
+async function closeAttendanceAfterEnd(): Promise<void> {
+  const repo = AppDataSource.getRepository(Event);
+  const result = await repo
+    .createQueryBuilder()
+    .update(Event)
+    .set({ attendance_status: "closed" })
+    .where("accept_attendance = true")
+    .andWhere(
+      "(date::text || ' ' || time_to)::timestamp + interval '2 hours' <= (NOW() AT TIME ZONE :tz)",
+      { tz: TZ }
+    )
+    .andWhere("(attendance_status IS NULL OR attendance_status <> 'closed')")
+    .execute();
+
+  const count = result.affected ?? 0;
+  logger.info(`[updateEventStatus] Attendance closed: ${count}`);
+}
+
 async function run(): Promise<void> {
   try {
     await AppDataSource.initialize();
@@ -75,6 +127,8 @@ async function run(): Promise<void> {
     await publishScheduledEvents();
     await markOngoingEvents();
     await closeElapsedEvents();
+    await openAttendanceAtStart();
+    await closeAttendanceAfterEnd();
     await scheduleRecurringEvents();
     logger.info("[updateEventStatus] Done");
     process.exit(0);
