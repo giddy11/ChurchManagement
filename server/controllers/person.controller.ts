@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { PersonService } from "../services/person.service";
-import { UserService } from "../services/user.service";
+import { PersonService } from "../services/user/person.service";
+import { UserService } from "../services/user/user.service";
 import asyncHandler from "../utils/asyncHandler";
 import { Person } from "../models/person.model";
 import { AuthRequest } from "../middleware/auth.middleware";

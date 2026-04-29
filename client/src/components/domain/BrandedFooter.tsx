@@ -117,7 +117,7 @@ const BrandedFooter: React.FC<Props> = ({ churchName, address, email, phone, soc
         <ul className="mt-4 space-y-3 text-sm">
           <li><Link to="/" className="hover:text-white">Home</Link></li>
           <li><Link to="/about" className="hover:text-white">About us</Link></li>
-          <li><Link to="/services" className="hover:text-white">Service times</Link></li>
+          <li><Link to="/services#services" className="hover:text-white">Service times</Link></li>
           <li><Link to="/login" className="hover:text-white">Member sign in</Link></li>
           <li><Link to="/register" className="hover:text-white">Create account</Link></li>
         </ul>

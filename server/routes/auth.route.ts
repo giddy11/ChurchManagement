@@ -11,7 +11,7 @@ import {
   refreshToken,
   logout,
 } from "../controllers/auth.controller";
-import { UserService } from "../services/user.service";
+import { UserService } from "../services/user/user.service";
 import { authMiddleware } from "../middleware/auth.middleware";
 
 const router = Router();

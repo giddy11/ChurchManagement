@@ -1,14 +1,14 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/auth.middleware";
-import { EventService } from "../services/event.service";
-import { AttendanceService } from "../services/attendance.service";
+import { EventService } from "../services/event/event.service";
+import { AttendanceService } from "../services/event/attendance.service";
 import { ActivityAction, EntityType } from "../models/activity-log.model";
 import { logActivity } from "../utils/activityLogger";
 import { emitToBranch } from "../services/socket.service";
 import asyncHandler from "../utils/asyncHandler";
 import CustomError from "../utils/customError";
-import { sendEventNotificationEmail } from "../email/email.event_notification";
-// import { sendEventNotificationEmail } from "../email/email.event_notification";
+import { sendEventNotificationEmail } from "../email/templates/email.event_notification";
+// import { sendEventNotificationEmail } from "../email/templates/email.event_notification";
 
 const eventService = new EventService();
 const attendanceService = new AttendanceService();

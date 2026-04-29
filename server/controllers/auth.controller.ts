@@ -1,11 +1,11 @@
 import { Request, Response } from "express";
-import { AuthService } from "../services/auth.service";
+import { AuthService } from "../services/auth/auth.service";
 import asyncHandler from "../utils/asyncHandler";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { getPermissionsForRole } from "../utils/roles";
 import { logActivity } from "../utils/activityLogger";
 import { ActivityAction, EntityType } from "../models/activity-log.model";
-import { autoJoinFromCustomDomain } from "../services/domain-auth.service";
+import { autoJoinFromCustomDomain } from "../services/auth/domain-auth.service";
 
 const authService = new AuthService();
 
@@ -227,7 +227,7 @@ export const logout = asyncHandler(
       const authHeader = req.headers.authorization;
       const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
       if (token) {
-        const { TokenService } = await import('../services/token.service');
+        const { TokenService } = await import('../services/auth/token.service');
         const ts = new TokenService();
         const decoded = ts.verifyAccessToken(token);
         if (decoded?.id) {

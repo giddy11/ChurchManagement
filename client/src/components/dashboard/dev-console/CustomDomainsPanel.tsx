@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactElement } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,7 @@ import {
 
 type FilterStatus = 'all' | CustomDomainStatus;
 
-const STATUS_BADGE: Record<CustomDomainStatus, JSX.Element> = {
+const STATUS_BADGE: Record<CustomDomainStatus, ReactElement> = {
   pending: <Badge variant="outline" className="gap-1 text-amber-700 border-amber-200 bg-amber-50"><Clock className="h-3 w-3" /> Pending</Badge>,
   active: <Badge variant="outline" className="gap-1 text-green-700 border-green-200 bg-green-50"><CheckCircle2 className="h-3 w-3" /> Active</Badge>,
   inactive: <Badge variant="outline" className="gap-1 text-slate-700 border-slate-200 bg-slate-50"><PowerOff className="h-3 w-3" /> Inactive</Badge>,

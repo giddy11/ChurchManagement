@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { JoinService } from "../services/join.service";
+import { JoinService } from "../services/church/join.service";
 import asyncHandler from "../utils/asyncHandler";
 import { AuthRequest } from "../middleware/auth.middleware";
 

@@ -1,6 +1,6 @@
 import { Request, Response, RequestHandler } from "express";
 import { classToPlain } from "class-transformer";
-import { UserService } from "../services/user.service";
+import { UserService } from "../services/user/user.service";
 import asyncHandler from "../utils/asyncHandler";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { logActivity } from "../utils/activityLogger";

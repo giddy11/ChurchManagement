@@ -1,5 +1,5 @@
-import { AppDataSource } from "../config/database";
-import { Person } from "../models/person.model";
+import { AppDataSource } from "../../config/database";
+import { Person } from "../../models/person.model";
 import { ILike } from "typeorm";
 
 export interface ImportResult {

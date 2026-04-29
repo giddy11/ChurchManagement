@@ -42,7 +42,7 @@ import { updateMyProfileApi, changePasswordApi } from '@/lib/api';
 import { Separator } from '@/components/ui/separator';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { toast } from 'sonner';
-import { PhoneField, isoToFlag, FormInput } from '@/components/dashboard/AddPersonDialog';
+import { PhoneField, isoToFlag, FormInput } from '@/components/dashboard/people/AddPersonDialog';
 import { FormSelect } from '@/components/ui/form-select';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

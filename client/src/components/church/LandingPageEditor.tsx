@@ -4,15 +4,18 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { Camera, ChevronDown, ChevronUp, Loader2, Plus, Trash2 } from 'lucide-react';
-import { uploadToCloudinary } from '@/lib/cloudinary';
-import { toast } from 'sonner';
+import { ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import type {
   LandingConfig,
+  LandingCoreValue,
+  LandingHighlight,
   LandingMinistry,
   LandingServiceTime,
   LandingSocialLinks,
 } from '@/lib/api';
+import HighlightsEditor from './landing-editor/HighlightsEditor';
+import CoreValuesEditor from './landing-editor/CoreValuesEditor';
+import ImageUploadButton from './landing-editor/ImageUploadButton';
 
 interface Props {
   value: LandingConfig | null;
@@ -26,8 +29,6 @@ interface Props {
  */
 const LandingPageEditor: React.FC<Props> = ({ value, onChange }) => {
   const [open, setOpen] = useState(false);
-  const [uploadingHero, setUploadingHero] = useState(false);
-  const [uploadingGallery, setUploadingGallery] = useState(false);
 
   const cfg: LandingConfig = value ?? {};
   const setField = <K extends keyof LandingConfig>(k: K, v: LandingConfig[K]) => {
@@ -36,35 +37,9 @@ const LandingPageEditor: React.FC<Props> = ({ value, onChange }) => {
 
   const services = cfg.service_times ?? [];
   const ministries = cfg.ministries ?? [];
-  const gallery = cfg.gallery_urls ?? [];
+  const highlights = cfg.highlights ?? [];
+  const coreValues = cfg.core_values ?? [];
   const social: LandingSocialLinks = cfg.social ?? {};
-
-  const handleHeroUpload = async (file: File) => {
-    try {
-      setUploadingHero(true);
-      const url = await uploadToCloudinary(file, 'custom-domains');
-      setField('hero_image_url', url);
-    } catch {
-      toast.error('Hero image upload failed');
-    } finally {
-      setUploadingHero(false);
-    }
-  };
-
-  const handleGalleryUpload = async (files: FileList) => {
-    if (!files.length) return;
-    try {
-      setUploadingGallery(true);
-      const uploads = await Promise.all(
-        Array.from(files).map((f) => uploadToCloudinary(f, 'custom-domains')),
-      );
-      setField('gallery_urls', [...gallery, ...uploads]);
-    } catch {
-      toast.error('Gallery upload failed');
-    } finally {
-      setUploadingGallery(false);
-    }
-  };
 
   /* ─── Service times ────────────────────────────────────────────────── */
   const updateService = (i: number, patch: Partial<LandingServiceTime>) => {
@@ -86,9 +61,6 @@ const LandingPageEditor: React.FC<Props> = ({ value, onChange }) => {
   const removeMinistry = (i: number) =>
     setField('ministries', ministries.filter((_, idx) => idx !== i));
 
-  const removeGalleryItem = (i: number) =>
-    setField('gallery_urls', gallery.filter((_, idx) => idx !== i));
-
   const setSocial = (k: keyof LandingSocialLinks, v: string) =>
     setField('social', { ...social, [k]: v });
 
@@ -105,7 +77,11 @@ const LandingPageEditor: React.FC<Props> = ({ value, onChange }) => {
             Customise the page visitors see at the root of your custom domain.
           </p>
         </div>
-        {open ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+        {open ? (
+          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        )}
       </button>
 
       {open && (
@@ -139,41 +115,11 @@ const LandingPageEditor: React.FC<Props> = ({ value, onChange }) => {
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label className="text-xs">Hero background image</Label>
-              <div className="flex items-center gap-3">
-                {cfg.hero_image_url ? (
-                  <div className="h-16 w-28 rounded-md overflow-hidden bg-slate-200">
-                    <img src={cfg.hero_image_url} alt="Hero" className="h-full w-full object-cover" />
-                  </div>
-                ) : (
-                  <div className="h-16 w-28 rounded-md bg-slate-200 flex items-center justify-center text-xs text-slate-500">
-                    No image
-                  </div>
-                )}
-                <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border bg-white text-sm cursor-pointer hover:bg-slate-50">
-                  {uploadingHero ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-                  Upload
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleHeroUpload(f);
-                    }}
-                  />
-                </label>
-                {cfg.hero_image_url && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-600 hover:bg-red-50"
-                    onClick={() => setField('hero_image_url', undefined)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
+              <ImageUploadButton
+                value={cfg.hero_image_url}
+                onChange={(url) => setField('hero_image_url', url)}
+                errorMessage="Hero image upload failed"
+              />
             </div>
           </div>
 
@@ -218,36 +164,50 @@ const LandingPageEditor: React.FC<Props> = ({ value, onChange }) => {
             {services.length === 0 && (
               <p className="text-xs text-muted-foreground italic">No services added yet.</p>
             )}
-            <div className="space-y-2">
+            <div className="space-y-3">
               {services.map((s, i) => (
-                <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                  <Input
-                    className="col-span-4"
-                    placeholder="Sunday Service"
-                    value={s.label}
-                    onChange={(e) => updateService(i, { label: e.target.value })}
-                  />
-                  <Input
-                    className="col-span-3"
-                    placeholder="Sundays"
-                    value={s.day ?? ''}
-                    onChange={(e) => updateService(i, { day: e.target.value })}
-                  />
-                  <Input
-                    className="col-span-4"
-                    placeholder="9:00 AM"
-                    value={s.time ?? ''}
-                    onChange={(e) => updateService(i, { time: e.target.value })}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="col-span-1 text-red-600 hover:bg-red-50"
-                    onClick={() => removeService(i)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                <div key={i} className="rounded-md border bg-white p-3 space-y-2">
+                  <div className="grid grid-cols-12 gap-2">
+                    <Input
+                      className="col-span-4"
+                      placeholder="Sunday Service"
+                      value={s.label}
+                      onChange={(e) => updateService(i, { label: e.target.value })}
+                    />
+                    <Input
+                      className="col-span-3"
+                      placeholder="Sundays"
+                      value={s.day ?? ''}
+                      onChange={(e) => updateService(i, { day: e.target.value })}
+                    />
+                    <Input
+                      className="col-span-4"
+                      placeholder="9:00 AM"
+                      value={s.time ?? ''}
+                      onChange={(e) => updateService(i, { time: e.target.value })}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="col-span-1 text-red-600 hover:bg-red-50"
+                      onClick={() => removeService(i)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">
+                      Background image (optional)
+                    </Label>
+                    <ImageUploadButton
+                      value={s.background_image}
+                      onChange={(url) => updateService(i, { background_image: url })}
+                      folder="custom-domains/services"
+                      thumbClassName="h-12 w-20"
+                      errorMessage="Service image upload failed"
+                    />
+                  </div>
                 </div>
               ))}
             </div>
@@ -262,10 +222,10 @@ const LandingPageEditor: React.FC<Props> = ({ value, onChange }) => {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Icons (optional): <code className="font-mono">Music2</code>, <code className="font-mono">Users</code>,{' '}
-              <code className="font-mono">Heart</code>, <code className="font-mono">Sparkles</code>,{' '}
-              <code className="font-mono">Church</code>, <code className="font-mono">Calendar</code>,{' '}
-              <code className="font-mono">Globe</code>.
+              Icons (optional): <code className="font-mono">Music2</code>,{' '}
+              <code className="font-mono">Users</code>, <code className="font-mono">Heart</code>,{' '}
+              <code className="font-mono">Sparkles</code>, <code className="font-mono">Church</code>,{' '}
+              <code className="font-mono">Calendar</code>, <code className="font-mono">Globe</code>.
             </p>
             <div className="space-y-2">
               {ministries.map((m, i) => (
@@ -304,53 +264,52 @@ const LandingPageEditor: React.FC<Props> = ({ value, onChange }) => {
             </div>
           </div>
 
-          {/* ─── Gallery ─────────────────────────────────────────── */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs">Photo gallery</Label>
-              <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border bg-white text-xs cursor-pointer hover:bg-slate-50">
-                {uploadingGallery ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
-                Upload images
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files) handleGalleryUpload(e.target.files);
-                  }}
-                />
-              </label>
-            </div>
-            {gallery.length === 0 && (
-              <p className="text-xs text-muted-foreground italic">No images yet.</p>
-            )}
-            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-              {gallery.map((url, i) => (
-                <div key={i} className="relative group aspect-square rounded-md overflow-hidden bg-slate-200">
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removeGalleryItem(i)}
-                    className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity text-white"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* ─── Core values ─────────────────────────────────────── */}
+          <CoreValuesEditor
+            value={coreValues}
+            onChange={(next: LandingCoreValue[]) => setField('core_values', next)}
+          />
+
+          {/* ─── Highlights (replaces flat photo gallery) ────────── */}
+          <HighlightsEditor
+            value={highlights}
+            onChange={(next: LandingHighlight[]) => setField('highlights', next)}
+          />
 
           {/* ─── Social ──────────────────────────────────────────── */}
           <div className="space-y-2">
             <Label className="text-xs">Social links</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <Input placeholder="Facebook URL" value={social.facebook ?? ''} onChange={(e) => setSocial('facebook', e.target.value)} />
-              <Input placeholder="Instagram URL" value={social.instagram ?? ''} onChange={(e) => setSocial('instagram', e.target.value)} />
-              <Input placeholder="YouTube URL" value={social.youtube ?? ''} onChange={(e) => setSocial('youtube', e.target.value)} />
-              <Input placeholder="X / Twitter URL" value={social.twitter ?? ''} onChange={(e) => setSocial('twitter', e.target.value)} />
-              <Input placeholder="WhatsApp URL" value={social.whatsapp ?? ''} onChange={(e) => setSocial('whatsapp', e.target.value)} />
-              <Input placeholder="Website URL" value={social.website ?? ''} onChange={(e) => setSocial('website', e.target.value)} />
+              <Input
+                placeholder="Facebook URL"
+                value={social.facebook ?? ''}
+                onChange={(e) => setSocial('facebook', e.target.value)}
+              />
+              <Input
+                placeholder="Instagram URL"
+                value={social.instagram ?? ''}
+                onChange={(e) => setSocial('instagram', e.target.value)}
+              />
+              <Input
+                placeholder="YouTube URL"
+                value={social.youtube ?? ''}
+                onChange={(e) => setSocial('youtube', e.target.value)}
+              />
+              <Input
+                placeholder="X / Twitter URL"
+                value={social.twitter ?? ''}
+                onChange={(e) => setSocial('twitter', e.target.value)}
+              />
+              <Input
+                placeholder="WhatsApp URL"
+                value={social.whatsapp ?? ''}
+                onChange={(e) => setSocial('whatsapp', e.target.value)}
+              />
+              <Input
+                placeholder="Website URL"
+                value={social.website ?? ''}
+                onChange={(e) => setSocial('website', e.target.value)}
+              />
             </div>
           </div>
 

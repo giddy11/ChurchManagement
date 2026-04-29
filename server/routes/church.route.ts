@@ -27,7 +27,7 @@ import {
 } from "../controllers/custom-domain.controller";
 import { UserController } from "../controllers/user.controller";
 import { authMiddleware, adminMiddleware, superAdminMiddleware } from "../middleware/auth.middleware";
-import { UserService } from "../services/user.service";
+import { UserService } from "../services/user/user.service";
 import type { RequestHandler } from "express";
 
 const router = Router();

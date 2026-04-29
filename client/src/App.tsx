@@ -2,6 +2,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from '@/components/auth/AuthProvider';
 import { SocketProvider } from '@/components/auth/SocketProvider';
@@ -31,6 +32,12 @@ const queryClient = new QueryClient({
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
+
 /**
  * Root route picker — when the visitor is on an active branded custom domain
  * (e.g. https://grace.churchflow.app/), show that branch's branded landing
@@ -57,6 +64,7 @@ function AppRoutes() {
         <RealtimeSyncProvider>
         <Toaster />
         <BrowserRouter>
+          <ScrollToTop />
           <Routes>
             <Route path="/" element={<RootLanding />} />
             {/* Custom-domain sub-pages — only meaningful on branded domains */}

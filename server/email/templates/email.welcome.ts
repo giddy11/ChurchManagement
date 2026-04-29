@@ -1,5 +1,5 @@
-import emailService from "./email.service";
-import { churchFlowEmail, styles } from "./email.layout";
+import emailService from "../email.service";
+import { churchFlowEmail, styles } from "../email.layout";
 
 export async function sendWelcomeEmail(to: string, firstName?: string) {
   const name = firstName || "there";
@@ -13,19 +13,19 @@ export async function sendWelcomeEmail(to: string, firstName?: string) {
       Your email has been verified and your Church Flow account is now active. We're excited to have you on board!
     </p>
     <p style="${styles.paragraph}">
-      Church Flow helps churches manage their members, branches, and communications — all in one place.
+      Church Flow helps churches manage their members, branches, and communications â€” all in one place.
     </p>
     <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
       <tr>
         <td align="center" style="padding:24px 0;">
-          <a href="${loginUrl}" style="${styles.button}">Go to Dashboard →</a>
+          <a href="${loginUrl}" style="${styles.button}">Go to Dashboard â†’</a>
         </td>
       </tr>
     </table>
     <div style="${styles.infoBox}">
       <strong>Getting started:</strong> Create or join a church, invite your team, and start managing your congregation today.
     </div>
-  `, "Welcome to Church Flow — your account is ready");
+  `, "Welcome to Church Flow â€” your account is ready");
 
   const text = `Welcome to Church Flow!\n\nHi ${name},\n\nYour email has been verified and your account is now active.\n\nGet started: ${loginUrl}`;
 

@@ -1,5 +1,5 @@
-import { AppDataSource } from "../config/database";
-import { Denomination, Branch, BranchMembership, BranchRole } from "../models/church";
+import { AppDataSource } from "../../config/database";
+import { Denomination, Branch, BranchMembership, BranchRole } from "../../models/church";
 
 export class ChurchService {
   private readonly denomRepo = AppDataSource.getRepository(Denomination);

@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/select';
 import { Country, State } from 'country-state-city';
 import { fetchPublicDenominations, submitDenominationRequestApi } from '@/lib/api';
-import { PhoneField, isoToFlag } from '@/components/dashboard/AddPersonDialog';
+import { PhoneField, isoToFlag } from '@/components/dashboard/people/AddPersonDialog';
 
 interface BranchInfo {
   id: string;

@@ -1,14 +1,14 @@
-import { AppDataSource } from "../config/database";
+import { AppDataSource } from "../../config/database";
 import {
   DenominationRequest,
   DenominationRequestStatus,
-} from "../models/church/denomination-request.model";
-import { Denomination } from "../models/church/denomination.model";
-import { User } from "../models/user.model";
-import { sendDenominationApprovedEmail, sendDenominationRejectedEmail, sendNewDenominationRequestAdminNotify } from "../email/email.denomination_approved";
-import { firebaseAuth } from "../config/firebase.admin";
+} from "../../models/church/denomination-request.model";
+import { Denomination } from "../../models/church/denomination.model";
+import { User } from "../../models/user.model";
+import { sendDenominationApprovedEmail, sendDenominationRejectedEmail, sendNewDenominationRequestAdminNotify } from "../../email/templates/email.denomination_approved";
+import { firebaseAuth } from "../../config/firebase.admin";
 import { randomUUID } from "crypto";
-import CustomError from "../utils/customError";
+import CustomError from "../../utils/customError";
 
 export class DenominationRequestService {
   private readonly requestRepo = AppDataSource.getRepository(DenominationRequest);

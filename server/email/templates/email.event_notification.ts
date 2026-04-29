@@ -1,8 +1,8 @@
-import { churchFlowEmail } from "./email.layout";
-import { Event } from "../models/event/event.model";
-import { AppDataSource } from "../config/database";
-import { BranchMembership } from "../models/church/branch-membership.model";
-import { User } from "../models/user.model";
+import { churchFlowEmail } from "../email.layout";
+import { Event } from "../../models/event/event.model";
+import { AppDataSource } from "../../config/database";
+import { BranchMembership } from "../../models/church/branch-membership.model";
+import { User } from "../../models/user.model";
 
 const styles = {
   heading: "margin:0 0 16px;font-size:22px;font-weight:700;color:#1F2937;",
@@ -23,11 +23,11 @@ function buildEventEmailBody(event: Event): string {
     <p style="${styles.paragraph}">A new event has been scheduled for your branch.</p>
     <p style="${styles.detail}"><strong>Category:</strong> ${formatCategory(event.category)}</p>
     <p style="${styles.detail}"><strong>Date:</strong> ${event.date}</p>
-    <p style="${styles.detail}"><strong>Time:</strong> ${event.time_from} – ${event.time_to}</p>
+    <p style="${styles.detail}"><strong>Time:</strong> ${event.time_from} â€“ ${event.time_to}</p>
     <p style="${styles.detail}"><strong>Location:</strong> ${event.location}</p>
     ${event.description ? `<p style="${styles.paragraph}">${event.description}</p>` : ""}
     <div style="text-align:center;margin:28px 0;">
-      <a href="${dashboardUrl}/events" style="${styles.button}">View Event →</a>
+      <a href="${dashboardUrl}/events" style="${styles.button}">View Event â†’</a>
     </div>
   `;
 }
@@ -51,7 +51,7 @@ export async function sendEventNotificationEmail(event: Event): Promise<void> {
     const html = churchFlowEmail(body, `New event "${event.title}" at your branch`);
 
     // Dynamic import to avoid breaking if email service is commented out
-    const emailService = (await import("./email.service")).default;
+    const emailService = (await import("../email.service")).default;
     if (!emailService?.sendEmail) return;
 
     const batchSize = 10;

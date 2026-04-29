@@ -1,5 +1,5 @@
-import emailService from "./email.service";
-import { churchFlowEmail, styles } from "./email.layout";
+import emailService from "../email.service";
+import { churchFlowEmail, styles } from "../email.layout";
 
 const ADMIN_NOTIFY_EMAIL = process.env.EMAIL_USER || process.env.ADMIN_EMAIL || "theunitedchurchflow@gmail.com";
 
@@ -20,7 +20,7 @@ export async function sendNewDenominationRequestAdminNotify(data: {
   const consoleUrl = process.env.URL
     ? `${process.env.URL}/superadmin`
     : "http://localhost:5173/superadmin";
-  const subject = `New Denomination Request: ${data.denomination_name} — Church Flow`;
+  const subject = `New Denomination Request: ${data.denomination_name} â€” Church Flow`;
 
   const locationParts = [data.city, data.state, data.country].filter(Boolean).join(", ");
 
@@ -76,7 +76,7 @@ export async function sendNewDenominationRequestAdminNotify(data: {
     <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
       <tr>
         <td align="center" style="padding:24px 0;">
-          <a href="${consoleUrl}" style="${styles.button}">Review in Developer Console →</a>
+          <a href="${consoleUrl}" style="${styles.button}">Review in Developer Console â†’</a>
         </td>
       </tr>
     </table>
@@ -104,7 +104,7 @@ export async function sendDenominationApprovedEmail(
   tempPassword: string
 ) {
   const loginUrl = process.env.URL || "http://localhost:5173";
-  const subject = `Your denomination "${denominationName}" has been approved — Church Flow`;
+  const subject = `Your denomination "${denominationName}" has been approved â€” Church Flow`;
 
   const html = churchFlowEmail(
     `
@@ -133,20 +133,20 @@ export async function sendDenominationApprovedEmail(
     </div>
 
     <div style="${styles.warningBox}">
-      <strong>⚠️ Important:</strong> Please change your password immediately after logging in.
-      Go to <strong>Settings → Change Password</strong> to set a new secure password.
+      <strong>âš ï¸ Important:</strong> Please change your password immediately after logging in.
+      Go to <strong>Settings â†’ Change Password</strong> to set a new secure password.
     </div>
 
     <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
       <tr>
         <td align="center" style="padding:24px 0;">
-          <a href="${loginUrl}/login" style="${styles.button}">Log In to Church Flow →</a>
+          <a href="${loginUrl}/login" style="${styles.button}">Log In to Church Flow â†’</a>
         </td>
       </tr>
     </table>
 
     <p style="${styles.paragraph}">
-      Once logged in, you can start managing your denomination — add branches, invite members, and much more.
+      Once logged in, you can start managing your denomination â€” add branches, invite members, and much more.
     </p>
 
     <p style="${styles.muted}">
@@ -177,7 +177,7 @@ export async function sendDenominationRejectedEmail(
   denominationName: string,
   rejectionReason: string
 ) {
-  const subject = `Update on your denomination request — Church Flow`;
+  const subject = `Update on your denomination request â€” Church Flow`;
 
   const html = churchFlowEmail(
     `

@@ -1,8 +1,8 @@
-import emailService from "./email.service";
-import { churchFlowEmail, styles } from "./email.layout";
+import emailService from "../email.service";
+import { churchFlowEmail, styles } from "../email.layout";
 
 export async function send2FACodeEmail(to: string, code: string) {
-  const subject = "Your Login Code — Church Flow";
+  const subject = "Your Login Code â€” Church Flow";
 
   const html = churchFlowEmail(`
     <h2 style="${styles.heading}">Two-Factor Authentication</h2>
@@ -19,7 +19,7 @@ export async function send2FACodeEmail(to: string, code: string) {
     </div>
   `, "Your Church Flow 2FA code");
 
-  const text = `Church Flow — Two-Factor Authentication\n\nYour 2FA verification code is: ${code}\n\nThis code will expire in 10 minutes.\n\nIf you didn't attempt to sign in, please change your password immediately.`;
+  const text = `Church Flow â€” Two-Factor Authentication\n\nYour 2FA verification code is: ${code}\n\nThis code will expire in 10 minutes.\n\nIf you didn't attempt to sign in, please change your password immediately.`;
 
   return emailService.sendEmail(to, subject, text, html);
 }

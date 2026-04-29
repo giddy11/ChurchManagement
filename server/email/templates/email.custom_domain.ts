@@ -1,5 +1,5 @@
-import emailService from "./email.service";
-import { churchFlowEmail, styles } from "./email.layout";
+import emailService from "../email.service";
+import { churchFlowEmail, styles } from "../email.layout";
 
 const APP_URL = () => process.env.URL || "http://localhost:5173";
 
@@ -24,7 +24,7 @@ export async function sendCustomDomainRequestedToSuperAdmin(
     <p style="${styles.paragraph}">Review pending requests in the Developer Console.</p>
     <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
       <tr><td align="center" style="padding:24px 0;">
-        <a href="${APP_URL()}/superadmin" style="${styles.button}">Review Request →</a>
+        <a href="${APP_URL()}/superadmin" style="${styles.button}">Review Request â†’</a>
       </td></tr>
     </table>
   `, "A branch admin requested a custom domain");
@@ -41,21 +41,21 @@ export async function sendCustomDomainDecisionEmail(
 ) {
   const subject =
     decision === "approved"
-      ? `✅ Your custom domain ${domain} is live`
+      ? `âœ… Your custom domain ${domain} is live`
       : `Your custom domain request was rejected`;
 
   const body =
     decision === "approved"
       ? `
         <h2 style="${styles.heading}">Custom Domain Approved</h2>
-        <p style="${styles.paragraph}">Great news — your custom domain for <strong>${branchName}</strong> is now active.</p>
+        <p style="${styles.paragraph}">Great news â€” your custom domain for <strong>${branchName}</strong> is now active.</p>
         <div style="${styles.infoBox}">
           <strong>Domain:</strong> ${domain}<br/>
           Members visiting this domain will see your branch branding on the sign-in and sign-up pages.
         </div>
         <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
           <tr><td align="center" style="padding:24px 0;">
-            <a href="https://${domain}" style="${styles.button}">Open ${domain} →</a>
+            <a href="https://${domain}" style="${styles.button}">Open ${domain} â†’</a>
           </td></tr>
         </table>
         <p style="${styles.muted}">Make sure your DNS points <strong>${domain}</strong> to the Church Flow platform.</p>

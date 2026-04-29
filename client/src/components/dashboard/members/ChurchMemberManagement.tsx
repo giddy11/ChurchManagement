@@ -36,8 +36,8 @@ import AddFromUsersDialog from './AddFromUsersDialog';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
 import { fetchMembersApi } from '@/lib/api';
 import MemberDetailsDialog from '@/components/member/MemberDetailsDialog';
-import JoinRequestsPanel from './JoinRequestsPanel';
-import InviteLinksPanel from './InviteLinksPanel';
+import JoinRequestsPanel from '../admin/JoinRequestsPanel';
+import InviteLinksPanel from '../admin/InviteLinksPanel';
 
 // -- Export helpers ---------------------------------------------------------
 function exportToCSV(members: MemberDTO[]) {

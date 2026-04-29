@@ -1,6 +1,6 @@
 import { Server as HttpServer } from "http";
 import { Server, Socket } from "socket.io";
-import { TokenService } from "./token.service";
+import { TokenService } from "./auth/token.service";
 import { config } from "../config";
 
 const tokenService = new TokenService();

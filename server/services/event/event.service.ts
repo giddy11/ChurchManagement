@@ -1,9 +1,9 @@
 import { Repository, LessThanOrEqual, MoreThanOrEqual } from "typeorm";
-import { AppDataSource } from "../config/database";
-import { Event, EventVisibility, EventStatus } from "../models/event";
-import { EventAttendance } from "../models/event/event-attendance.model";
-import { BranchMembership, BranchRole } from "../models/church";
-import CustomError from "../utils/customError";
+import { AppDataSource } from "../../config/database";
+import { Event, EventVisibility, EventStatus } from "../../models/event";
+import { EventAttendance } from "../../models/event/event-attendance.model";
+import { BranchMembership, BranchRole } from "../../models/church";
+import CustomError from "../../utils/customError";
 
 export interface CreateEventDTO {
   title: string;

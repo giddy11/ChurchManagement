@@ -1,5 +1,5 @@
-import emailService from "./email.service";
-import { churchFlowEmail, styles } from "./email.layout";
+import emailService from "../email.service";
+import { churchFlowEmail, styles } from "../email.layout";
 
 /**
  * Notify branch admins when someone joins via invite link.
@@ -10,7 +10,7 @@ export async function sendInviteJoinNotification(
   memberEmail: string,
   branchName: string
 ) {
-  const subject = `New member joined ${branchName} — Church Flow`;
+  const subject = `New member joined ${branchName} â€” Church Flow`;
   const loginUrl = process.env.URL || "http://localhost:5173";
 
   const html = churchFlowEmail(`
@@ -22,13 +22,13 @@ export async function sendInviteJoinNotification(
     <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
       <tr>
         <td align="center" style="padding:24px 0;">
-          <a href="${loginUrl}" style="${styles.button}">View Members →</a>
+          <a href="${loginUrl}" style="${styles.button}">View Members â†’</a>
         </td>
       </tr>
     </table>
   `, "A new member joined your branch on Church Flow");
 
-  const text = `Church Flow — New Member\n\n${memberName} (${memberEmail}) has joined "${branchName}" using an invite link.\n\nView members: ${loginUrl}`;
+  const text = `Church Flow â€” New Member\n\n${memberName} (${memberEmail}) has joined "${branchName}" using an invite link.\n\nView members: ${loginUrl}`;
 
   await emailService.sendEmail(to, subject, text, html);
 }
@@ -43,7 +43,7 @@ export async function sendJoinRequestNotification(
   branchName: string,
   message?: string
 ) {
-  const subject = `New join request for ${branchName} — Church Flow`;
+  const subject = `New join request for ${branchName} â€” Church Flow`;
   const loginUrl = process.env.URL || "http://localhost:5173";
 
   const html = churchFlowEmail(`
@@ -63,13 +63,13 @@ export async function sendJoinRequestNotification(
     <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
       <tr>
         <td align="center" style="padding:24px 0;">
-          <a href="${loginUrl}" style="${styles.button}">Review Request →</a>
+          <a href="${loginUrl}" style="${styles.button}">Review Request â†’</a>
         </td>
       </tr>
     </table>
   `, "Someone wants to join your branch on Church Flow");
 
-  const text = `Church Flow — Join Request\n\n${requesterName} (${requesterEmail}) has requested to join "${branchName}".${message ? `\n\nMessage: "${message}"` : ""}\n\nPlease log in to review: ${loginUrl}`;
+  const text = `Church Flow â€” Join Request\n\n${requesterName} (${requesterEmail}) has requested to join "${branchName}".${message ? `\n\nMessage: "${message}"` : ""}\n\nPlease log in to review: ${loginUrl}`;
 
   await emailService.sendEmail(to, subject, text, html);
 }
@@ -87,8 +87,8 @@ export async function sendJoinDecisionNotification(
   const approved = decision === "approved";
 
   const subject = approved
-    ? `You've been approved to join ${branchName} — Church Flow`
-    : `Update on your request to join ${branchName} — Church Flow`;
+    ? `You've been approved to join ${branchName} â€” Church Flow`
+    : `Update on your request to join ${branchName} â€” Church Flow`;
 
   const html = churchFlowEmail(`
     <h2 style="${styles.heading}">${approved ? "You're In!" : "Request Update"}</h2>
@@ -100,7 +100,7 @@ export async function sendJoinDecisionNotification(
     <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
       <tr>
         <td align="center" style="padding:24px 0;">
-          <a href="${loginUrl}" style="${styles.button}">Go to Dashboard →</a>
+          <a href="${loginUrl}" style="${styles.button}">Go to Dashboard â†’</a>
         </td>
       </tr>
     </table>

@@ -1,8 +1,8 @@
-import emailService from "./email.service";
-import { churchFlowEmail, styles } from "./email.layout";
+import emailService from "../email.service";
+import { churchFlowEmail, styles } from "../email.layout";
 
 export async function sendVerificationEmail(to: string, verificationCode: string) {
-  const subject = "Verify Your Email — Church Flow";
+  const subject = "Verify Your Email â€” Church Flow";
 
   const html = churchFlowEmail(`
     <h2 style="${styles.heading}">Verify Your Email Address</h2>
@@ -19,7 +19,7 @@ export async function sendVerificationEmail(to: string, verificationCode: string
     </div>
   `, "Your Church Flow verification code");
 
-  const text = `Church Flow — Email Verification\n\nYour verification code is: ${verificationCode}\n\nThis code will expire in 10 minutes.\n\nIf you didn't create an account, you can safely ignore this email.`;
+  const text = `Church Flow â€” Email Verification\n\nYour verification code is: ${verificationCode}\n\nThis code will expire in 10 minutes.\n\nIf you didn't create an account, you can safely ignore this email.`;
 
   return emailService.sendEmail(to, subject, text, html);
 }

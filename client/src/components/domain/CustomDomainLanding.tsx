@@ -17,7 +17,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useDomain } from '@/components/domain/DomainProvider';
 import BrandedFooter from '@/components/domain/BrandedFooter';
-import type { LandingMinistry, LandingServiceTime } from '@/lib/api';
+import BrandedHeader from '@/components/domain/BrandedHeader';
+import HighlightsGallery from '@/components/domain/HighlightsGallery';
+import type { LandingHighlight, LandingMinistry, LandingServiceTime } from '@/lib/api';
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /*  Helpers                                                                   */
@@ -68,7 +70,7 @@ const CustomDomainLanding: React.FC = () => {
 
   return (
     <div style={themeStyle} className="min-h-screen bg-white text-slate-900 antialiased">
-      <Header churchName={churchName} logoUrl={branding?.logo_url ?? null} accent={accent} />
+      <BrandedHeader />
 
       <Hero
         headline={heroHeadline}
@@ -97,9 +99,11 @@ const CustomDomainLanding: React.FC = () => {
 
       <Ministries items={ministries} />
 
-      {cfg?.gallery_urls && cfg.gallery_urls.length > 0 && (
-        <Gallery urls={cfg.gallery_urls} />
-      )}
+      {/*
+        Backward-compat: surface the legacy flat gallery_urls list as a single
+        ungrouped highlight so older configs still display.
+      */}
+      <HighlightsGallery highlights={normalizeHighlights(cfg)} />
 
       <CallToAction churchName={churchName} ctaLabel={ctaLabel} accent={accent} />
 
@@ -118,39 +122,7 @@ const CustomDomainLanding: React.FC = () => {
 /*  Sections                                                                  */
 /* ────────────────────────────────────────────────────────────────────────── */
 
-const Header: React.FC<{ churchName: string; logoUrl: string | null; accent: string }> = ({
-  churchName,
-  logoUrl,
-}) => (
-  <header className="sticky top-0 z-30 bg-white/85 backdrop-blur border-b border-slate-200/60">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-      <Link to="/" className="flex items-center gap-3 min-w-0">
-        {logoUrl ? (
-          <img src={logoUrl} alt={churchName} className="h-9 w-9 rounded-lg object-cover" />
-        ) : (
-          <div className="h-9 w-9 rounded-lg flex items-center justify-center text-white" style={{ background: 'var(--brand)' }}>
-            <Church className="h-5 w-5" />
-          </div>
-        )}
-        <span className="font-semibold text-slate-900 truncate">{churchName}</span>
-      </Link>
-      <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600">
-        <Link to="/about" className="hover:text-slate-900 transition-colors">About</Link>
-        <Link to="/services" className="hover:text-slate-900 transition-colors">Services</Link>
-        <a href="#ministries" className="hover:text-slate-900 transition-colors">Ministries</a>
-        <a href="#contact" className="hover:text-slate-900 transition-colors">Contact</a>
-      </nav>
-      <div className="flex items-center gap-2">
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/login">Sign in</Link>
-        </Button>
-        <Button asChild size="sm" style={{ background: 'var(--brand)' }} className="text-white hover:opacity-90">
-          <Link to="/register">Get started</Link>
-        </Button>
-      </div>
-    </div>
-  </header>
-);
+
 
 const Hero: React.FC<{
   headline: string;
@@ -330,29 +302,60 @@ const ServiceTimes: React.FC<{ items: LandingServiceTime[] }> = ({ items }) => (
         <p className="mt-3 text-slate-600">Come as you are — there's a seat saved for you.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {items.map((s, i) => (
-          <Card key={i} className="border-slate-200">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3 mb-3">
-                <div
-                  className="h-10 w-10 rounded-lg flex items-center justify-center"
-                  style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}
-                >
-                  <Calendar className="h-5 w-5" />
+        {items.map((s, i) => {
+          const hasBg = !!s.background_image;
+          return (
+            <Card
+              key={i}
+              className={`relative overflow-hidden border-slate-200 ${hasBg ? 'text-white' : ''}`}
+            >
+              {hasBg && (
+                <>
+                  <div
+                    className="absolute inset-0 bg-cover bg-center"
+                    style={{ backgroundImage: `url(${s.background_image})` }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-br from-slate-900/85 to-slate-900/40" />
+                </>
+              )}
+              <CardContent className={`relative p-6 ${hasBg ? 'min-h-[180px]' : ''}`}>
+                <div className="flex items-center gap-3 mb-3">
+                  <div
+                    className="h-10 w-10 rounded-lg flex items-center justify-center"
+                    style={
+                      hasBg
+                        ? { background: 'rgba(255,255,255,0.15)', color: 'white' }
+                        : { background: 'var(--brand-soft)', color: 'var(--brand)' }
+                    }
+                  >
+                    <Calendar className="h-5 w-5" />
+                  </div>
+                  <h3
+                    className={`text-lg font-semibold ${hasBg ? 'text-white' : 'text-slate-900'}`}
+                  >
+                    {s.label}
+                  </h3>
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900">{s.label}</h3>
-              </div>
-              <div className="space-y-1 text-sm text-slate-600">
-                {s.day && (
-                  <p className="flex items-center gap-2"><Calendar className="h-4 w-4" />{s.day}</p>
-                )}
-                {s.time && (
-                  <p className="flex items-center gap-2"><Clock className="h-4 w-4" />{s.time}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                <div
+                  className={`space-y-1 text-sm ${hasBg ? 'text-white/90' : 'text-slate-600'}`}
+                >
+                  {s.day && (
+                    <p className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      {s.day}
+                    </p>
+                  )}
+                  {s.time && (
+                    <p className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      {s.time}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   </section>
@@ -393,33 +396,23 @@ const Ministries: React.FC<{ items: LandingMinistry[] }> = ({ items }) => (
   </section>
 );
 
-const Gallery: React.FC<{ urls: string[] }> = ({ urls }) => (
-  <section className="bg-slate-50/80 border-y border-slate-200">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-24">
-      <div className="text-center max-w-2xl mx-auto mb-12">
-        <p className="text-sm font-semibold uppercase tracking-wider" style={{ color: 'var(--brand)' }}>
-          Gallery
-        </p>
-        <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-slate-900">Moments together</h2>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {urls.map((u, i) => (
-          <div
-            key={i}
-            className="aspect-square rounded-lg overflow-hidden bg-slate-100 group cursor-pointer"
-          >
-            <img
-              src={u}
-              alt={`Gallery ${i + 1}`}
-              loading="lazy"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-          </div>
-        ))}
-      </div>
-    </div>
-  </section>
-);
+const Gallery: React.FC<{ urls: string[] }> = () => null; // legacy — replaced by <HighlightsGallery />
+void Gallery;
+
+/**
+ * Build the `highlights[]` we want to render.  Falls back to wrapping the
+ * legacy `gallery_urls[]` so older configs keep working.
+ */
+function normalizeHighlights(
+  cfg: { highlights?: LandingHighlight[]; gallery_urls?: string[] } | null,
+): LandingHighlight[] {
+  if (!cfg) return [];
+  if (cfg.highlights && cfg.highlights.length > 0) return cfg.highlights;
+  if (cfg.gallery_urls && cfg.gallery_urls.length > 0) {
+    return [{ id: 'legacy', title: 'Gallery', images: cfg.gallery_urls }];
+  }
+  return [];
+}
 
 const CallToAction: React.FC<{ churchName: string; ctaLabel: string; accent: string }> = ({
   churchName,

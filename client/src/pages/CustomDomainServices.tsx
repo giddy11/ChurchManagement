@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import {
   ArrowRight,
   Calendar,
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useDomain } from '@/components/domain/DomainProvider';
 import BrandedFooter from '@/components/domain/BrandedFooter';
+import BrandedHeader from '@/components/domain/BrandedHeader';
 import type { LandingServiceTime } from '@/lib/api';
 
 const DEFAULT_SERVICES: LandingServiceTime[] = [
@@ -27,6 +28,15 @@ const DEFAULT_SERVICES: LandingServiceTime[] = [
 
 const CustomDomainServices: React.FC = () => {
   const { branding } = useDomain();
+  const { hash } = useLocation();
+
+  // Scroll to hash anchor after the page renders (e.g. /services#services)
+  useEffect(() => {
+    if (hash) {
+      const el = document.getElementById(hash.replace('#', ''));
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [hash]);
 
   const accent = branding?.primary_color || '#4F46E5';
   const churchName = branding?.church_name || branding?.display_name || 'Our Church';
@@ -45,31 +55,7 @@ const CustomDomainServices: React.FC = () => {
   return (
     <div style={themeStyle} className="min-h-screen bg-white text-slate-900 antialiased">
       {/* ── Header ── */}
-      <header className="sticky top-0 z-30 bg-white/85 backdrop-blur border-b border-slate-200/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 min-w-0">
-            {branding?.logo_url ? (
-              <img src={branding.logo_url} alt={churchName} className="h-9 w-9 rounded-lg object-cover" />
-            ) : (
-              <div className="h-9 w-9 rounded-lg flex items-center justify-center text-white" style={{ background: 'var(--brand)' }}>
-                <Church className="h-5 w-5" />
-              </div>
-            )}
-            <span className="font-semibold text-slate-900 truncate">{churchName}</span>
-          </Link>
-          <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600">
-            <Link to="/" className="hover:text-slate-900 transition-colors">Home</Link>
-            <Link to="/about" className="hover:text-slate-900 transition-colors">About</Link>
-            <Link to="/services" className="font-semibold transition-colors" style={{ color: 'var(--brand)' }}>Services</Link>
-          </nav>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm"><Link to="/login">Sign in</Link></Button>
-            <Button asChild size="sm" style={{ background: 'var(--brand)' }} className="text-white hover:opacity-90">
-              <Link to="/register">Get started</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <BrandedHeader />
 
       {/* ── Hero banner ── */}
       <section
@@ -90,35 +76,70 @@ const CustomDomainServices: React.FC = () => {
       </section>
 
       {/* ── Services grid ── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+      <section id="services" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {services.map((s, i) => (
-            <Card key={i} className="border-slate-200 hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div
-                  className="h-12 w-12 rounded-xl flex items-center justify-center mb-4"
-                  style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}
-                >
-                  <Calendar className="h-6 w-6" />
-                </div>
-                <h2 className="text-lg font-semibold text-slate-900">{s.label}</h2>
-                <div className="mt-3 space-y-1.5 text-sm text-slate-600">
-                  {s.day && (
-                    <p className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--brand)' }} />
-                      {s.day}
-                    </p>
-                  )}
-                  {s.time && (
-                    <p className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--brand)' }} />
-                      {s.time}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {services.map((s, i) => {
+            const hasBg = !!s.background_image;
+            return (
+              <Card
+                key={i}
+                className={`relative overflow-hidden border-slate-200 hover:shadow-md transition-shadow ${
+                  hasBg ? 'text-white' : ''
+                }`}
+              >
+                {hasBg && (
+                  <>
+                    <div
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{ backgroundImage: `url(${s.background_image})` }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 to-slate-900/40" />
+                  </>
+                )}
+                <CardContent className={`relative p-6 ${hasBg ? 'min-h-[220px]' : ''}`}>
+                  <div
+                    className="h-12 w-12 rounded-xl flex items-center justify-center mb-4"
+                    style={
+                      hasBg
+                        ? { background: 'rgba(255,255,255,0.15)', color: 'white' }
+                        : { background: 'var(--brand-soft)', color: 'var(--brand)' }
+                    }
+                  >
+                    <Calendar className="h-6 w-6" />
+                  </div>
+                  <h2
+                    className={`text-lg font-semibold ${hasBg ? 'text-white' : 'text-slate-900'}`}
+                  >
+                    {s.label}
+                  </h2>
+                  <div
+                    className={`mt-3 space-y-1.5 text-sm ${
+                      hasBg ? 'text-white/90' : 'text-slate-600'
+                    }`}
+                  >
+                    {s.day && (
+                      <p className="flex items-center gap-2">
+                        <Calendar
+                          className="h-4 w-4 flex-shrink-0"
+                          style={hasBg ? undefined : { color: 'var(--brand)' }}
+                        />
+                        {s.day}
+                      </p>
+                    )}
+                    {s.time && (
+                      <p className="flex items-center gap-2">
+                        <Clock
+                          className="h-4 w-4 flex-shrink-0"
+                          style={hasBg ? undefined : { color: 'var(--brand)' }}
+                        />
+                        {s.time}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </section>
 

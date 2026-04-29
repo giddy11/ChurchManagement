@@ -1,5 +1,5 @@
-import emailService from "./email.service";
-import { churchFlowEmail, styles } from "./email.layout";
+import emailService from "../email.service";
+import { churchFlowEmail, styles } from "../email.layout";
 
 export interface MemberAddedContext {
   fullName: string;
@@ -14,13 +14,13 @@ export async function sendMemberAddedEmail(to: string, ctx: MemberAddedContext) 
   const displayOrg = branchName ?? churchName ?? "your church";
   const loginUrl = process.env.URL || "http://localhost:5173";
 
-  const subject = `Welcome to ${displayOrg} — Church Flow`;
+  const subject = `Welcome to ${displayOrg} â€” Church Flow`;
 
   const html = churchFlowEmail(`
     <h2 style="${styles.heading}">Welcome to ${displayOrg}!</h2>
     <p style="${styles.paragraph}">Hi <strong>${fullName}</strong>,</p>
     <p style="${styles.paragraph}">
-      You have been added as a member of <strong>${displayOrg}</strong> on Church Flow. Below are your login credentials — please keep them safe.
+      You have been added as a member of <strong>${displayOrg}</strong> on Church Flow. Below are your login credentials â€” please keep them safe.
     </p>
 
     <!-- Credentials -->
@@ -46,19 +46,19 @@ export async function sendMemberAddedEmail(to: string, ctx: MemberAddedContext) 
     </table>
 
     <div style="${styles.warningBox}">
-      ⚠️ <strong>Important:</strong> This is a temporary password. Please log in and change it immediately to keep your account secure.
+      âš ï¸ <strong>Important:</strong> This is a temporary password. Please log in and change it immediately to keep your account secure.
     </div>
 
     <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
       <tr>
         <td align="center" style="padding:24px 0;">
-          <a href="${loginUrl}" style="${styles.button}">Log In Now →</a>
+          <a href="${loginUrl}" style="${styles.button}">Log In Now â†’</a>
         </td>
       </tr>
     </table>
   `, "Your Church Flow account has been created");
 
-  const text = `Welcome to ${displayOrg} — Church Flow\n\nHi ${fullName},\n\nYou have been added as a member of ${displayOrg}.\n\nEmail: ${email}\nTemporary Password: ${password}\n\nIMPORTANT: Please log in and change your password immediately.\n\nLogin: ${loginUrl}`;
+  const text = `Welcome to ${displayOrg} â€” Church Flow\n\nHi ${fullName},\n\nYou have been added as a member of ${displayOrg}.\n\nEmail: ${email}\nTemporary Password: ${password}\n\nIMPORTANT: Please log in and change your password immediately.\n\nLogin: ${loginUrl}`;
 
   await emailService.sendEmail(to, subject, text, html);
 }

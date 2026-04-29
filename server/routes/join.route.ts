@@ -7,7 +7,7 @@ import {
   useInviteCode,
 } from "../controllers/join.controller";
 import { authMiddleware } from "../middleware/auth.middleware";
-import { UserService } from "../services/user.service";
+import { UserService } from "../services/user/user.service";
 
 const router = Router();
 const auth = authMiddleware(new UserService()) as RequestHandler;

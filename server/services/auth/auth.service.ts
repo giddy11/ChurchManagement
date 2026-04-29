@@ -1,14 +1,14 @@
-import { User } from "../models/user.model";
-import { Denomination as Church } from "../models/church";
-import { AppDataSource } from "../config/database";
-import { firebaseAuth } from "../config/firebase.admin";
+import { User } from "../../models/user.model";
+import { Denomination as Church } from "../../models/church";
+import { AppDataSource } from "../../config/database";
+import { firebaseAuth } from "../../config/firebase.admin";
 import bcrypt from "bcrypt";
 import * as speakeasy from "speakeasy";
-import { sendPasswordResetOtpEmail } from "../email/sendPasswordResetOtpEmail";
+import { sendPasswordResetOtpEmail } from "../../email/otp/sendPasswordResetOtpEmail";
 import { TokenService } from "./token.service";
 import { GoogleAuthService, GoogleProfile } from "./google-auth.service";
-import CustomError from "../utils/customError";
-import { normalizeEmail } from "../utils/email";
+import CustomError from "../../utils/customError";
+import { normalizeEmail } from "../../utils/email";
 
 type UserResponse = Omit<
   User,

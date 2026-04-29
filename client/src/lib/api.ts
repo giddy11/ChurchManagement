@@ -557,12 +557,32 @@ export interface LandingServiceTime {
   label: string;
   day?: string;
   time?: string;
+  /** Optional background image URL for this service card. */
+  background_image?: string;
 }
 
 export interface LandingMinistry {
   title: string;
   description?: string;
   icon?: string;
+}
+
+/** A curated photo collection (e.g. "Easter Sunday — 2026-04-05"). */
+export interface LandingHighlight {
+  id?: string;
+  title: string;
+  /** ISO date string (YYYY-MM-DD). */
+  date?: string;
+  description?: string;
+  images: string[];
+}
+
+/** Core-value card (icon OR image, plus title & description). */
+export interface LandingCoreValue {
+  title: string;
+  description?: string;
+  icon?: string;
+  image?: string;
 }
 
 export interface LandingSocialLinks {
@@ -582,7 +602,10 @@ export interface LandingConfig {
   about?: string;
   service_times?: LandingServiceTime[];
   ministries?: LandingMinistry[];
+  /** Legacy flat list — surfaced as a single highlight when `highlights` is empty. */
   gallery_urls?: string[];
+  highlights?: LandingHighlight[];
+  core_values?: LandingCoreValue[];
   video_url?: string;
   mission?: string;
   social?: LandingSocialLinks;

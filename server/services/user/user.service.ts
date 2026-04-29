@@ -1,15 +1,15 @@
 import { randomUUID } from "crypto";
 import { classToPlain } from "class-transformer";
-import { AppDataSource } from "../config/database";
-import { User } from "../models/user.model";
-import { UserSettings, Gender } from "../types/user";
-import emailService from "../email/email.service";
-import { sendMemberAddedEmail } from "../email/email.member_added";
-import { firebaseAuth } from "../config/firebase.admin";
-import { normalizeEmail } from "../utils/email";
+import { AppDataSource } from "../../config/database";
+import { User } from "../../models/user.model";
+import { UserSettings, Gender } from "../../types/user";
+import emailService from "../../email/email.service";
+import { sendMemberAddedEmail } from "../../email/templates/email.member_added";
+import { firebaseAuth } from "../../config/firebase.admin";
+import { normalizeEmail } from "../../utils/email";
 
 import { In } from "typeorm";
-import { Person } from "../models/person.model";
+import { Person } from "../../models/person.model";
 
 export class UserService {
   private readonly userRepository = AppDataSource.getRepository(User);

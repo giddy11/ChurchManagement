@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Users, Plus, Trash2, Crown, Shield, User, UserCheck, Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useChurch } from '@/components/church/ChurchProvider';
-import AddMemberDialog from './AddMemberDialog';
+import AddMemberDialog from '../members/AddMemberDialog';
 import { createMemberApi, fetchUsers, deleteUserById } from '@/lib/api';
 
 type UserType = {

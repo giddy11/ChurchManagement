@@ -6,9 +6,9 @@ import { LogOut, Church, Users, Calendar, Shield, Crown, Settings, BarChart3, Te
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useNavigate } from 'react-router-dom';
 import { AttendanceTracker } from './AttendanceTracker';
-import { MemberProfile } from './MemberProfile';
-import { UserManagement } from './UserManagement';
-import AdminDashboard from './AdminDashboard';
+import { MemberProfile } from './members/MemberProfile';
+import { UserManagement } from './admin/UserManagement';
+import AdminDashboard from './admin/AdminDashboard';
 
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();

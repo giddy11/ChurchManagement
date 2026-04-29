@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   BookOpen,
+  Calendar,
   Church,
   Heart,
   Mail,
   MapPin,
+  Music2,
   Phone,
   Sparkles,
   Users,
@@ -15,6 +17,27 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useDomain } from '@/components/domain/DomainProvider';
 import BrandedFooter from '@/components/domain/BrandedFooter';
+import BrandedHeader from '@/components/domain/BrandedHeader';
+import HighlightsGallery from '@/components/domain/HighlightsGallery';
+import type { LandingCoreValue, LandingHighlight } from '@/lib/api';
+
+/* ─── icon registry & defaults (kept local — only used here) ─────────── */
+
+const VALUE_ICON: Record<string, React.ElementType> = {
+  Heart,
+  Users,
+  Sparkles,
+  BookOpen,
+  Music2,
+  Church,
+  Calendar,
+};
+
+const DEFAULT_VALUES: LandingCoreValue[] = [
+  { title: 'Love', description: 'We pursue God with our whole hearts and love our neighbours as ourselves.', icon: 'Heart' },
+  { title: 'Community', description: 'Faith grows in relationship. We do life together in genuine community.', icon: 'Users' },
+  { title: 'Purpose', description: 'Every person has a God-given calling. We help you discover and live yours.', icon: 'Sparkles' },
+];
 
 /* ─── page ────────────────────────────────────────────────────────────── */
 
@@ -24,9 +47,21 @@ const CustomDomainAbout: React.FC = () => {
   const accent = branding?.primary_color || '#4F46E5';
   const churchName = branding?.church_name || branding?.display_name || 'Our Church';
   const cfg = branding?.landing_config ?? null;
-  const about = cfg?.about || `Welcome to ${churchName}. We are a vibrant community of believers committed to knowing Christ and making Him known. Whether you are new to faith or have walked with God for years, there is a place for you here.`;
+  const about =
+    cfg?.about ||
+    `Welcome to ${churchName}. We are a vibrant community of believers committed to knowing Christ and making Him known. Whether you are new to faith or have walked with God for years, there is a place for you here.`;
   const mission = cfg?.mission;
   const social = cfg?.social ?? null;
+
+  const values: LandingCoreValue[] =
+    cfg?.core_values && cfg.core_values.length > 0 ? cfg.core_values : DEFAULT_VALUES;
+
+  const highlights: LandingHighlight[] =
+    cfg?.highlights && cfg.highlights.length > 0
+      ? cfg.highlights
+      : cfg?.gallery_urls && cfg.gallery_urls.length > 0
+        ? [{ id: 'legacy', title: 'Gallery', images: cfg.gallery_urls }]
+        : [];
 
   const themeStyle: React.CSSProperties = {
     ['--brand' as any]: accent,
@@ -36,31 +71,7 @@ const CustomDomainAbout: React.FC = () => {
   return (
     <div style={themeStyle} className="min-h-screen bg-white text-slate-900 antialiased">
       {/* ── Header ── */}
-      <header className="sticky top-0 z-30 bg-white/85 backdrop-blur border-b border-slate-200/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 min-w-0">
-            {branding?.logo_url ? (
-              <img src={branding.logo_url} alt={churchName} className="h-9 w-9 rounded-lg object-cover" />
-            ) : (
-              <div className="h-9 w-9 rounded-lg flex items-center justify-center text-white" style={{ background: 'var(--brand)' }}>
-                <Church className="h-5 w-5" />
-              </div>
-            )}
-            <span className="font-semibold text-slate-900 truncate">{churchName}</span>
-          </Link>
-          <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600">
-            <Link to="/" className="hover:text-slate-900 transition-colors">Home</Link>
-            <Link to="/about" className="text-slate-900 font-semibold transition-colors" style={{ color: 'var(--brand)' }}>About</Link>
-            <Link to="/services" className="hover:text-slate-900 transition-colors">Services</Link>
-          </nav>
-          <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm"><Link to="/login">Sign in</Link></Button>
-            <Button asChild size="sm" style={{ background: 'var(--brand)' }} className="text-white hover:opacity-90">
-              <Link to="/register">Get started</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <BrandedHeader />
 
       {/* ── Hero banner ── */}
       <section
@@ -168,44 +179,38 @@ const CustomDomainAbout: React.FC = () => {
           <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-slate-900">Our core values</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          {[
-            { icon: Heart, title: 'Love', body: 'We pursue God with our whole hearts and love our neighbours as ourselves.' },
-            { icon: Users, title: 'Community', body: 'Faith grows in relationship. We do life together in genuine community.' },
-            { icon: Sparkles, title: 'Purpose', body: 'Every person has a God-given calling. We help you discover and live yours.' },
-          ].map(({ icon: Icon, title, body }) => (
-            <Card key={title} className="border-slate-200 text-center hover:shadow-md transition-shadow">
-              <CardContent className="p-8">
-                <div
-                  className="h-14 w-14 rounded-2xl mx-auto flex items-center justify-center mb-5"
-                  style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}
-                >
-                  <Icon className="h-7 w-7" />
-                </div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">{title}</h3>
-                <p className="text-slate-600 leading-relaxed">{body}</p>
-              </CardContent>
-            </Card>
-          ))}
+          {values.map((v, i) => {
+            const Icon = (v.icon && VALUE_ICON[v.icon]) || Heart;
+            return (
+              <Card key={i} className="border-slate-200 text-center hover:shadow-md transition-shadow">
+                <CardContent className="p-8">
+                  <div
+                    className="h-14 w-14 rounded-2xl mx-auto flex items-center justify-center mb-5 overflow-hidden"
+                    style={
+                      v.image
+                        ? undefined
+                        : { background: 'var(--brand-soft)', color: 'var(--brand)' }
+                    }
+                  >
+                    {v.image ? (
+                      <img src={v.image} alt={v.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <Icon className="h-7 w-7" />
+                    )}
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">{v.title}</h3>
+                  {v.description && (
+                    <p className="text-slate-600 leading-relaxed">{v.description}</p>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </section>
 
-      {/* ── Gallery (if available) ── */}
-      {cfg?.gallery_urls && cfg.gallery_urls.length > 0 && (
-        <section className="bg-slate-50/80 border-y border-slate-200 py-14 sm:py-18">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <p className="text-sm font-semibold uppercase tracking-wider mb-8" style={{ color: 'var(--brand)' }}>
-              Life together
-            </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {cfg.gallery_urls.map((u, i) => (
-                <div key={i} className="aspect-square rounded-lg overflow-hidden bg-slate-100">
-                  <img src={u} alt="" loading="lazy" className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      {/* ── Highlights gallery ── */}
+      <HighlightsGallery highlights={highlights} />
 
       {/* ── CTA ── */}
       <section className="relative overflow-hidden">

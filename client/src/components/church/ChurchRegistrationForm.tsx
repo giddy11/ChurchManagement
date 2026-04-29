@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useRegister } from '@/hooks/useAuthQuery';
 import { Country } from 'country-state-city';
-import { PhoneField, isoToFlag } from '@/components/dashboard/AddPersonDialog';
+import { PhoneField, isoToFlag } from '@/components/dashboard/people/AddPersonDialog';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:7777/api';
 

@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { AuthRequest } from "../middleware/auth.middleware";
 import asyncHandler from "../utils/asyncHandler";
 import CustomError from "../utils/customError";
-import { CustomDomainService, normalizeDomain } from "../services/custom-domain.service";
+import { CustomDomainService, normalizeDomain } from "../services/church/custom-domain.service";
 import { CustomDomainStatus } from "../models/church/custom-domain.model";
 import { AppDataSource } from "../config/database";
 import { BranchMembership, BranchRole } from "../models/church/branch-membership.model";

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction, RequestHandler } from "express";
-import { UserService } from "../services/user.service";
-import { TokenService } from "../services/token.service";
+import { UserService } from "../services/user/user.service";
+import { TokenService } from "../services/auth/token.service";
 import { getPermissionsForRole } from "../utils/roles";
 import dotenv from "dotenv";
 import { AppDataSource } from "../config/database";

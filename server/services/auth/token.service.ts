@@ -1,6 +1,6 @@
 import * as jwt from "jsonwebtoken";
 import * as crypto from "crypto";
-import { User } from "../models/user.model";
+import { User } from "../../models/user.model";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 const REFRESH_SECRET = process.env.REFRESH_SECRET || "your-refresh-secret-key";

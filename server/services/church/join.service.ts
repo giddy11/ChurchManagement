@@ -1,13 +1,13 @@
 import { randomBytes } from "crypto";
 import { In } from "typeorm";
-import { AppDataSource } from "../config/database";
-import { BranchJoinRequest, JoinRequestStatus } from "../models/church/branch-join-request.model";
-import { BranchInvite } from "../models/church/branch-invite.model";
-import { BranchMembership, BranchRole } from "../models/church/branch-membership.model";
-import { Branch } from "../models/church/branch.model";
-import { Denomination } from "../models/church/denomination.model";
-import { User } from "../models/user.model";
-import { sendInviteJoinNotification, sendJoinRequestNotification, sendJoinDecisionNotification } from "../email/email.admin_notify";
+import { AppDataSource } from "../../config/database";
+import { BranchJoinRequest, JoinRequestStatus } from "../../models/church/branch-join-request.model";
+import { BranchInvite } from "../../models/church/branch-invite.model";
+import { BranchMembership, BranchRole } from "../../models/church/branch-membership.model";
+import { Branch } from "../../models/church/branch.model";
+import { Denomination } from "../../models/church/denomination.model";
+import { User } from "../../models/user.model";
+import { sendInviteJoinNotification, sendJoinRequestNotification, sendJoinDecisionNotification } from "../../email/templates/email.admin_notify";
 
 function generateCode(): string {
   return randomBytes(5).toString("hex").toUpperCase(); // 10-char hex e.g. "A3F9C12DE0"

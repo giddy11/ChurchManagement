@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { DenominationRequestService } from "../services/denomination-request.service";
+import { DenominationRequestService } from "../services/church/denomination-request.service";
 import { DenominationRequestStatus } from "../models/church/denomination-request.model";
 import asyncHandler from "../utils/asyncHandler";
 import { AuthRequest } from "../middleware/auth.middleware";

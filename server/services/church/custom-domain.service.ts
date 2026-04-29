@@ -1,15 +1,15 @@
-import { AppDataSource } from "../config/database";
-import { CustomDomain, CustomDomainStatus, LandingConfig } from "../models/church/custom-domain.model";
-import { Branch } from "../models/church/branch.model";
-import { Denomination } from "../models/church/denomination.model";
-import { BranchMembership, BranchRole } from "../models/church/branch-membership.model";
-import { User } from "../models/user.model";
-import CustomError from "../utils/customError";
+import { AppDataSource } from "../../config/database";
+import { CustomDomain, CustomDomainStatus, LandingConfig } from "../../models/church/custom-domain.model";
+import { Branch } from "../../models/church/branch.model";
+import { Denomination } from "../../models/church/denomination.model";
+import { BranchMembership, BranchRole } from "../../models/church/branch-membership.model";
+import { User } from "../../models/user.model";
+import CustomError from "../../utils/customError";
 import {
   sendCustomDomainRequestedToSuperAdmin,
   sendCustomDomainDecisionEmail,
   sendCustomDomainDeactivatedEmail,
-} from "../email/email.custom_domain";
+} from "../../email/templates/email.custom_domain";
 
 /**
  * Hostnames are normalised before comparison: lower-cased, trimmed,
@@ -168,6 +168,7 @@ export class CustomDomainService {
             label: trim(s?.label),
             day: trimOrNull(s?.day),
             time: trimOrNull(s?.time),
+            background_image: this.sanitizeImageUrl(s?.background_image),
           }))
           .filter((s) => s.label.length > 0)
           .slice(0, 12)
@@ -189,6 +190,39 @@ export class CustomDomainService {
           .map((u) => trim(u))
           .filter((u) => /^https?:\/\//i.test(u))
           .slice(0, 24)
+      : undefined;
+
+    const highlights = Array.isArray(raw.highlights)
+      ? raw.highlights
+          .map((h) => {
+            const images = Array.isArray(h?.images)
+              ? h.images
+                  .map((u) => trim(u))
+                  .filter((u) => /^https?:\/\//i.test(u))
+                  .slice(0, 30)
+              : [];
+            return {
+              id: trimOrNull(h?.id),
+              title: trim(h?.title),
+              date: this.sanitizeIsoDate(h?.date),
+              description: trimOrNull(h?.description),
+              images,
+            };
+          })
+          .filter((h) => h.title.length > 0 && h.images.length > 0)
+          .slice(0, 50)
+      : undefined;
+
+    const coreValues = Array.isArray(raw.core_values)
+      ? raw.core_values
+          .map((c) => ({
+            title: trim(c?.title),
+            description: trimOrNull(c?.description),
+            icon: trimOrNull(c?.icon),
+            image: this.sanitizeImageUrl(c?.image),
+          }))
+          .filter((c) => c.title.length > 0)
+          .slice(0, 12)
       : undefined;
 
     const social: LandingConfig["social"] = raw.social && typeof raw.social === "object"
@@ -214,6 +248,8 @@ export class CustomDomainService {
       service_times: services && services.length > 0 ? services : undefined,
       ministries: ministries && ministries.length > 0 ? ministries : undefined,
       gallery_urls: gallery && gallery.length > 0 ? gallery : undefined,
+      highlights: highlights && highlights.length > 0 ? highlights : undefined,
+      core_values: coreValues && coreValues.length > 0 ? coreValues : undefined,
       video_url: trimOrNull(raw.video_url),
       mission: trimOrNull(raw.mission),
       social: cleanedSocial,
@@ -226,6 +262,25 @@ export class CustomDomainService {
       (v) => v !== undefined && v !== null && v !== "",
     );
     return hasAny ? config : null;
+  }
+
+  /** Returns the URL only when it's an absolute http(s) URL; else undefined. */
+  private sanitizeImageUrl(v: unknown): string | undefined {
+    if (typeof v !== "string") return undefined;
+    const s = v.trim();
+    return /^https?:\/\//i.test(s) ? s : undefined;
+  }
+
+  /** Returns ISO YYYY-MM-DD when parseable; else undefined. */
+  private sanitizeIsoDate(v: unknown): string | undefined {
+    if (typeof v !== "string") return undefined;
+    const s = v.trim();
+    if (!s) return undefined;
+    // Accept YYYY-MM-DD directly, or any Date.parse-able value.
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const d = new Date(s);
+    if (Number.isNaN(d.getTime())) return undefined;
+    return d.toISOString().slice(0, 10);
   }
 
   // ─── Branch admin: read ────────────────────────────────────────────────

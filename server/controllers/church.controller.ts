@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { ChurchService } from "../services/church.service";
+import { ChurchService } from "../services/church/church.service";
 import asyncHandler from "../utils/asyncHandler";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { logActivity } from "../utils/activityLogger";

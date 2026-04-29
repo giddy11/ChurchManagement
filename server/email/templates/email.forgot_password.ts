@@ -1,8 +1,8 @@
-import emailService from "./email.service";
-import { churchFlowEmail, styles } from "./email.layout";
+import emailService from "../email.service";
+import { churchFlowEmail, styles } from "../email.layout";
 
 export async function sendPasswordLink(to: string, link: string) {
-  const subject = "Reset Your Password — Church Flow";
+  const subject = "Reset Your Password â€” Church Flow";
 
   const html = churchFlowEmail(`
     <h2 style="${styles.heading}">Password Reset Requested</h2>
@@ -24,14 +24,14 @@ export async function sendPasswordLink(to: string, link: string) {
       <span style="word-break:break-all;font-size:13px;">${link}</span>
     </div>
     <p style="${styles.paragraph}">
-      This link will expire in <strong>1 hour</strong>. If you didn't request a password reset, you can safely ignore this email — your password will remain unchanged.
+      This link will expire in <strong>1 hour</strong>. If you didn't request a password reset, you can safely ignore this email â€” your password will remain unchanged.
     </p>
     <div style="${styles.warningBox}">
       <strong>Security notice:</strong> Church Flow will never ask you for your password via email. If you didn't request this reset, your account may have been targeted. Consider enabling two-factor authentication.
     </div>
   `, "Reset your Church Flow password");
 
-  const text = `Church Flow — Password Reset\n\nWe received a request to reset your password.\n\nReset link: ${link}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, you can safely ignore this email.`;
+  const text = `Church Flow â€” Password Reset\n\nWe received a request to reset your password.\n\nReset link: ${link}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, you can safely ignore this email.`;
 
   return emailService.sendEmail(to, subject, text, html);
 }

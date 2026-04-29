@@ -1,10 +1,10 @@
 import { Repository } from "typeorm";
-import { AppDataSource } from "../config/database";
-import { EventAttendance } from "../models/event/event-attendance.model";
-import { GuestAttendance } from "../models/event/guest-attendance.model";
-import { Event } from "../models/event/event.model";
-import { BranchMembership, BranchRole } from "../models/church";
-import CustomError from "../utils/customError";
+import { AppDataSource } from "../../config/database";
+import { EventAttendance } from "../../models/event/event-attendance.model";
+import { GuestAttendance } from "../../models/event/guest-attendance.model";
+import { Event } from "../../models/event/event.model";
+import { BranchMembership, BranchRole } from "../../models/church";
+import CustomError from "../../utils/customError";
 
 export interface MarkAttendanceDTO {
   event_id: string;

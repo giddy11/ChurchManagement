@@ -8,7 +8,7 @@ import {
   rejectDenominationRequest,
 } from "../controllers/denomination-request.controller";
 import { authMiddleware, superAdminMiddleware } from "../middleware/auth.middleware";
-import { UserService } from "../services/user.service";
+import { UserService } from "../services/user/user.service";
 
 const router = Router();
 const auth = authMiddleware(new UserService()) as RequestHandler;

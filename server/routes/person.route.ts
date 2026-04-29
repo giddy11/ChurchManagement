@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth.middleware";
-import { UserService } from "../services/user.service";
+import { UserService } from "../services/user/user.service";
 import {
   createPerson,
   getPeople,

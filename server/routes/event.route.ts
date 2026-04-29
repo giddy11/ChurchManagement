@@ -14,7 +14,7 @@ import {
   getGuestAttendance,
 } from "../controllers/event.controller";
 import { authMiddleware, adminMiddleware } from "../middleware/auth.middleware";
-import { UserService } from "../services/user.service";
+import { UserService } from "../services/user/user.service";
 import type { RequestHandler } from "express";
 
 const router = Router();

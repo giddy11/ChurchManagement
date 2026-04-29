@@ -1,8 +1,8 @@
 import { Request } from "express";
-import { AppDataSource } from "../config/database";
-import { BranchMembership } from "../models/church/branch-membership.model";
-import { BranchJoinRequest } from "../models/church/branch-join-request.model";
-import { CustomDomainService, normalizeDomain } from "./custom-domain.service";
+import { AppDataSource } from "../../config/database";
+import { BranchMembership } from "../../models/church/branch-membership.model";
+import { BranchJoinRequest } from "../../models/church/branch-join-request.model";
+import { CustomDomainService, normalizeDomain } from "../church/custom-domain.service";
 
 const customDomainService = new CustomDomainService();
 
@@ -94,7 +94,7 @@ export async function autoJoinFromCustomDomain(
   }
 
   // Lazy-import to avoid a circular import with join.service ↔ email modules.
-  const { JoinService } = await import("./join.service");
+  const { JoinService } = await import("../church/join.service");
   const join = new JoinService();
   try {
     await join.submitJoinRequest(userId, domain.branch_id, "Auto-submitted via custom domain sign-in");

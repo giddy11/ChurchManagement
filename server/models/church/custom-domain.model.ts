@@ -138,6 +138,8 @@ export interface LandingServiceTime {
   day?: string;
   /** Human-friendly time. Optional — e.g. "9:00 AM". */
   time?: string;
+  /** Optional background image for this service card (URL). */
+  background_image?: string;
 }
 
 export interface LandingMinistry {
@@ -145,6 +147,34 @@ export interface LandingMinistry {
   description?: string;
   /** Free-form lucide icon name; renderer falls back to a default icon. */
   icon?: string;
+}
+
+/**
+ * A "highlight" is a curated photo collection — e.g. a service, event,
+ * outreach or activity that took place on a given date.  The public landing
+ * & about pages render them as a filterable gallery (by title or date).
+ */
+export interface LandingHighlight {
+  /** Stable client-generated id used for keys. Optional. */
+  id?: string;
+  title: string;
+  /** ISO date string (YYYY-MM-DD). Optional. */
+  date?: string;
+  description?: string;
+  /** One or more photo URLs. */
+  images: string[];
+}
+
+/**
+ * Core-value card — what the church believes / stands for.  Either an icon
+ * (lucide-react name) or an uploaded image may be provided; the renderer
+ * prefers the image when both are set.
+ */
+export interface LandingCoreValue {
+  title: string;
+  description?: string;
+  icon?: string;
+  image?: string;
 }
 
 export interface LandingSocialLinks {
@@ -171,8 +201,16 @@ export interface LandingConfig {
   service_times?: LandingServiceTime[];
   /** Up to ~6 ministry / focus-area cards. */
   ministries?: LandingMinistry[];
-  /** Photo gallery URLs. */
+  /**
+   * Legacy flat photo list. Kept for backward compatibility — new content
+   * should be authored as `highlights[]`.  At render time the legacy list is
+   * surfaced as a single "Gallery" highlight when `highlights` is empty.
+   */
   gallery_urls?: string[];
+  /** Curated photo collections grouped by title / date. */
+  highlights?: LandingHighlight[];
+  /** Core values shown on the landing & about pages. */
+  core_values?: LandingCoreValue[];
   /** Embedded YouTube/Vimeo URL for the welcome video. */
   video_url?: string;
   /** Mission statement. */

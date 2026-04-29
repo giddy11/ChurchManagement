@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Loader2, UserPlus } from 'lucide-react';
-import { PhoneField, isoToFlag } from './AddPersonDialog';
+import { PhoneField, isoToFlag } from '../people/AddPersonDialog';
 import { Country } from 'country-state-city';
 
 interface MemberFormData {
