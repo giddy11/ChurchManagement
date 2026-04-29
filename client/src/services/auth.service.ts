@@ -11,6 +11,13 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:7777/api";
 const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 
+export interface CustomDomainAuthInfo {
+  branch_id: string;
+  denomination_id: string;
+  domain: string;
+  membership_status: 'member' | 'pending' | 'rejected' | 'request_created';
+}
+
 export interface AuthResponse {
   user: {
     id: string;
@@ -21,6 +28,7 @@ export interface AuthResponse {
   role: any;
   permissions: any[];
   isNewUser?: boolean;
+  customDomain?: CustomDomainAuthInfo | null;
 }
 
 export interface RegisterResponse {
@@ -105,12 +113,16 @@ export async function authFetch(
   const token = getAccessToken();
   const hasToken = Boolean(token);
   const branchId = localStorage.getItem('church_mgmt_selected_branch') || undefined;
+  // Always echo the current hostname so the backend can scope the request
+  // to a custom domain (auto-join flow, branding lookups, etc.).
+  const customDomain = typeof window !== 'undefined' ? window.location.hostname : undefined;
   console.debug(`API Request -> ${endpoint} | method=${options?.method || 'GET'} | hasOptions=${hasOptions} | hasToken=${hasToken}`);
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}`, 'X-Access-Token': token } : {}),
     ...(branchId ? { 'X-Branch-Id': branchId } : {}),
+    ...(customDomain ? { 'X-Custom-Domain': customDomain } : {}),
     ...(options?.headers as Record<string, string> | undefined),
   };
 
@@ -131,10 +143,12 @@ export async function authFetch(
     if (refreshed) {
       const newToken = getAccessToken();
       const newBranchId = localStorage.getItem('church_mgmt_selected_branch') || undefined;
+      const newCustomDomain = typeof window !== 'undefined' ? window.location.hostname : undefined;
       const retryHeaders: Record<string, string> = {
         "Content-Type": "application/json",
         ...(newToken ? { Authorization: `Bearer ${newToken}`, 'X-Access-Token': newToken } : {}),
         ...(newBranchId ? { 'X-Branch-Id': newBranchId } : {}),
+        ...(newCustomDomain ? { 'X-Custom-Domain': newCustomDomain } : {}),
         ...(options?.headers as Record<string, string> | undefined),
       };
       res = await axios({ ...axiosConfig, headers: retryHeaders });
@@ -165,6 +179,12 @@ async function handleTokenRefresh(): Promise<boolean> {
   }
 }
 
+function customDomainHeader(): Record<string, string> {
+  if (typeof window === 'undefined') return {};
+  const host = window.location.hostname;
+  return host ? { 'X-Custom-Domain': host } : {};
+}
+
 export async function apiLogin(
   email: string,
   password: string
@@ -177,7 +197,7 @@ export async function apiLogin(
   const res = await axios.post(`${API_BASE}/auth/firebase-login`, {
     idToken,
   }, {
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...customDomainHeader() },
   });
 
   if (res.status !== 200) {
@@ -192,7 +212,7 @@ export async function apiLogin(
 export async function apiGoogleSignIn(
   idToken: string
 ): Promise<AuthResponse> {
-  const res = await axios.post(`${API_BASE}/auth/google`, { idToken }, { headers: { "Content-Type": "application/json" } });
+  const res = await axios.post(`${API_BASE}/auth/google`, { idToken }, { headers: { "Content-Type": "application/json", ...customDomainHeader() } });
   clearTokens();
   saveTokensFromResponse(res);
   return res.data.data;
@@ -217,7 +237,7 @@ export async function apiRegister(
     const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
     firebaseUser = credential.user;
     const idToken = await firebaseUser.getIdToken();
-    const res = await axios.post(`${API_BASE}/auth/signup`, { idToken, full_name, phone_number, ...(church ?? {}) }, { headers: { "Content-Type": "application/json" } });
+    const res = await axios.post(`${API_BASE}/auth/signup`, { idToken, full_name, phone_number, ...(church ?? {}) }, { headers: { "Content-Type": "application/json", ...customDomainHeader() } });
     saveTokensFromResponse(res);
     return res.data.data;
   } catch (err: any) {

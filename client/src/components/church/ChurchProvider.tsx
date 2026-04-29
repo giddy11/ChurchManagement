@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, typ
 import type { Church, Branch } from '@/types/church';
 import { fetchChurches, fetchBranches, fetchUserChurches } from '@/lib/api';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { useDomain } from '@/components/domain/DomainProvider';
 import { useProfile } from '@/hooks/useAuthQuery';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -14,6 +15,8 @@ interface ChurchContextType {
   isMembershipsReady: boolean; // profile.branchMemberships has been resolved from server
   effectiveRole: 'super_admin' | 'admin' | 'member';
   branchRole: 'admin' | 'coordinator' | 'member' | null; // role within the current branch
+  /** True when the active session is locked to a single branch by a custom domain. */
+  isLockedToBranch: boolean;
   selectChurch: (churchId: string) => void;
   selectBranch: (branchId: string | null) => void;
   selectBranchGlobal: (branch: Branch) => Promise<void>;
@@ -39,6 +42,7 @@ interface ChurchProviderProps {
 
 export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
   const { user } = useAuth();
+  const { branding, isCustomDomain } = useDomain();
   const { data: profile, isFetching: profileFetching, isStale: profileStale } = useProfile();
   const queryClient = useQueryClient();
   const [currentChurch, setCurrentChurch] = useState<Church | null>(null);
@@ -47,6 +51,21 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
   const [userChurches, setUserChurches] = useState<Church[]>([]);
   const [myBranches, setMyBranches] = useState<Branch[]>([]);
   const [isMembershipsReady, setIsMembershipsReady] = useState(false);
+
+  /**
+   * When the app is loaded via an active custom domain, the user must be
+   * scoped to that exact branch — no toggling allowed. We persist the IDs
+   * up-front so any code path reading from localStorage picks them up.
+   */
+  const lockedBranchId = isCustomDomain ? branding?.branch_id ?? null : null;
+  const lockedDenominationId = isCustomDomain ? branding?.denomination_id ?? null : null;
+  const isLockedToBranch = !!lockedBranchId;
+
+  useEffect(() => {
+    if (!isLockedToBranch) return;
+    if (lockedBranchId) localStorage.setItem(SELECTED_BRANCH_KEY, lockedBranchId);
+    if (lockedDenominationId) localStorage.setItem(SELECTED_CHURCH_KEY, lockedDenominationId);
+  }, [isLockedToBranch, lockedBranchId, lockedDenominationId]);
 
   const loadUserChurches = useCallback(async () => {
     if (!user) {
@@ -199,6 +218,7 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
   };
 
   const selectChurch = (churchId: string) => {
+    if (isLockedToBranch && churchId !== lockedDenominationId) return;
     const church = userChurches.find(c => c.id === churchId);
     if (church) {
       setCurrentChurch(church);
@@ -214,6 +234,7 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
   };
 
   const selectBranch = (branchId: string | null) => {
+    if (isLockedToBranch && branchId !== lockedBranchId) return;
     if (branchId) {
       const branch = branches.find(b => b.id === branchId);
       setCurrentBranch(branch || null);
@@ -228,6 +249,7 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
 
   // Select a branch across churches: switches church, loads its branches, then selects the branch
   const selectBranchGlobal = async (branch: Branch) => {
+    if (isLockedToBranch && branch.id !== lockedBranchId) return;
     console.log('[selectBranchGlobal] called with branch:', branch);
     console.log('[selectBranchGlobal] membership_is_active:', branch.membership_is_active);
     if (branch.membership_is_active === false) {
@@ -362,6 +384,7 @@ export const ChurchProvider: React.FC<ChurchProviderProps> = ({ children }) => {
     isMembershipsReady,
     effectiveRole,
     branchRole,
+    isLockedToBranch,
     selectChurch,
     selectBranch,
     selectBranchGlobal,

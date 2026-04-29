@@ -1,15 +1,20 @@
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from '@/components/auth/AuthProvider';
 import { SocketProvider } from '@/components/auth/SocketProvider';
 import { ChurchProvider } from '@/components/church/ChurchProvider';
+import DomainProvider from '@/components/domain/DomainProvider';
 import RealtimeSyncProvider from '@/components/auth/RealtimeSyncProvider';
 import { ReloadPrompt } from '@/components/pwa/ReloadPrompt';
 import Index from './pages/Index';
 import LandingPage from './pages/LandingPage';
+import CustomDomainLanding from './components/domain/CustomDomainLanding';
+import CustomDomainAbout from './pages/CustomDomainAbout';
+import CustomDomainServices from './pages/CustomDomainServices';
+import { useDomain } from '@/components/domain/DomainProvider';
 import Dashboard from './pages/Dashboard';
 import SuperAdmin from './pages/SuperAdmin';
 import NotFound from './pages/NotFound';
@@ -26,6 +31,23 @@ const queryClient = new QueryClient({
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
+/**
+ * Root route picker — when the visitor is on an active branded custom domain
+ * (e.g. https://grace.churchflow.app/), show that branch's branded landing
+ * page. Otherwise fall back to the default ChurchFlow marketing landing page.
+ * Waits for branding resolution to avoid flicker.
+ */
+function RootLanding() {
+  const { isCustomDomain, isResolving, branding } = useDomain();
+  if (isResolving) {
+    return <div className="min-h-screen bg-white" />;
+  }
+  if (isCustomDomain && branding) {
+    return <CustomDomainLanding />;
+  }
+  return <LandingPage />;
+}
+
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
 
@@ -36,7 +58,10 @@ function AppRoutes() {
         <Toaster />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<RootLanding />} />
+            {/* Custom-domain sub-pages — only meaningful on branded domains */}
+            <Route path="/about" element={<CustomDomainAbout />} />
+            <Route path="/services" element={<CustomDomainServices />} />
             <Route path="/login" element={<Index />} />
             <Route path="/register" element={<Index />} />
             <Route path="/register-church" element={<Index />} />
@@ -95,10 +120,12 @@ const App = () => (
   <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AuthProvider>
-          <AppRoutes />
-          <ReloadPrompt />
-        </AuthProvider>
+        <DomainProvider>
+          <AuthProvider>
+            <AppRoutes />
+            <ReloadPrompt />
+          </AuthProvider>
+        </DomainProvider>
       </TooltipProvider>
     </QueryClientProvider>
   </GoogleOAuthProvider>

@@ -534,6 +534,178 @@ export const reviewJoinRequestApi = (churchId: string, branchId: string, request
     body: JSON.stringify({ decision }),
   });
 
+export interface BulkReviewResult {
+  succeeded: string[];
+  failed: { id: string; reason: string }[];
+}
+
+export const bulkReviewJoinRequestsApi = (
+  churchId: string,
+  branchId: string,
+  ids: string[],
+  decision: 'approved' | 'rejected',
+) =>
+  request<{ data: BulkReviewResult; status: number; message: string }>(
+    `/churches/${churchId}/branches/${branchId}/join-requests/bulk-review`,
+    { method: 'POST', body: JSON.stringify({ ids, decision }) },
+  );
+
+// ─── Custom Domains ───────────────────────────────────────────────────────
+export type CustomDomainStatus = 'pending' | 'active' | 'inactive' | 'rejected';
+
+export interface LandingServiceTime {
+  label: string;
+  day?: string;
+  time?: string;
+}
+
+export interface LandingMinistry {
+  title: string;
+  description?: string;
+  icon?: string;
+}
+
+export interface LandingSocialLinks {
+  facebook?: string;
+  instagram?: string;
+  youtube?: string;
+  twitter?: string;
+  whatsapp?: string;
+  website?: string;
+}
+
+export interface LandingConfig {
+  hero_image_url?: string;
+  hero_headline?: string;
+  hero_subheadline?: string;
+  cta_primary_label?: string;
+  about?: string;
+  service_times?: LandingServiceTime[];
+  ministries?: LandingMinistry[];
+  gallery_urls?: string[];
+  video_url?: string;
+  mission?: string;
+  social?: LandingSocialLinks;
+  show_join_cta?: boolean;
+}
+
+export interface CustomDomainDTO {
+  id: string;
+  domain: string;
+  branch_id: string;
+  denomination_id: string;
+  display_name: string;
+  logo_url: string | null;
+  church_name: string;
+  address: string | null;
+  pastor_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  tagline: string | null;
+  primary_color: string | null;
+  allow_self_signup: boolean;
+  status: CustomDomainStatus;
+  rejection_reason: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  landing_config: LandingConfig | null;
+  branch?: { id: string; name: string };
+  denomination?: { id: string; denomination_name: string };
+}
+
+export interface PublicCustomDomainBrandingDTO {
+  domain: string;
+  display_name: string;
+  logo_url: string | null;
+  church_name: string;
+  address: string | null;
+  pastor_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  tagline: string | null;
+  primary_color: string | null;
+  allow_self_signup: boolean;
+  branch_id: string;
+  denomination_id: string;
+  landing_config: LandingConfig | null;
+}
+
+export interface UpsertCustomDomainPayload {
+  domain: string;
+  display_name?: string;
+  logo_url?: string;
+  church_name?: string;
+  address?: string;
+  pastor_name?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  tagline?: string;
+  primary_color?: string;
+  allow_self_signup?: boolean;
+  /** Pass `null` to clear all landing-page customisation. */
+  landing_config?: LandingConfig | null;
+}
+
+const PUBLIC_API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:7777/api';
+
+/** Public — fetch active custom-domain branding for a hostname. */
+export const fetchPublicCustomDomainBranding = (host: string) =>
+  fetch(`${PUBLIC_API_BASE}/custom-domains/resolve/${encodeURIComponent(host)}`)
+    .then((r) => r.json() as Promise<{ status: number; data: PublicCustomDomainBrandingDTO | null }>)
+    .catch(() => ({ status: 200, data: null as PublicCustomDomainBrandingDTO | null }));
+
+/** Branch admin — fetch the configured custom domain for a branch. */
+export const fetchBranchCustomDomainApi = (churchId: string, branchId: string) =>
+  request<{ data: CustomDomainDTO | null; status: number }>(
+    `/churches/${churchId}/branches/${branchId}/custom-domain`,
+  );
+
+/** Branch admin — create or update the custom domain for a branch. */
+export const upsertBranchCustomDomainApi = (
+  churchId: string,
+  branchId: string,
+  payload: UpsertCustomDomainPayload,
+) =>
+  request<{ data: CustomDomainDTO; status: number; message: string }>(
+    `/churches/${churchId}/branches/${branchId}/custom-domain`,
+    { method: 'PUT', body: JSON.stringify(payload) },
+  );
+
+/** Branch admin — remove the custom domain for a branch. */
+export const deleteBranchCustomDomainApi = (churchId: string, branchId: string) =>
+  request<{ status: number; message: string }>(
+    `/churches/${churchId}/branches/${branchId}/custom-domain`,
+    { method: 'DELETE' },
+  );
+
+/** Super admin — list all custom domains. */
+export const fetchAllCustomDomainsApi = (status?: CustomDomainStatus) => {
+  const qs = status ? `?status=${status}` : '';
+  return request<{ data: CustomDomainDTO[]; status: number }>(`/custom-domains${qs}`);
+};
+
+export const approveCustomDomainApi = (id: string) =>
+  request<{ data: CustomDomainDTO; status: number; message: string }>(
+    `/custom-domains/${id}/approve`, { method: 'POST' },
+  );
+
+export const rejectCustomDomainApi = (id: string, rejection_reason: string) =>
+  request<{ data: CustomDomainDTO; status: number; message: string }>(
+    `/custom-domains/${id}/reject`,
+    { method: 'POST', body: JSON.stringify({ rejection_reason }) },
+  );
+
+export const deactivateCustomDomainApi = (id: string) =>
+  request<{ data: CustomDomainDTO; status: number; message: string }>(
+    `/custom-domains/${id}/deactivate`, { method: 'POST' },
+  );
+
+export const reactivateCustomDomainApi = (id: string) =>
+  request<{ data: CustomDomainDTO; status: number; message: string }>(
+    `/custom-domains/${id}/reactivate`, { method: 'POST' },
+  );
+
 export const fetchInviteLinksApi = (churchId: string, branchId: string) =>
   request<{ data: InviteLinkDTO[]; status: number }>(`/churches/${churchId}/branches/${branchId}/invites`);
 

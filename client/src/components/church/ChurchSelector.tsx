@@ -15,7 +15,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { toast } from 'sonner';
 
 const ChurchSelector: React.FC = () => {
-  const { myBranches, currentBranch, selectBranchGlobal, effectiveRole, isMembershipsReady } = useChurch();
+  const { myBranches, currentBranch, selectBranchGlobal, effectiveRole, isMembershipsReady, isLockedToBranch } = useChurch();
   const { user, isLoading: authLoading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
@@ -69,8 +69,10 @@ const ChurchSelector: React.FC = () => {
     <div className="border-b border-gray-200">
       {/* Current Branch Display */}
       <button
-        className="w-full p-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
-        onClick={() => setIsOpen(!isOpen)}
+        className="w-full p-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left disabled:cursor-default disabled:hover:bg-transparent"
+        onClick={() => { if (!isLockedToBranch) setIsOpen(!isOpen); }}
+        disabled={isLockedToBranch}
+        title={isLockedToBranch ? 'Branch is locked by custom domain' : undefined}
       >
         <div className="relative w-9 h-9 flex-shrink-0">
           <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -89,11 +91,13 @@ const ChurchSelector: React.FC = () => {
             {currentBranch?.membership_role ?? effectiveRole}
           </Badge>
         </div>
-        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        {!isLockedToBranch && (
+          <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        )}
       </button>
 
       {/* Dropdown */}
-      {isOpen && (
+      {isOpen && !isLockedToBranch && (
         <div className="border-t border-gray-100 bg-gray-50">
           {/* Branch Selector across all memberships */}
           <div className="p-2">

@@ -1,4 +1,5 @@
 import { randomBytes } from "crypto";
+import { In } from "typeorm";
 import { AppDataSource } from "../config/database";
 import { BranchJoinRequest, JoinRequestStatus } from "../models/church/branch-join-request.model";
 import { BranchInvite } from "../models/church/branch-invite.model";
@@ -256,7 +257,50 @@ export class JoinService {
     return req;
   }
 
-  // ─── Internal: email the requester with the outcome of their request ──────
+  // ─── Admin: bulk approve / reject ─────────────────────────────────────────
+  /**
+   * Sequentially apply reviewRequest to each id, scoped to a single branch.
+   * IDs that don't belong to the branch (or are no longer pending) are
+   * collected into `failed` so the caller can surface them. Email
+   * notifications are still fired-and-forgotten per-request, matching the
+   * behaviour of the single-review endpoint.
+   */
+  async bulkReviewRequests(
+    branchId: string,
+    ids: string[],
+    decision: "approved" | "rejected",
+    reviewerId: string,
+  ): Promise<{ succeeded: string[]; failed: { id: string; reason: string }[] }> {
+    const unique = Array.from(new Set(ids));
+    const succeeded: string[] = [];
+    const failed: { id: string; reason: string }[] = [];
+
+    // Pre-load all requests in one query and validate branch ownership.
+    const records = await this.requestRepo.find({ where: { id: In(unique) } });
+    const validIds = new Set<string>();
+    for (const id of unique) {
+      const rec = records.find((r) => r.id === id);
+      if (!rec) {
+        failed.push({ id, reason: "Request not found" });
+      } else if (rec.branch_id !== branchId) {
+        failed.push({ id, reason: "Request does not belong to this branch" });
+      } else if (rec.status !== "pending") {
+        failed.push({ id, reason: `Already ${rec.status}` });
+      } else {
+        validIds.add(id);
+      }
+    }
+
+    for (const id of validIds) {
+      try {
+        await this.reviewRequest(id, decision, reviewerId);
+        succeeded.push(id);
+      } catch (err: any) {
+        failed.push({ id, reason: err?.message ?? "Failed" });
+      }
+    }
+    return { succeeded, failed };
+  }
 
   private async notifyRequester(
     userId: string,

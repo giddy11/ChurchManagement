@@ -15,10 +15,16 @@ import {
 import {
   listBranchJoinRequests,
   reviewJoinRequest,
+  bulkReviewJoinRequests,
   createInviteLink,
   listInviteLinks,
   deactivateInviteLink,
 } from "../controllers/join.controller";
+import {
+  getBranchCustomDomain,
+  upsertBranchCustomDomain,
+  deleteBranchCustomDomain,
+} from "../controllers/custom-domain.controller";
 import { UserController } from "../controllers/user.controller";
 import { authMiddleware, adminMiddleware, superAdminMiddleware } from "../middleware/auth.middleware";
 import { UserService } from "../services/user.service";
@@ -51,6 +57,12 @@ router.delete("/:churchId/branches/:branchId/members", auth, adminMiddleware, re
 // ─── Join requests (admin) ────────────────────────────────────────────────
 router.get("/:churchId/branches/:branchId/join-requests", auth, adminMiddleware, listBranchJoinRequests);
 router.put("/:churchId/branches/:branchId/join-requests/:requestId", auth, adminMiddleware, reviewJoinRequest);
+router.post("/:churchId/branches/:branchId/join-requests/bulk-review", auth, adminMiddleware, bulkReviewJoinRequests);
+
+// ─── Custom domain (admin) ────────────────────────────────────────────────
+router.get("/:churchId/branches/:branchId/custom-domain", auth, getBranchCustomDomain);
+router.put("/:churchId/branches/:branchId/custom-domain", auth, upsertBranchCustomDomain);
+router.delete("/:churchId/branches/:branchId/custom-domain", auth, deleteBranchCustomDomain);
 
 // ─── Invite links (admin) ─────────────────────────────────────────────────
 router.get("/:churchId/branches/:branchId/invites", auth, adminMiddleware, listInviteLinks);

@@ -81,6 +81,35 @@ export const reviewJoinRequest = asyncHandler(
   }
 );
 
+// ─── Admin: bulk approve / reject join requests ──────────────────────────
+export const bulkReviewJoinRequests = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const reviewerId = (req as AuthRequest).user?.id;
+    const { branchId } = req.params;
+    const { ids, decision } = req.body ?? {};
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      res.status(400).json({ status: 400, message: "ids must be a non-empty array" });
+      return;
+    }
+    if (ids.length > 200) {
+      res.status(400).json({ status: 400, message: "Too many requests in a single batch (max 200)" });
+      return;
+    }
+    if (!["approved", "rejected"].includes(decision)) {
+      res.status(400).json({ status: 400, message: "decision must be 'approved' or 'rejected'" });
+      return;
+    }
+
+    const result = await joinService.bulkReviewRequests(branchId, ids, decision, reviewerId);
+    res.json({
+      status: 200,
+      data: result,
+      message: `${result.succeeded.length} request(s) ${decision}; ${result.failed.length} failed.`,
+    });
+  }
+);
+
 // ─── Admin: create invite link ────────────────────────────────────────────
 export const createInviteLink = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {

@@ -161,4 +161,10 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    host: true,
+    // Allow *.localhost subdomains so custom domain previews work locally.
+    // Visit e.g. http://slbcyenagoa.localhost:5173 during development.
+    allowedHosts: ['.localhost', 'localhost'],
+  },
 });

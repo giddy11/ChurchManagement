@@ -5,6 +5,7 @@ import { AuthRequest } from "../middleware/auth.middleware";
 import { getPermissionsForRole } from "../utils/roles";
 import { logActivity } from "../utils/activityLogger";
 import { ActivityAction, EntityType } from "../models/activity-log.model";
+import { autoJoinFromCustomDomain } from "../services/domain-auth.service";
 
 const authService = new AuthService();
 
@@ -95,8 +96,10 @@ export const register = asyncHandler(
         { email: result.user.email }
       );
 
+      const customDomain = await autoJoinFromCustomDomain(req, result.user.id).catch(() => null);
+
       res.status(201).json({
-        data: buildAuthResponse(result),
+        data: { ...buildAuthResponse(result), customDomain },
         status: 201,
         message: "Registration successful.",
       });
@@ -149,8 +152,10 @@ export const login = asyncHandler(
       { email: result.user.email, method: 'email' }
     );
 
+    const customDomain = await autoJoinFromCustomDomain(req, result.user.id).catch(() => null);
+
     res.status(200).json({
-      data: buildAuthResponse(result),
+      data: { ...buildAuthResponse(result), customDomain },
       status: 200,
       message: "Login successful",
     });
@@ -179,8 +184,10 @@ export const googleSignIn = asyncHandler(
       { email: result.user.email, method: 'google' }
     );
 
+    const customDomain = await autoJoinFromCustomDomain(req, result.user.id).catch(() => null);
+
     res.status(200).json({
-      data: { ...buildAuthResponse(result), isNewUser: result.isNewUser },
+      data: { ...buildAuthResponse(result), isNewUser: result.isNewUser, customDomain },
       status: 200,
       message: result.isNewUser
         ? "Account created via Google"

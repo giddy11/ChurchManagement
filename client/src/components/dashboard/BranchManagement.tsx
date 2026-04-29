@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,13 +31,15 @@ import {
   LayoutList,
   Loader2,
   Building,
+  Globe,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { fetchChurches } from '@/lib/api';
 import type { ChurchDTO, BranchDTO } from '@/lib/api';
 import { useBranchCrud } from '@/hooks/useBranchCrud';
+import { useChurchCrud } from '@/hooks/useChurchCrud';
 import BranchFormDialog from '@/components/church/BranchFormDialog';
 import BranchDetailsDialog from '@/components/church/BranchDetailsDialog';
+import CustomDomainSettingsDialog from '@/components/church/CustomDomainSettingsDialog';
 import ConfirmDialog from '@/components/ui/confirm-dialog';
 import { useChurch } from '@/components/church/ChurchProvider';
 
@@ -46,9 +48,8 @@ const BranchManagement: React.FC = () => {
   const isAdmin = effectiveRole === 'admin';
   const isSuperAdmin = effectiveRole === 'super_admin';
 
-  const [denominations, setDenominations] = useState<ChurchDTO[]>([]);
+  const { churches: allChurches, loading: churchesLoading } = useChurchCrud();
   const [selectedDenomId, setSelectedDenomId] = useState<string | null>(null);
-  const [denomLoading, setDenomLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
 
@@ -57,35 +58,25 @@ const BranchManagement: React.FC = () => {
   const [editTarget, setEditTarget] = useState<BranchDTO | null>(null);
   const [viewTarget, setViewTarget] = useState<BranchDTO | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<BranchDTO | null>(null);
+  const [domainTarget, setDomainTarget] = useState<BranchDTO | null>(null);
 
   const { branches, loading, saving, load, create, update, remove } = useBranchCrud(selectedDenomId);
 
-  // For admin: use their church directly; for superadmin: fetch all denominations
+  // Derive denominations list: admin sees only their church, superadmin sees all
+  const denominations: ChurchDTO[] = isAdmin
+    ? (currentChurch ? [currentChurch as unknown as ChurchDTO] : [])
+    : allChurches;
+
+  const denomLoading = isAdmin ? false : churchesLoading;
+
+  // Set initial selection when denominations first become available
   useEffect(() => {
     if (isAdmin) {
-      if (currentChurch) {
-        setDenominations([currentChurch as unknown as ChurchDTO]);
-        setSelectedDenomId(currentChurch.id);
-      } else {
-        setDenominations([]);
-        setSelectedDenomId(null);
-      }
-      setDenomLoading(false);
-    } else {
-      // superadmin: load all denominations
-      setDenomLoading(true);
-      fetchChurches()
-        .then((res) => {
-          const list = res.data ?? [];
-          setDenominations(list);
-          if (list.length > 0) setSelectedDenomId(list[0].id);
-        })
-        .catch(() => {})
-        .finally(() => setDenomLoading(false));
+      setSelectedDenomId(currentChurch?.id ?? null);
+    } else if (!selectedDenomId && denominations.length > 0) {
+      setSelectedDenomId(denominations[0].id);
     }
-  }, [isAdmin, currentChurch]);
-
-  useEffect(() => { load(); }, [load]);
+  }, [isAdmin, currentChurch?.id, denominations.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = branches.filter((b) =>
     b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -182,9 +173,9 @@ const BranchManagement: React.FC = () => {
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : viewMode === 'card' ? (
-        <CardView branches={filtered} onEdit={openEdit} onDelete={openDelete} onView={(b) => setViewTarget(b)} />
+        <CardView branches={filtered} onEdit={openEdit} onDelete={openDelete} onView={(b) => setViewTarget(b)} onDomain={(b) => setDomainTarget(b)} />
       ) : (
-        <TableView branches={filtered} onEdit={openEdit} onDelete={openDelete} onView={(b) => setViewTarget(b)} />
+        <TableView branches={filtered} onEdit={openEdit} onDelete={openDelete} onView={(b) => setViewTarget(b)} onDomain={(b) => setDomainTarget(b)} />
       )}
 
       <BranchFormDialog
@@ -206,6 +197,12 @@ const BranchManagement: React.FC = () => {
         description={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
         onConfirm={handleDelete}
         loading={saving}
+      />
+      <CustomDomainSettingsDialog
+        open={!!domainTarget}
+        onOpenChange={(o) => { if (!o) setDomainTarget(null); }}
+        churchId={selectedDenomId ?? ''}
+        branch={domainTarget}
       />
     </div>
   );
@@ -264,9 +261,10 @@ interface ListProps {
   onEdit: (b: BranchDTO) => void;
   onDelete: (b: BranchDTO) => void;
   onView: (b: BranchDTO) => void;
+  onDomain: (b: BranchDTO) => void;
 }
 
-const CardView: React.FC<ListProps> = ({ branches, onEdit, onDelete, onView }) => {
+const CardView: React.FC<ListProps> = ({ branches, onEdit, onDelete, onView, onDomain }) => {
   if (branches.length === 0) return <EmptyState />;
   return (
     <div className="space-y-3">
@@ -306,7 +304,7 @@ const CardView: React.FC<ListProps> = ({ branches, onEdit, onDelete, onView }) =
                   </div>
                 </div>
               </div>
-              <ActionButtons branch={branch} onEdit={onEdit} onDelete={onDelete} />
+              <ActionButtons branch={branch} onEdit={onEdit} onDelete={onDelete} onDomain={onDomain} />
             </div>
           </CardContent>
         </Card>
@@ -315,7 +313,7 @@ const CardView: React.FC<ListProps> = ({ branches, onEdit, onDelete, onView }) =
   );
 };
 
-const TableView: React.FC<ListProps> = ({ branches, onEdit, onDelete, onView }) => {
+const TableView: React.FC<ListProps> = ({ branches, onEdit, onDelete, onView, onDomain }) => {
   if (branches.length === 0) return <EmptyState />;
   return (
     <Card>
@@ -350,7 +348,7 @@ const TableView: React.FC<ListProps> = ({ branches, onEdit, onDelete, onView }) 
                     {branch.created_at ? format(new Date(branch.created_at), 'PP') : '—'}
                   </TableCell>
                   <TableCell className="text-right">
-                    <ActionButtons branch={branch} onEdit={onEdit} onDelete={onDelete} />
+                    <ActionButtons branch={branch} onEdit={onEdit} onDelete={onDelete} onDomain={onDomain} />
                   </TableCell>
                 </TableRow>
               ))}
@@ -366,9 +364,15 @@ const ActionButtons: React.FC<{
   branch: BranchDTO;
   onEdit: (b: BranchDTO) => void;
   onDelete: (b: BranchDTO) => void;
+  onDomain?: (b: BranchDTO) => void;
   onClick?: (e: React.MouseEvent) => void;
-}> = ({ branch, onEdit, onDelete, onClick }) => (
+}> = ({ branch, onEdit, onDelete, onDomain, onClick }) => (
   <div className="flex gap-1" onClick={onClick}>
+    {onDomain && (
+      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onDomain(branch); }} title="Custom domain">
+        <Globe className="h-4 w-4" />
+      </Button>
+    )}
     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onEdit(branch); }} title="Edit">
       <Edit className="h-4 w-4" />
     </Button>
