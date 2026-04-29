@@ -131,9 +131,9 @@ const BrandedFooter: React.FC<Props> = ({ churchName, address, email, phone, soc
         <p>&copy; {new Date().getFullYear()} {churchName}. All rights reserved.</p>
         <p>
           Powered by{' '}
-          <a href="https://churchflow.app" target="_blank" rel="noreferrer" className="hover:text-white">
+          <Link to="/" className="hover:text-white">
             Church Flow
-          </a>
+          </Link>
         </p>
       </div>
     </div>

@@ -375,6 +375,33 @@ const Ministries: React.FC<{ items: LandingMinistry[] }> = ({ items }) => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {items.map((m, i) => {
         const Icon = (m.icon && MINISTRY_ICON[m.icon]) || Sparkles;
+        if (m.background_image) {
+          return (
+            <Card
+              key={i}
+              className="border-0 overflow-hidden hover:shadow-md transition-shadow relative"
+              style={{ minHeight: 200 }}
+            >
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url(${m.background_image})` }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-black/10" />
+              <CardContent className="relative p-6 flex flex-col justify-end h-full" style={{ minHeight: 200 }}>
+                <div
+                  className="h-10 w-10 rounded-xl flex items-center justify-center mb-3"
+                  style={{ background: 'rgba(255,255,255,0.15)', color: '#fff' }}
+                >
+                  <Icon className="h-5 w-5" />
+                </div>
+                <h3 className="text-lg font-semibold text-white">{m.title}</h3>
+                {m.description && (
+                  <p className="mt-1 text-white/80 leading-relaxed text-sm">{m.description}</p>
+                )}
+              </CardContent>
+            </Card>
+          );
+        }
         return (
           <Card key={i} className="border-slate-200 hover:shadow-md transition-shadow">
             <CardContent className="p-6">

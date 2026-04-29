@@ -24,6 +24,8 @@ const SYSTEM_HOSTS = new Set([
 interface DomainContextValue {
   /** True when the current hostname maps to an active custom domain. */
   isCustomDomain: boolean;
+  /** True when the domain exists in the system but is currently deactivated/inactive. */
+  isDeactivated: boolean;
   /** Active branding (logo, church name, etc.) or null if not on a custom domain. */
   branding: PublicCustomDomainBrandingDTO | null;
   /** True while the initial branding lookup is in flight. */
@@ -52,6 +54,7 @@ export const DomainProvider: React.FC<DomainProviderProps> = ({ children }) => {
 
   const [branding, setBranding] = useState<PublicCustomDomainBrandingDTO | null>(null);
   const [isResolving, setIsResolving] = useState<boolean>(true);
+  const [isDeactivated, setIsDeactivated] = useState<boolean>(false);
 
   useEffect(() => {
     if (!hostname || SYSTEM_HOSTS.has(hostname)) {
@@ -63,10 +66,12 @@ export const DomainProvider: React.FC<DomainProviderProps> = ({ children }) => {
       .then((res) => {
         if (cancelled) return;
         setBranding(res?.data ?? null);
+        setIsDeactivated(!!res?.deactivated);
       })
       .catch(() => {
         if (cancelled) return;
         setBranding(null);
+        setIsDeactivated(false);
       })
       .finally(() => {
         if (!cancelled) setIsResolving(false);
@@ -77,11 +82,12 @@ export const DomainProvider: React.FC<DomainProviderProps> = ({ children }) => {
   const value: DomainContextValue = useMemo(
     () => ({
       isCustomDomain: !!branding,
+      isDeactivated,
       branding,
       isResolving,
       hostname,
     }),
-    [branding, isResolving, hostname],
+    [branding, isDeactivated, isResolving, hostname],
   );
 
   // Side-effect: apply the brand accent colour as a CSS variable so
@@ -109,24 +115,31 @@ export const DomainProvider: React.FC<DomainProviderProps> = ({ children }) => {
       if (ogTitle) ogTitle.content = siteName;
     }
 
-    // Favicon — replace/create a <link rel="icon"> pointing to the logo
+    // Favicon — remove ALL existing icon links then inject fresh ones.
+    // Mutating href on an existing <link> is not reliable (browsers cache
+    // the original URL); removing + re-creating forces a new fetch.
     if (branding.logo_url) {
-      const setFav = (rel: string, type: string, href: string) => {
-        let el = document.querySelector<HTMLLinkElement>(`link[rel="${rel}"]`);
-        if (!el) {
-          el = document.createElement('link');
-          el.rel = rel;
-          document.head.appendChild(el);
-        }
-        el.type = type;
-        el.href = href;
-      };
-      setFav('icon', 'image/png', branding.logo_url);
-      setFav('apple-touch-icon', 'image/png', branding.logo_url);
-      // Remove the SVG fallback so browsers don't prefer it over the logo
+      // Cache-bust so the browser doesn't serve a stale favicon
+      const sep = branding.logo_url.includes('?') ? '&' : '?';
+      const faviconHref = `${branding.logo_url}${sep}_t=${Date.now()}`;
+
+      // Wipe every existing icon link
       document
-        .querySelectorAll<HTMLLinkElement>('link[rel="icon"][type="image/svg+xml"]')
+        .querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="apple-touch-icon"], link[rel="shortcut icon"]')
         .forEach((el) => el.remove());
+
+      // Re-create icon
+      const icon = document.createElement('link');
+      icon.rel = 'icon';
+      icon.type = 'image/png';
+      icon.href = faviconHref;
+      document.head.appendChild(icon);
+
+      // Re-create apple-touch-icon
+      const apple = document.createElement('link');
+      apple.rel = 'apple-touch-icon';
+      apple.href = faviconHref;
+      document.head.appendChild(apple);
     }
   }, [branding]);
 

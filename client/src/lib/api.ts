@@ -565,6 +565,8 @@ export interface LandingMinistry {
   title: string;
   description?: string;
   icon?: string;
+  /** Optional background image URL for this ministry card. */
+  background_image?: string;
 }
 
 /** A curated photo collection (e.g. "Easter Sunday — 2026-04-05"). */
@@ -675,8 +677,8 @@ const PUBLIC_API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:7777/a
 /** Public — fetch active custom-domain branding for a hostname. */
 export const fetchPublicCustomDomainBranding = (host: string) =>
   fetch(`${PUBLIC_API_BASE}/custom-domains/resolve/${encodeURIComponent(host)}`)
-    .then((r) => r.json() as Promise<{ status: number; data: PublicCustomDomainBrandingDTO | null }>)
-    .catch(() => ({ status: 200, data: null as PublicCustomDomainBrandingDTO | null }));
+    .then((r) => r.json() as Promise<{ status: number; data: PublicCustomDomainBrandingDTO | null; deactivated?: boolean }>)
+    .catch(() => ({ status: 200, data: null as PublicCustomDomainBrandingDTO | null, deactivated: false }));
 
 /** Branch admin — fetch the configured custom domain for a branch. */
 export const fetchBranchCustomDomainApi = (churchId: string, branchId: string) =>

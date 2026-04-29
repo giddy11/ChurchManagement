@@ -2,21 +2,23 @@ import React from "react";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useGoogleSignIn } from "../../hooks/useAuthQuery";
 import { useAuth } from "./AuthProvider";
+import { useDomain } from "@/components/domain/DomainProvider";
+
+const API_BASE_URL =
+  (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/api\/?$/, "") ||
+  "http://localhost:4000";
 
 export const GoogleSignInButton: React.FC = () => {
   const { loginWithResponse } = useAuth();
+  const { isCustomDomain } = useDomain();
   const googleMutation = useGoogleSignIn();
 
+  // Main-domain flow — origin is registered with Google, so the SDK works directly.
   const googleLogin = useGoogleLogin({
     flow: "implicit",
     onSuccess: async (tokenResponse) => {
-      // Exchange the access token for an id_token via Google's userinfo
-      // The implicit flow gives us an access_token; we pass it to the backend
-      // which will verify it
       googleMutation.mutate(tokenResponse.access_token, {
-        onSuccess: (data) => {
-          loginWithResponse(data);
-        },
+        onSuccess: (data) => loginWithResponse(data),
       });
     },
     onError: () => {
@@ -24,10 +26,25 @@ export const GoogleSignInButton: React.FC = () => {
     },
   });
 
+  const handleClick = () => {
+    if (!isCustomDomain) {
+      googleLogin();
+      return;
+    }
+
+    // Custom-domain flow — full-page redirect through the API. The API has a
+    // single Google-registered redirect URI and round-trips the original page
+    // URL back to us via a signed `state` parameter. The user only ever sees
+    // their own custom domain and Google's consent screen — nothing else.
+    const returnTo = `${window.location.origin}/auth/google/callback`;
+    const startUrl = `${API_BASE_URL}/api/auth/google/start?return_to=${encodeURIComponent(returnTo)}`;
+    window.location.href = startUrl;
+  };
+
   return (
     <button
       type="button"
-      onClick={() => googleLogin()}
+      onClick={handleClick}
       disabled={googleMutation.isPending}
       style={styles.googleButton}
     >

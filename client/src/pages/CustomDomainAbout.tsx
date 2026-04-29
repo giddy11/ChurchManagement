@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useDomain } from '@/components/domain/DomainProvider';
 import BrandedFooter from '@/components/domain/BrandedFooter';
+import DomainUnavailable from '@/pages/DomainUnavailable';
 import BrandedHeader from '@/components/domain/BrandedHeader';
 import HighlightsGallery from '@/components/domain/HighlightsGallery';
 import type { LandingCoreValue, LandingHighlight } from '@/lib/api';
@@ -42,7 +43,8 @@ const DEFAULT_VALUES: LandingCoreValue[] = [
 /* ─── page ────────────────────────────────────────────────────────────── */
 
 const CustomDomainAbout: React.FC = () => {
-  const { branding } = useDomain();
+  const { branding, isDeactivated } = useDomain();
+  if (isDeactivated) return <DomainUnavailable />;
 
   const accent = branding?.primary_color || '#4F46E5';
   const churchName = branding?.church_name || branding?.display_name || 'Our Church';

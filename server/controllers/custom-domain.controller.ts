@@ -104,9 +104,8 @@ export const reactivateCustomDomain = asyncHandler(async (req: Request, res: Res
 
 export const resolvePublicCustomDomain = asyncHandler(async (req: Request, res: Response) => {
   const host = (req.params.host as string) || "";
-  const branding = await service.resolvePublicBranding(host);
-  // 200 + null payload — front-end treats null as "no custom branding".
-  res.json({ status: 200, data: branding });
+  const { branding, deactivated } = await service.resolvePublicBrandingWithStatus(host);
+  res.json({ status: 200, data: branding, deactivated });
 });
 
 /** Convenience: resolve based on the request's Host header / X-Custom-Domain. */

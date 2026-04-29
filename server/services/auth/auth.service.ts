@@ -212,6 +212,17 @@ export class AuthService {
     idToken: string
   ): Promise<{ user: UserResponse; tokens: AuthTokens; isNewUser: boolean }> {
     const profile = await this.googleAuthService.verifyIdToken(idToken);
+    return this.signInWithGoogleProfile(profile);
+  }
+
+  /**
+   * Internal: complete sign-in once the GoogleProfile has been resolved.
+   * Used by both the access-token flow (`googleSignIn`) and the server-side
+   * auth-code flow (controller's googleAuthCallback).
+   */
+  async signInWithGoogleProfile(
+    profile: GoogleProfile
+  ): Promise<{ user: UserResponse; tokens: AuthTokens; isNewUser: boolean }> {
     profile.email = normalizeEmail(profile.email) ?? profile.email;
     let user = await this.findUserWithRelations({ google_id: profile.googleId });
     let isNewUser = false;

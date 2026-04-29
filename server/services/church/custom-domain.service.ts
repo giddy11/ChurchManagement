@@ -180,6 +180,7 @@ export class CustomDomainService {
             title: trim(m?.title),
             description: trimOrNull(m?.description),
             icon: trimOrNull(m?.icon),
+            background_image: this.sanitizeImageUrl(m?.background_image),
           }))
           .filter((m) => m.title.length > 0)
           .slice(0, 12)
@@ -379,7 +380,32 @@ export class CustomDomainService {
       where: { domain, status: CustomDomainStatus.ACTIVE },
     });
     if (!record) return null;
+    return this._buildBrandingPayload(record);
+  }
 
+  /**
+   * Like resolvePublicBranding but also tells the caller whether the domain
+   * exists in the system but is currently inactive/deactivated.
+   */
+  async resolvePublicBrandingWithStatus(host: string): Promise<{
+    branding: Awaited<ReturnType<CustomDomainService['resolvePublicBranding']>>;
+    deactivated: boolean;
+  }> {
+    const domain = normalizeDomain(host);
+    if (!domain) return { branding: null, deactivated: false };
+
+    // Check ACTIVE first (fast path)
+    const active = await this.repo.findOne({
+      where: { domain, status: CustomDomainStatus.ACTIVE },
+    });
+    if (active) return { branding: this._buildBrandingPayload(active), deactivated: false };
+
+    // Check whether the domain is known but inactive/rejected/pending
+    const any = await this.repo.findOne({ where: { domain } });
+    return { branding: null, deactivated: !!any };
+  }
+
+  private _buildBrandingPayload(record: CustomDomain): NonNullable<Awaited<ReturnType<CustomDomainService['resolvePublicBranding']>>> {
     return {
       domain: record.domain,
       display_name: record.display_name,

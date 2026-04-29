@@ -13,7 +13,7 @@ import { Person } from "../../models/person.model";
 
 export class UserService {
   private readonly userRepository = AppDataSource.getRepository(User);
-  private readonly membershipRepository = AppDataSource.getRepository(require('../models/church/branch-membership.model').BranchMembership);
+  private readonly membershipRepository = AppDataSource.getRepository(require('../../models/church/branch-membership.model').BranchMembership);
   private readonly personRepository = AppDataSource.getRepository(Person);
 
   async createUserWithGeneratedPassword(
@@ -554,7 +554,7 @@ export class UserService {
   getUserPermissions(userId: string): string[] {
     // Permissions are derived from the user's role via the static roles utility
     // Import done inline to avoid circular deps
-    const { getPermissionsForRole } = require('../utils/roles');
+    const { getPermissionsForRole } = require('../../utils/roles');
     return getPermissionsForRole(userId); // caller should pass role name, kept for compat
   }
 
@@ -651,7 +651,7 @@ export class UserService {
 
   // ─── Branch helpers ─────────────────────────────────────────────────────
   async updateMemberBranchRole(userId: string, branchId: string, role: string): Promise<any | null> {
-    const { BranchRole } = require('../models/church/branch-membership.model');
+    const { BranchRole } = require('../../models/church/branch-membership.model');
     const membership = await this.membershipRepository.findOne({ where: { user_id: userId, branch_id: branchId } });
     if (!membership) return null;
     membership.role = BranchRole[role.toUpperCase()] ?? BranchRole.MEMBER;
@@ -668,7 +668,7 @@ export class UserService {
   async addUserToBranch(userId: string, branchId: string, role: 'member' | 'coordinator' | 'admin' = 'member'): Promise<void> {
     const existing = await this.membershipRepository.findOne({ where: { user_id: userId, branch_id: branchId } });
     if (existing) return;
-    const { BranchMembership, BranchRole } = require('../models/church/branch-membership.model');
+    const { BranchMembership, BranchRole } = require('../../models/church/branch-membership.model');
     const membership = this.membershipRepository.create({
       user_id: userId,
       branch_id: branchId,

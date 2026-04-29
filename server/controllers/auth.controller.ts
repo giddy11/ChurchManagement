@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
+import crypto from "crypto";
 import { AuthService } from "../services/auth/auth.service";
+import { GoogleAuthService } from "../services/auth/google-auth.service";
 import asyncHandler from "../utils/asyncHandler";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { getPermissionsForRole } from "../utils/roles";
@@ -8,6 +10,35 @@ import { ActivityAction, EntityType } from "../models/activity-log.model";
 import { autoJoinFromCustomDomain } from "../services/auth/domain-auth.service";
 
 const authService = new AuthService();
+const googleAuthService = new GoogleAuthService();
+
+const STATE_SECRET = process.env.JWT_SECRET || process.env.TOKEN_SECRET_KEY || "google-state-secret";
+
+/** Sign a `return_to` URL into a tamper-proof state string for the OAuth code flow. */
+function signGoogleState(returnTo: string): string {
+  const nonce = crypto.randomBytes(8).toString("hex");
+  const payload = JSON.stringify({ r: returnTo, n: nonce, t: Date.now() });
+  const data = Buffer.from(payload).toString("base64url");
+  const sig = crypto.createHmac("sha256", STATE_SECRET).update(data).digest("base64url");
+  return `${data}.${sig}`;
+}
+
+/** Verify and decode a state string from the Google OAuth callback. */
+function verifyGoogleState(state: string): { returnTo: string } | null {
+  if (!state || typeof state !== "string" || !state.includes(".")) return null;
+  const [data, sig] = state.split(".");
+  const expected = crypto.createHmac("sha256", STATE_SECRET).update(data).digest("base64url");
+  if (sig !== expected) return null;
+  try {
+    const { r, t } = JSON.parse(Buffer.from(data, "base64url").toString("utf8"));
+    // Reject states older than 10 minutes
+    if (typeof t !== "number" || Date.now() - t > 10 * 60 * 1000) return null;
+    if (typeof r !== "string" || !/^https?:\/\//i.test(r)) return null;
+    return { returnTo: r };
+  } catch {
+    return null;
+  }
+}
 
 function setTokenHeaders(res: Response, tokens: { accessToken: string; refreshToken: string }) {
   res.setHeader('X-Access-Token', tokens.accessToken);
@@ -193,6 +224,87 @@ export const googleSignIn = asyncHandler(
         ? "Account created via Google"
         : "Google sign-in successful",
     });
+  }
+);
+
+/**
+ * GET /api/auth/google/start
+ *
+ * Server-side OAuth code flow. The frontend redirects the browser here with
+ * a `?return_to=<url>` query — typically the URL of the page on the
+ * (possibly custom) domain that the user came from. We sign that URL into
+ * the OAuth `state` parameter, then redirect to Google. After consent Google
+ * redirects to `/api/auth/google/callback` (the only redirect URI that
+ * needs to be registered in Google Console).
+ */
+export const googleAuthStart = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const returnTo = String(req.query.return_to || "");
+    if (!/^https?:\/\//i.test(returnTo)) {
+      res.status(400).send("Invalid return_to");
+      return;
+    }
+    const state = signGoogleState(returnTo);
+    const url = googleAuthService.buildAuthUrl(state);
+    res.redirect(url);
+  }
+);
+
+/**
+ * GET /api/auth/google/callback
+ *
+ * Google redirects here after the user signs in. We exchange the code for a
+ * profile, complete the sign-in, then redirect the user back to the frontend
+ * URL captured in `state`, passing the access/refresh tokens via the URL
+ * fragment (so they're never sent to any server).
+ */
+export const googleAuthCallback = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    const code = String(req.query.code || "");
+    const state = String(req.query.state || "");
+    const error = req.query.error ? String(req.query.error) : "";
+
+    const verified = verifyGoogleState(state);
+    if (!verified) {
+      res.status(400).send("Invalid or expired OAuth state");
+      return;
+    }
+    const { returnTo } = verified;
+
+    if (error || !code) {
+      const sep = returnTo.includes("#") ? "&" : "#";
+      res.redirect(`${returnTo}${sep}google_error=${encodeURIComponent(error || "no_code")}`);
+      return;
+    }
+
+    try {
+      const profile = await googleAuthService.exchangeCodeForProfile(code);
+      const result = await authService.signInWithGoogleProfile(profile);
+
+      logActivity(
+        result.user.id,
+        result.isNewUser ? ActivityAction.REGISTER : ActivityAction.LOGIN,
+        EntityType.AUTH,
+        result.user.id,
+        `User "${result.user.full_name || result.user.email}" ${result.isNewUser ? "registered" : "logged in"} via Google (custom domain)`,
+        { email: result.user.email, method: "google_code_flow" }
+      );
+
+      // Auto-join custom-domain branch if applicable
+      await autoJoinFromCustomDomain(req, result.user.id).catch(() => null);
+
+      // Pass tokens via URL fragment (`#`) — never sent to servers.
+      const fragment = new URLSearchParams({
+        access_token: result.tokens.accessToken,
+        refresh_token: result.tokens.refreshToken,
+        is_new: result.isNewUser ? "1" : "0",
+      }).toString();
+      res.redirect(`${returnTo}#${fragment}`);
+    } catch (err: any) {
+      const msg = encodeURIComponent(err?.message || "google_auth_failed");
+      const sep = returnTo.includes("#") ? "&" : "#";
+      res.redirect(`${returnTo}${sep}google_error=${msg}`);
+    }
   }
 );
 

@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useDomain } from '@/components/domain/DomainProvider';
 import BrandedFooter from '@/components/domain/BrandedFooter';
+import DomainUnavailable from '@/pages/DomainUnavailable';
 import BrandedHeader from '@/components/domain/BrandedHeader';
 import type { LandingServiceTime } from '@/lib/api';
 
@@ -27,8 +28,9 @@ const DEFAULT_SERVICES: LandingServiceTime[] = [
 /* ─── page ────────────────────────────────────────────────────────────── */
 
 const CustomDomainServices: React.FC = () => {
-  const { branding } = useDomain();
+  const { branding, isDeactivated } = useDomain();
   const { hash } = useLocation();
+  if (isDeactivated) return <DomainUnavailable />;
 
   // Scroll to hash anchor after the page renders (e.g. /services#services)
   useEffect(() => {

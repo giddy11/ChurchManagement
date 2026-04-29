@@ -259,6 +259,18 @@ const LandingPageEditor: React.FC<Props> = ({ value, onChange }) => {
                     value={m.description ?? ''}
                     onChange={(e) => updateMinistry(i, { description: e.target.value })}
                   />
+                  <div className="flex flex-col gap-1">
+                    <Label className="text-xs text-muted-foreground">
+                      Background image (optional)
+                    </Label>
+                    <ImageUploadButton
+                      value={m.background_image}
+                      onChange={(url) => updateMinistry(i, { background_image: url })}
+                      folder="custom-domains/ministries"
+                      thumbClassName="h-12 w-20"
+                      errorMessage="Ministry image upload failed"
+                    />
+                  </div>
                 </div>
               ))}
             </div>

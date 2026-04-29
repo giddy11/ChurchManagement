@@ -147,6 +147,8 @@ export interface LandingMinistry {
   description?: string;
   /** Free-form lucide icon name; renderer falls back to a default icon. */
   icon?: string;
+  /** Optional background image URL for this ministry card. */
+  background_image?: string;
 }
 
 /**

@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Camera, Loader2, Plus, Trash2 } from 'lucide-react';
+import { Camera, ChevronDown, ChevronUp, Loader2, Plus, Trash2 } from 'lucide-react';
 import { uploadToCloudinary } from '@/lib/cloudinary';
 import { toast } from 'sonner';
 import type { LandingHighlight } from '@/lib/api';
@@ -13,35 +13,30 @@ interface Props {
   onChange: (next: LandingHighlight[]) => void;
 }
 
-/** Quick id helper — only used for stable react keys. Not security-sensitive. */
 const newId = () => `h_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
-/**
- * Editor for the "Highlights" gallery — each highlight is a titled, dated
- * collection of photos (e.g. "Easter Sunday Service — 2026-04-05").
- */
 const HighlightsEditor: React.FC<Props> = ({ value, onChange }) => {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
 
   const update = (i: number, patch: Partial<LandingHighlight>) => {
     onChange(value.map((h, idx) => (idx === i ? { ...h, ...patch } : h)));
   };
 
-  const add = () =>
-    onChange([
-      ...value,
-      { id: newId(), title: '', date: '', description: '', images: [] },
-    ]);
+  const add = () => {
+    const id = newId();
+    onChange([...value, { id, title: '', date: '', description: '', images: [] }]);
+    setExpandedId(id);
+  };
 
-  const remove = (i: number) =>
+  const remove = (i: number, id: string) => {
     onChange(value.filter((_, idx) => idx !== i));
+    if (expandedId === id) setExpandedId(null);
+  };
 
   const removeImage = (i: number, imageIdx: number) => {
     const next = [...value];
-    next[i] = {
-      ...next[i],
-      images: next[i].images.filter((_, idx) => idx !== imageIdx),
-    };
+    next[i] = { ...next[i], images: next[i].images.filter((_, idx) => idx !== imageIdx) };
     onChange(next);
   };
 
@@ -81,89 +76,122 @@ const HighlightsEditor: React.FC<Props> = ({ value, onChange }) => {
         <p className="text-xs text-muted-foreground italic">No highlights added yet.</p>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-1.5">
         {value.map((h, i) => {
           const id = h.id ?? `idx-${i}`;
+          const open = expandedId === id;
           const busy = uploadingFor === id;
           return (
-            <div key={id} className="rounded-md border bg-white p-3 space-y-3">
-              <div className="grid grid-cols-12 gap-2">
-                <Input
-                  className="col-span-7"
-                  placeholder="e.g. Easter Sunday Service"
-                  value={h.title}
-                  onChange={(e) => update(i, { title: e.target.value })}
-                />
-                <Input
-                  className="col-span-4"
-                  type="date"
-                  value={h.date ?? ''}
-                  onChange={(e) => update(i, { date: e.target.value })}
-                />
+            <div key={id} className="rounded-md border bg-white overflow-hidden">
+              {/* Collapsed header — always visible */}
+              <div className="flex items-center gap-2 px-3 py-2">
+                <button
+                  type="button"
+                  className="flex-1 flex items-center gap-2 text-left min-w-0"
+                  onClick={() => setExpandedId(open ? null : id)}
+                >
+                  {open ? (
+                    <ChevronUp className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  )}
+                  <span className="text-xs font-medium truncate text-slate-800">
+                    {h.title || <span className="text-slate-400 italic">Untitled</span>}
+                  </span>
+                  {h.date && (
+                    <span className="text-xs text-slate-400 shrink-0">{h.date}</span>
+                  )}
+                  {h.images.length > 0 && (
+                    <span className="text-xs text-slate-400 shrink-0">
+                      · {h.images.length} photo{h.images.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </button>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="col-span-1 text-red-600 hover:bg-red-50"
-                  onClick={() => remove(i)}
+                  className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 shrink-0"
+                  onClick={() => remove(i, id)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
 
-              <Textarea
-                rows={2}
-                placeholder="Short description (optional)"
-                value={h.description ?? ''}
-                onChange={(e) => update(i, { description: e.target.value })}
-              />
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs text-muted-foreground">
-                    Photos ({h.images.length})
-                  </Label>
-                  <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border bg-white text-xs cursor-pointer hover:bg-slate-50">
-                    {busy ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Camera className="h-3.5 w-3.5" />
-                    )}
-                    Add photos
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={(e) => {
-                        if (e.target.files) uploadImages(i, e.target.files);
-                        e.target.value = '';
-                      }}
+              {/* Expanded form */}
+              {open && (
+                <div className="border-t px-3 pb-3 pt-2 space-y-2">
+                  <div className="grid grid-cols-12 gap-2">
+                    <Input
+                      className="col-span-7 h-8 text-xs"
+                      placeholder="e.g. Easter Sunday Service"
+                      value={h.title}
+                      onChange={(e) => update(i, { title: e.target.value })}
                     />
-                  </label>
-                </div>
-                {h.images.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic">No photos yet.</p>
-                ) : (
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {h.images.map((url, imageIdx) => (
-                      <div
-                        key={imageIdx}
-                        className="relative group aspect-square rounded-md overflow-hidden bg-slate-200"
-                      >
-                        <img src={url} alt="" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(i, imageIdx)}
-                          className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity text-white"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
+                    <Input
+                      className="col-span-5 h-8 text-xs"
+                      type="date"
+                      value={h.date ?? ''}
+                      onChange={(e) => update(i, { date: e.target.value })}
+                    />
                   </div>
-                )}
-              </div>
+
+                  <Textarea
+                    rows={2}
+                    placeholder="Short description (optional)"
+                    value={h.description ?? ''}
+                    className="text-xs"
+                    onChange={(e) => update(i, { description: e.target.value })}
+                  />
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs text-muted-foreground">
+                        Photos ({h.images.length})
+                      </Label>
+                      <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border bg-white text-xs cursor-pointer hover:bg-slate-50">
+                        {busy ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Camera className="h-3 w-3" />
+                        )}
+                        Add photos
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files) uploadImages(i, e.target.files);
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                    </div>
+                    {h.images.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic">No photos yet.</p>
+                    ) : (
+                      <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
+                        {h.images.map((url, imageIdx) => (
+                          <div
+                            key={imageIdx}
+                            className="relative group aspect-square rounded-md overflow-hidden bg-slate-200"
+                          >
+                            <img src={url} alt="" className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => removeImage(i, imageIdx)}
+                              className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity text-white"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}

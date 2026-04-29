@@ -15,6 +15,8 @@ import LandingPage from './pages/LandingPage';
 import CustomDomainLanding from './components/domain/CustomDomainLanding';
 import CustomDomainAbout from './pages/CustomDomainAbout';
 import CustomDomainServices from './pages/CustomDomainServices';
+import DomainUnavailable from './pages/DomainUnavailable';
+import GoogleAuthCallback from './pages/GoogleAuthCallback';
 import { useDomain } from '@/components/domain/DomainProvider';
 import Dashboard from './pages/Dashboard';
 import SuperAdmin from './pages/SuperAdmin';
@@ -45,9 +47,12 @@ function ScrollToTop() {
  * Waits for branding resolution to avoid flicker.
  */
 function RootLanding() {
-  const { isCustomDomain, isResolving, branding } = useDomain();
+  const { isCustomDomain, isDeactivated, isResolving, branding } = useDomain();
   if (isResolving) {
     return <div className="min-h-screen bg-white" />;
+  }
+  if (isDeactivated) {
+    return <DomainUnavailable />;
   }
   if (isCustomDomain && branding) {
     return <CustomDomainLanding />;
@@ -70,6 +75,10 @@ function AppRoutes() {
             {/* Custom-domain sub-pages — only meaningful on branded domains */}
             <Route path="/about" element={<CustomDomainAbout />} />
             <Route path="/services" element={<CustomDomainServices />} />
+            {/* Google OAuth landing — backend redirects here with tokens in
+                the URL fragment after the user completes Google sign-in.
+                Works identically on the main domain and any custom domain. */}
+            <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
             <Route path="/login" element={<Index />} />
             <Route path="/register" element={<Index />} />
             <Route path="/register-church" element={<Index />} />

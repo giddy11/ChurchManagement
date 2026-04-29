@@ -21,6 +21,17 @@
   <meta property="og:description" content="Church Management System - Track attendance and manage membership" />
   <meta property="og:type" content="website" />
 
+  <!-- On custom domains the JS app will set the real title/favicon.
+       Blank the title immediately so the default never flashes. -->
+  <script>
+    (function () {
+      var h = location.hostname.toLowerCase();
+      if (h !== 'localhost' && h !== '127.0.0.1' && h !== '0.0.0.0') {
+        document.title = '';
+      }
+    })();
+  </script>
+
 </head>
 
 <body>
