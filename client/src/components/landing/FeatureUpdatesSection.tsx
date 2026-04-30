@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle2, Clock, ChevronDown, ChevronUp, Sparkles, CalendarDays, QrCode, MapPin, Repeat, Image, Users, Eye, Copy } from 'lucide-react';
+import { CheckCircle2, Clock, ChevronDown, ChevronUp, Sparkles, CalendarDays, QrCode, MapPin, Repeat, Image, Users, Eye, Copy, Globe, Palette, LayoutTemplate } from 'lucide-react';
 
 interface Release {
   period: string;
@@ -81,6 +81,39 @@ const releases: Release[] = [
       {
         icon: <Copy className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />,
         text: 'Duplicate events — clone any existing event as a starting point to save time when creating similar ones.',
+      },
+    ],
+  },
+  {
+    period: 'April – May 2026',
+    tag: 'Released',
+    title: 'Custom Domains & Branded Public Pages',
+    description:
+      'Give your branch its own corner of the internet. Register a custom domain, configure your branding, and launch a public-facing site — all without writing a single line of code.',
+    features: [
+      {
+        icon: <Globe className="h-4 w-4 text-violet-400 shrink-0 mt-0.5" />,
+        text: 'Register a custom domain — map your own hostname (e.g. grace.yourchurch.com) to your branch and make it publicly accessible.',
+      },
+      {
+        icon: <Palette className="h-4 w-4 text-violet-400 shrink-0 mt-0.5" />,
+        text: 'Full branding control — set your church logo, accent colour, tagline, pastor name, and contact details that appear across all public pages.',
+      },
+      {
+        icon: <LayoutTemplate className="h-4 w-4 text-violet-400 shrink-0 mt-0.5" />,
+        text: 'Customisable landing page — configure a hero section, service times, ministry cards, an about section, video embed, core values, and social links.',
+      },
+      {
+        icon: <Image className="h-4 w-4 text-violet-400 shrink-0 mt-0.5" />,
+        text: 'Highlights gallery — curate photo collections grouped by event or activity so visitors can browse your church life at a glance.',
+      },
+      {
+        icon: <CheckCircle2 className="h-4 w-4 text-violet-400 shrink-0 mt-0.5" />,
+        text: 'Approval workflow — domain requests go through super admin review before going live, with email notifications at every step.',
+      },
+      {
+        icon: <Users className="h-4 w-4 text-violet-400 shrink-0 mt-0.5" />,
+        text: 'Self-signup toggle — choose whether visitors who arrive via your custom domain can request to join the branch or are redirected away.',
       },
     ],
   },
