@@ -24,6 +24,13 @@ import NotFound from './pages/NotFound';
 import JoinPage from './pages/JoinPage';
 import DenominationsPage from './pages/DenominationsPage';
 import EventCheckInPage from './pages/EventCheckInPage';
+import AboutUs from './pages/marketing/AboutUs';
+import Blog from './pages/marketing/Blog';
+import Careers from './pages/marketing/Careers';
+import Contact from './pages/marketing/Contact';
+import PrivacyPolicy from './pages/marketing/PrivacyPolicy';
+import TermsOfService from './pages/marketing/TermsOfService';
+import CookiePolicy from './pages/marketing/CookiePolicy';
 import ProtectedRoute from '@/components/auth/RouteGuard';
 
 const queryClient = new QueryClient({
@@ -124,6 +131,14 @@ function AppRoutes() {
             <Route path="/join" element={<JoinPage />} />
             <Route path="/denominations" element={<DenominationsPage />} />
             <Route path="/checkin/:eventId" element={<EventCheckInPage />} />
+            {/* Marketing / legal pages linked from the landing footer. */}
+            <Route path="/about-us" element={<AboutUs />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/careers" element={<Careers />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/cookies" element={<CookiePolicy />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -11,10 +11,10 @@ const footerLinks = {
     { label: 'Testimonials', href: '#testimonials' },
   ],
   Company: [
-    { label: 'About Us', href: '#' },
-    { label: 'Blog', href: '#' },
-    { label: 'Careers', href: '#' },
-    { label: 'Contact', href: '#' },
+    { label: 'About Us', href: '/about-us' },
+    { label: 'Blog', href: '/blog' },
+    { label: 'Careers', href: '/careers' },
+    { label: 'Contact', href: '/contact' },
   ],
   // Support: [
   //   { label: 'Help Center', href: '#' },
@@ -23,9 +23,9 @@ const footerLinks = {
   //   { label: 'Status', href: '#' },
   // ],
   Legal: [
-    { label: 'Privacy Policy', href: '#' },
-    { label: 'Terms of Service', href: '#' },
-    { label: 'Cookie Policy', href: '#' },
+    { label: 'Privacy Policy', href: '/privacy' },
+    { label: 'Terms of Service', href: '/terms' },
+    { label: 'Cookie Policy', href: '/cookies' },
     // { label: 'GDPR', href: '#' },
   ],
 };
