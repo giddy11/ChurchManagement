@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Camera, Globe, Loader2, Trash2, Copy, ExternalLink } from 'lucide-react';
+import ConfirmDialog from '@/components/ui/confirm-dialog';
 import { toast } from 'sonner';
 import {
   fetchBranchCustomDomainApi,
@@ -113,6 +114,7 @@ const CustomDomainSettingsDialog: React.FC<Props> = ({ open, onOpenChange, churc
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false);
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
     setForm((p) => ({ ...p, [k]: v }));
@@ -228,15 +230,18 @@ const CustomDomainSettingsDialog: React.FC<Props> = ({ open, onOpenChange, churc
 
   const handleRemove = async () => {
     if (!branch || !existing) return;
-    if (!confirm('Remove the custom domain configuration for this branch? This cannot be undone.')) {
-      return;
-    }
+    setConfirmRemoveOpen(true);
+  };
+
+  const doRemove = async () => {
+    if (!branch || !existing) return;
     try {
       setRemoving(true);
       await deleteBranchCustomDomainApi(churchId, branch.id);
       toast.success('Custom domain removed');
       setExisting(null);
       setForm({ ...EMPTY });
+      setConfirmRemoveOpen(false);
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to remove custom domain');
     } finally {
@@ -245,6 +250,7 @@ const CustomDomainSettingsDialog: React.FC<Props> = ({ open, onOpenChange, churc
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -438,6 +444,18 @@ const CustomDomainSettingsDialog: React.FC<Props> = ({ open, onOpenChange, churc
         )}
       </DialogContent>
     </Dialog>
+
+    <ConfirmDialog
+      open={confirmRemoveOpen}
+      onOpenChange={setConfirmRemoveOpen}
+      title="Remove custom domain?"
+      description="This will permanently remove the custom domain configuration for this branch. This cannot be undone."
+      confirmLabel="Remove"
+      variant="danger"
+      loading={removing}
+      onConfirm={doRemove}
+    />
+    </>
   );
 };
 

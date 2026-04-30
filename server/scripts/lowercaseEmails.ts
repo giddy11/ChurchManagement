@@ -20,8 +20,9 @@
  *     duplicates manually before re-running.
  */
 import "reflect-metadata";
+import path from "path";
 import dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 import { AppDataSource } from "../config/database";
 import { Logger } from "../utils/logger";
@@ -40,12 +41,12 @@ async function detectConflicts(table: "users" | "people"): Promise<ConflictRow[]
     SELECT LOWER(email) AS lowered, string_agg(id::text, ',') AS ids
     FROM ${table}
     WHERE email IS NOT NULL AND email <> LOWER(email)
+      AND EXISTS (
+        SELECT 1 FROM ${table} t2
+        WHERE LOWER(t2.email) = LOWER(${table}.email)
+          AND t2.id <> ${table}.id
+      )
     GROUP BY LOWER(email)
-    HAVING COUNT(*) FILTER (WHERE TRUE) > 1
-       OR EXISTS (
-         SELECT 1 FROM ${table} t2
-         WHERE t2.email = LOWER(${table}.email) AND t2.id <> ${table}.id
-       )
     `
   );
   return rows.map((r) => ({ table, email: r.lowered, ids: r.ids.split(",") }));
