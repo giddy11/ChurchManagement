@@ -1,13 +1,52 @@
-# ChurchManagement
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChurchManagement — ERD</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: #ffffff !important;
+    color: #111111;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 32px;
+  }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; color: #111; }
+  p { font-size: 13px; color: #555; margin-bottom: 28px; }
+  #erd { background: #ffffff; }
+  #erd svg { max-width: 100%; height: auto; background: #ffffff; }
+  #erd svg text, #erd svg tspan { fill: #111111 !important; color: #111111 !important; }
+</style>
+</head>
+<body>
+<h1>ChurchManagement — Data Model ERD</h1>
+<p>Entity Relationship Diagram for the PostgreSQL / TypeORM schema. PK = primary key, FK = foreign key.</p>
+<div id="erd"></div>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
 
-## Entity Relationship Diagram
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'base',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  themeVariables: {
+    darkMode: false,
+    fontSize: '13px',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    background: '#ffffff',
+    primaryColor: '#e8f0fe',
+    primaryTextColor: '#111111',
+    primaryBorderColor: '#4a6cf7',
+    lineColor: '#555555',
+    textColor: '#111111',
+    edgeLabelBackground: '#ffffff',
+    attributeBackgroundColorOdd: '#f4f6fb',
+    attributeBackgroundColorEven: '#ffffff',
+  },
+});
 
-The application uses TypeORM with PostgreSQL. Below is the ERD covering all entities and their relationships.
-
-```mermaid
-erDiagram
-
-  %% ─── Core Identity ───────────────────────────────────────────
+const diagram = `erDiagram
 
   users {
     uuid id PK
@@ -46,8 +85,6 @@ erDiagram
     timestamp createdAt
     timestamp updatedAt
   }
-
-  %% ─── Church Structure ────────────────────────────────────────
 
   denominations {
     uuid id PK
@@ -164,8 +201,6 @@ erDiagram
     timestamp updated_at
   }
 
-  %% ─── Events & Attendance ─────────────────────────────────────
-
   events {
     uuid id PK
     string title
@@ -181,21 +216,17 @@ erDiagram
     jsonb recurrence_days
     enum monthly_type
     int monthly_day
-    string monthly_week_descriptor
     date recurrence_end_date
     boolean accept_attendance
     boolean require_location
     float location_lat
     float location_lng
     int location_radius
-    varchar attendance_status
     timestamp attendance_opens_at
     timestamp attendance_closes_at
     boolean allow_multiple_checkins
     jsonb guest_checkin_fields
     enum visibility
-    jsonb visible_to_member_ids
-    timestamp publish_at
     boolean is_published
     enum status
     uuid branch_id FK
@@ -233,8 +264,6 @@ erDiagram
     timestamp checked_in_at
   }
 
-  %% ─── People (Visitors / Prospects) ──────────────────────────
-
   people {
     uuid id PK
     string first_name
@@ -255,8 +284,6 @@ erDiagram
     timestamp created_at
     timestamp updated_at
   }
-
-  %% ─── Follow-Ups ──────────────────────────────────────────────
 
   follow_ups {
     uuid id PK
@@ -308,8 +335,6 @@ erDiagram
     timestamp created_at
   }
 
-  %% ─── Audit & Analytics ───────────────────────────────────────
-
   activity_logs {
     uuid id PK
     uuid user_id FK
@@ -333,86 +358,80 @@ erDiagram
     timestamp created_at
   }
 
-  %% ─── Relationships ───────────────────────────────────────────
-
-  %% Denomination admin
-  users ||--o{ denominations : "administers (admin_id)"
-
-  %% Denomination ↔ Branch
+  users ||--o{ denominations : "administers"
   denominations ||--o{ branches : "has branches"
-
-  %% Denomination ↔ User (M:M via user_denominations)
-  users }o--o{ denominations : "member of (user_denominations)"
-
-  %% Branch memberships
+  users }o--o{ denominations : "member of"
   users ||--o{ branch_memberships : "belongs to"
   branches ||--o{ branch_memberships : "has members"
-
-  %% Branch invites
   branches ||--o{ branch_invites : "has invites"
   denominations ||--o{ branch_invites : "scoped to"
-
-  %% Branch join requests
   users ||--o{ branch_join_requests : "requests"
   branches ||--o{ branch_join_requests : "receives"
   denominations ||--o{ branch_join_requests : "scoped to"
-
-  %% Custom domains
   branches ||--o| branch_custom_domains : "has domain"
   denominations ||--o{ branch_custom_domains : "scoped to"
-
-  %% Events
   branches ||--o{ events : "hosts"
-  users ||--o{ events : "creates (created_by)"
-
-  %% Event attendance
+  users ||--o{ events : "creates"
   events ||--o{ event_attendance : "has attendances"
   users ||--o{ event_attendance : "attends"
-
-  %% Guest attendance
   events ||--o{ guest_attendance : "has guest check-ins"
-
-  %% People
   branches ||--o{ people : "tracks"
-
-  %% Follow-ups
   branches ||--o{ follow_ups : "manages"
   people ||--o{ follow_ups : "subject of"
-  users ||--o{ follow_ups : "subject of (user)"
   users ||--o{ follow_ups : "assigned to"
-  users ||--o{ follow_ups : "created by"
-
-  %% Follow-up contact logs
   follow_ups ||--o{ follow_up_contact_logs : "has logs"
   users ||--o{ follow_up_contact_logs : "contacted by"
-
-  %% Follow-up notification logs
   follow_ups ||--o{ follow_up_notification_logs : "has notifications"
   users ||--o{ follow_up_notification_logs : "notified"
-
-  %% Activity logs
   users ||--o{ activity_logs : "generates"
-```
+`;
 
-## Entity Descriptions
+const { svg } = await mermaid.render('erd-svg', diagram);
+document.getElementById('erd').innerHTML = svg;
 
-| Entity | Table | Description |
-|---|---|---|
-| **User** | `users` | Registered platform users (members, coordinators, admins). Central identity entity. |
-| **Denomination** | `denominations` | Top-level church organisation (e.g. RCCG). Owns multiple branches. |
-| **Branch** | `branches` | A local church campus/location belonging to a denomination. |
-| **BranchMembership** | `branch_memberships` | Junction table tracking a user's role (`member`, `coordinator`, `admin`) within a specific branch. |
-| **BranchInvite** | `branch_invites` | Shareable invite codes granting access to a branch. |
-| **BranchJoinRequest** | `branch_join_requests` | Pending/approved/rejected requests from users to join a branch. |
-| **CustomDomain** | `branch_custom_domains` | Custom hostname (e.g. `grace.example.com`) mapped to a branch with branding config. |
-| **DenominationRequest** | `denomination_requests` | Applications to register a new denomination; reviewed by a super admin. |
-| **Event** | `events` | Church events with optional recurrence, attendance, and visibility settings. |
-| **EventAttendance** | `event_attendance` | Records a member's check-in to a specific event occurrence. |
-| **GuestAttendance** | `guest_attendance` | Anonymous/guest check-ins captured via QR code form. |
-| **Person** | `people` | Non-member individuals (visitors, prospects) tracked per branch. |
-| **FollowUp** | `follow_ups` | Pastoral follow-up tasks targeting a person or member, with priority and status. |
-| **FollowUpContactLog** | `follow_up_contact_logs` | Log of each contact attempt made for a follow-up. |
-| **FollowUpSavedFilter** | `follow_up_saved_filters` | Per-user saved filter presets for the follow-ups list view. |
-| **FollowUpNotificationLog** | `follow_up_notification_logs` | Deduplication log for follow-up notifications (prevents duplicate sends). |
-| **ActivityLog** | `activity_logs` | Audit trail of actions performed by users across the platform. |
-| **WebsiteVisit** | `website_visits` | Anonymous page-view analytics for the main landing page and custom domain pages. |
+// Force all SVG text dark
+document.querySelectorAll('#erd svg text, #erd svg tspan').forEach(el => {
+  el.setAttribute('fill', '#111111');
+  el.style.fill = '#111111';
+});
+
+// Force SVG background white
+const svgEl = document.querySelector('#erd svg');
+if (svgEl) {
+  svgEl.style.background = '#ffffff';
+  // Insert a white background rect as first child
+  const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  bg.setAttribute('width', '100%');
+  bg.setAttribute('height', '100%');
+  bg.setAttribute('fill', '#ffffff');
+  svgEl.insertBefore(bg, svgEl.firstChild);
+}
+
+// Round entity box corners
+document.querySelectorAll('#erd svg .node').forEach(node => {
+  const firstPath = node.querySelector('path[d]');
+  if (!firstPath) return;
+  const d = firstPath.getAttribute('d');
+  const nums = d.match(/-?[\d.]+/g)?.map(Number);
+  if (!nums || nums.length < 8) return;
+  const xs = [nums[0], nums[2], nums[4], nums[6]];
+  const ys = [nums[1], nums[3], nums[5], nums[7]];
+  const x = Math.min(...xs), y = Math.min(...ys);
+  const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  rect.setAttribute('x', x); rect.setAttribute('y', y);
+  rect.setAttribute('width', w); rect.setAttribute('height', h);
+  rect.setAttribute('rx', '8');
+  for (const a of ['fill', 'stroke', 'stroke-width', 'class', 'style']) {
+    if (firstPath.hasAttribute(a)) rect.setAttribute(a, firstPath.getAttribute(a));
+  }
+  firstPath.replaceWith(rect);
+});
+
+// Strip borders from attribute rows
+document.querySelectorAll('#erd svg .row-rect-odd path, #erd svg .row-rect-even path').forEach(p => {
+  p.setAttribute('stroke', 'none');
+});
+</script>
+</body>
+</html>
