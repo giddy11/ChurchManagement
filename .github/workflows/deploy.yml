@@ -33,13 +33,13 @@ jobs:
           workload_identity_provider: ${{ env.WIF_PROVIDER }}
           service_account: ${{ env.WIF_SA }}
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker gcr.io --quiet
 
       - name: Build and push image
         run: |
-          cd server
-          gcloud builds submit --tag $IMAGE --project $PROJECT_ID --suppress-logs .
+          docker build -t $IMAGE ./server
+          docker push $IMAGE
 
       - name: Deploy to Cloud Run
         run: |
