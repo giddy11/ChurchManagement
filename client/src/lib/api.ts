@@ -438,8 +438,10 @@ export interface MapPinDTO {
   map_pin_lng: number;
 }
 
-export const fetchMapPins = () =>
-  request<{ data: MapPinDTO[]; status: number; message: string }>(`/user/map-pins`);
+export const fetchMapPins = (branchId?: string) =>
+  request<{ data: MapPinDTO[]; status: number; message: string }>(`/user/map-pins`,
+    branchId ? { headers: { 'X-Branch-Id': branchId } } : undefined
+  );
 
 // ─── People ───────────────────────────────────────────────────────────────
 import type { Person, PersonCreateDTO, PersonUpdateDTO, ImportPeopleResult } from '@/types/person';

@@ -74,12 +74,13 @@ const MemberLocationMap: React.FC = () => {
   const mapRef = useRef<MapRef | null>(null);
   const seenLiveRef = useRef<Set<string>>(new Set());
 
-  // Fetch static pins
+  // Fetch static pins — wait until branch context is available
   useEffect(() => {
+    if (!branchId) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetchMapPins()
+    fetchMapPins(branchId)
       .then((res) => {
         if (cancelled) return;
         setPins(res.data || []);
@@ -247,6 +248,17 @@ const MemberLocationMap: React.FC = () => {
         <h2 className="text-xl md:text-2xl font-bold mb-4">Member Map</h2>
         <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
           Map disabled — set <code>VITE_MAPBOX_TOKEN</code> in the client environment to enable the map.
+        </div>
+      </div>
+    );
+  }
+
+  if (!branchId) {
+    return (
+      <div className="p-4 md:p-6">
+        <h2 className="text-xl md:text-2xl font-bold mb-4">Member Map</h2>
+        <div className="rounded-md border bg-white h-[480px] grid place-items-center text-gray-500">
+          <div className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading branch context…</div>
         </div>
       </div>
     );
