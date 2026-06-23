@@ -36,5 +36,4 @@ router.post('/follow-ups', async (req: Request, res: Response) => {
   }
 });
 
-
 export default router;
