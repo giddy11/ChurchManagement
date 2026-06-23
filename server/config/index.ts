@@ -10,7 +10,7 @@ interface AppConfig {
 
 export const config: AppConfig = {
   nodeEnv: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT || '9999', 10),
+  port: parseInt(process.env.PORT || '8080', 10),
   corsOrigins:
         [
           'http://localhost:3000',

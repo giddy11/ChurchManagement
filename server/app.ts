@@ -12,7 +12,8 @@ import denominationRequestRoutes from './routes/denomination-request.route';
 import customDomainRoutes from './routes/custom-domain.route';
 import websiteVisitRoutes from './routes/website-visit.route';
 import followUpRoutes from './routes/follow-up.route';
-import { errorHandler } from './middleware/error_handler.middleware';
+import jobsRoutes from './routes/jobs.route';
+import { globalErrorHandler } from './shared/middleware/errorHandler.middleware';
 import { setupMiddleware } from './middleware';
 import { AppDataSource } from './config/database';
 import emailService from './email/email.service';
@@ -36,6 +37,7 @@ app.use('/api/denomination-requests', denominationRequestRoutes);
 app.use('/api/custom-domains', customDomainRoutes);
 app.use('/api/visits', websiteVisitRoutes);
 app.use('/api/follow-ups', followUpRoutes);
+app.use('/api/jobs', jobsRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
@@ -83,6 +85,6 @@ app.get('/health/services', async (req, res) => {
   });
 });
 
-app.use(errorHandler);
+app.use(globalErrorHandler);
 
 export default app;

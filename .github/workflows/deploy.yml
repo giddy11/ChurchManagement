@@ -1,0 +1,50 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+
+env:
+  PROJECT_ID: project-00ffee45-48d5-4a4f-a68
+  SERVICE: my-backend
+  REGION: europe-west1
+  IMAGE: gcr.io/project-00ffee45-48d5-4a4f-a68/my-backend
+  WIF_PROVIDER: projects/356338474780/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+  WIF_SA: github-actions-cicd@project-00ffee45-48d5-4a4f-a68.iam.gserviceaccount.com
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SA }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and push image
+        run: |
+          cd server
+          gcloud builds submit --tag $IMAGE --project $PROJECT_ID .
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy $SERVICE \
+            --image $IMAGE \
+            --platform managed \
+            --region $REGION \
+            --project $PROJECT_ID

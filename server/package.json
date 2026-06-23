@@ -32,6 +32,15 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^22.15.31",
+    "@types/paystack": "^2.0.4",
+    "@types/pg": "^8.16.0",
+    "@types/speakeasy": "^2.0.10",
     "axios": "^1.10.0",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
@@ -51,19 +60,10 @@
     "sequelize": "^6.37.7",
     "socket.io": "^4.8.3",
     "speakeasy": "^2.0.0",
+    "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typeorm": "^0.3.24",
-    "@types/bcrypt": "^5.0.2",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.3",
-    "@types/jsonwebtoken": "^9.0.9",
-    "@types/morgan": "^1.9.10",
-    "@types/node": "^22.15.31",
-
-    "@types/paystack": "^2.0.4",
-    "@types/pg": "^8.16.0",
-    "@types/speakeasy": "^2.0.10",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "zod": "^4.4.3"
   }
 }
