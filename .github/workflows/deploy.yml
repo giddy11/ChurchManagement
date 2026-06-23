@@ -39,7 +39,7 @@ jobs:
       - name: Build and push image
         run: |
           cd server
-          gcloud builds submit --tag $IMAGE --project $PROJECT_ID .
+          gcloud builds submit --tag $IMAGE --project $PROJECT_ID --suppress-logs .
 
       - name: Deploy to Cloud Run
         run: |
