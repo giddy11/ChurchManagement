@@ -76,7 +76,7 @@ export async function sendNewDenominationRequestAdminNotify(data: {
     <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
       <tr>
         <td align="center" style="padding:24px 0;">
-          <a href="${consoleUrl}" style="${styles.button}">Review in Developer Console â†’</a>
+          <a href="${consoleUrl}" style="${styles.button}">Review in Developer Console</a>
         </td>
       </tr>
     </table>
@@ -104,7 +104,7 @@ export async function sendDenominationApprovedEmail(
   tempPassword: string
 ) {
   const loginUrl = process.env.URL || "http://localhost:5173";
-  const subject = `Your denomination "${denominationName}" has been approved â€” Church Flow`;
+  const subject = `Your denomination "${denominationName}" has been approved at” Church Flow`;
 
   const html = churchFlowEmail(
     `
@@ -133,20 +133,20 @@ export async function sendDenominationApprovedEmail(
     </div>
 
     <div style="${styles.warningBox}">
-      <strong>âš ï¸ Important:</strong> Please change your password immediately after logging in.
-      Go to <strong>Settings â†’ Change Password</strong> to set a new secure password.
+      <strong>Very Important:</strong> Please change your password immediately after logging in.
+      Go to <strong>Settings and Change Password</strong> to set a new secure password.
     </div>
 
     <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
       <tr>
         <td align="center" style="padding:24px 0;">
-          <a href="${loginUrl}/login" style="${styles.button}">Log In to Church Flow â†’</a>
+          <a href="${loginUrl}/login" style="${styles.button}">Log In to Church Flow</a>
         </td>
       </tr>
     </table>
 
     <p style="${styles.paragraph}">
-      Once logged in, you can start managing your denomination â€” add branches, invite members, and much more.
+      Once logged in, you can start managing your denomination, add branches, invite members, and much more.
     </p>
 
     <p style="${styles.muted}">

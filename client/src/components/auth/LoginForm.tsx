@@ -4,6 +4,7 @@ import { useAuth } from './AuthProvider';
 import { useLogin } from '../../hooks/useAuthQuery';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { apiVerify2FA, apiResend2FA } from '@/services/auth.service';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface LoginFormProps {
   onSwitchToRegister: () => void;
@@ -16,6 +17,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [twoFAStep, setTwoFAStep] = useState(false);
   const [code, setCode] = useState('');
   const [verifying, setVerifying] = useState(false);
@@ -165,15 +167,26 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
           <div style={styles.formGroup}>
             <label htmlFor="password" style={styles.label}>Password</label>
-            <input
-              id="password"
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              style={styles.input}
-            />
+            <div style={styles.passwordWrapper}>
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                style={styles.inputWithIcon}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                style={styles.eyeButton}
+                tabIndex={-1}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           {onSwitchToForgotPassword && (
@@ -282,6 +295,35 @@ const styles = {
     transition: 'border-color 0.2s',
     backgroundColor: '#ffffff',
     color: '#0f172a',
+  },
+  passwordWrapper: {
+    position: 'relative' as const,
+    display: 'flex',
+    alignItems: 'center',
+  },
+  inputWithIcon: {
+    width: '100%',
+    padding: '8px 40px 8px 12px',
+    fontSize: '14px',
+    border: '1px solid #e2e8f0',
+    borderRadius: '6px',
+    outline: 'none',
+    transition: 'border-color 0.2s',
+    backgroundColor: '#ffffff',
+    color: '#0f172a',
+    boxSizing: 'border-box' as const,
+  },
+  eyeButton: {
+    position: 'absolute' as const,
+    right: '10px',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '0',
+    color: '#64748b',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   button: {
     width: '100%',

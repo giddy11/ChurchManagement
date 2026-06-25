@@ -82,7 +82,7 @@ const HighlightsEditor: React.FC<Props> = ({ value, onChange }) => {
           const open = expandedId === id;
           const busy = uploadingFor === id;
           return (
-            <div key={id} className="rounded-md border bg-white overflow-hidden">
+            <div key={id} className="rounded-md border bg-card overflow-hidden">
               {/* Collapsed header — always visible */}
               <div className="flex items-center gap-2 px-3 py-2">
                 <button
@@ -91,18 +91,18 @@ const HighlightsEditor: React.FC<Props> = ({ value, onChange }) => {
                   onClick={() => setExpandedId(open ? null : id)}
                 >
                   {open ? (
-                    <ChevronUp className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   ) : (
-                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   )}
-                  <span className="text-xs font-medium truncate text-slate-800">
-                    {h.title || <span className="text-slate-400 italic">Untitled</span>}
+                  <span className="text-xs font-medium truncate text-foreground">
+                    {h.title || <span className="text-muted-foreground italic">Untitled</span>}
                   </span>
                   {h.date && (
-                    <span className="text-xs text-slate-400 shrink-0">{h.date}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">{h.date}</span>
                   )}
                   {h.images.length > 0 && (
-                    <span className="text-xs text-slate-400 shrink-0">
+                    <span className="text-xs text-muted-foreground shrink-0">
                       · {h.images.length} photo{h.images.length !== 1 ? 's' : ''}
                     </span>
                   )}
@@ -149,7 +149,7 @@ const HighlightsEditor: React.FC<Props> = ({ value, onChange }) => {
                       <Label className="text-xs text-muted-foreground">
                         Photos ({h.images.length})
                       </Label>
-                      <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border bg-white text-xs cursor-pointer hover:bg-slate-50">
+                      <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border bg-card text-foreground text-xs cursor-pointer hover:bg-accent">
                         {busy ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
                         ) : (
@@ -175,7 +175,7 @@ const HighlightsEditor: React.FC<Props> = ({ value, onChange }) => {
                         {h.images.map((url, imageIdx) => (
                           <div
                             key={imageIdx}
-                            className="relative group aspect-square rounded-md overflow-hidden bg-slate-200"
+                            className="relative group aspect-square rounded-md overflow-hidden bg-muted"
                           >
                             <img src={url} alt="" className="w-full h-full object-cover" />
                             <button

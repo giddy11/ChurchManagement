@@ -73,7 +73,7 @@ export const EventListPage: React.FC = () => {
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <select
-          className="rounded-md border px-3 py-2 text-sm"
+          className="rounded-md border px-3 py-2 text-sm bg-background text-foreground border-border"
           value={category}
           onChange={(e) => { setCategory(e.target.value); setPage(1); }}
         >

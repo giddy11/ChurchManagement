@@ -58,7 +58,7 @@ const MinistriesEditor: React.FC<Props> = ({ value, onChange }) => {
         {value.map((m, i) => {
           const open = expandedIdx === i;
           return (
-            <div key={i} className="rounded-md border bg-white overflow-hidden">
+            <div key={i} className="rounded-md border bg-card overflow-hidden">
               {/* Collapsed header */}
               <div className="flex items-center gap-2 px-3 py-2">
                 <button
@@ -67,15 +67,15 @@ const MinistriesEditor: React.FC<Props> = ({ value, onChange }) => {
                   onClick={() => setExpandedIdx(open ? null : i)}
                 >
                   {open ? (
-                    <ChevronUp className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   ) : (
-                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   )}
-                  <span className="text-xs font-medium truncate text-slate-800">
-                    {m.title || <span className="text-slate-400 italic">Untitled ministry</span>}
+                  <span className="text-xs font-medium truncate text-foreground">
+                    {m.title || <span className="text-muted-foreground italic">Untitled ministry</span>}
                   </span>
                   {m.icon && (
-                    <span className="text-xs text-slate-400 shrink-0 font-mono">{m.icon}</span>
+                    <span className="text-xs text-muted-foreground shrink-0 font-mono">{m.icon}</span>
                   )}
                 </button>
                 <Button

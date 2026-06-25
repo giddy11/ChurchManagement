@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useRegister } from '@/hooks/useAuthQuery';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface RegisterFormProps {
   onSwitchToLogin: () => void;
@@ -17,6 +18,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
     lastName: '',
   });
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const registerMutation = useRegister();
 
   const handleInputChange = (field: string, value: string) => {
@@ -116,27 +119,49 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin, onS
           <div style={styles.gridRow}>
             <div style={styles.formGroup}>
               <label htmlFor="password" style={styles.label}>Password *</label>
-              <input
-                id="password"
-                type="password"
-                placeholder="At least 6 characters"
-                value={formData.password}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-                required
-                style={styles.input}
-              />
+              <div style={styles.passwordWrapper}>
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="At least 6 characters"
+                  value={formData.password}
+                  onChange={(e) => handleInputChange('password', e.target.value)}
+                  required
+                  style={styles.inputWithIcon}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  style={styles.eyeButton}
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
             <div style={styles.formGroup}>
               <label htmlFor="confirmPassword" style={styles.label}>Confirm Password *</label>
-              <input
-                id="confirmPassword"
-                type="password"
-                placeholder="Confirm your password"
-                value={formData.confirmPassword}
-                onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                required
-                style={styles.input}
-              />
+              <div style={styles.passwordWrapper}>
+                <input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                  required
+                  style={styles.inputWithIcon}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  style={styles.eyeButton}
+                  tabIndex={-1}
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -248,6 +273,35 @@ const styles = {
     backgroundColor: '#ffffff',
     color: '#0f172a',
     boxSizing: 'border-box' as const,
+  },
+  passwordWrapper: {
+    position: 'relative' as const,
+    display: 'flex',
+    alignItems: 'center',
+  },
+  inputWithIcon: {
+    width: '100%',
+    padding: '8px 40px 8px 12px',
+    fontSize: '14px',
+    border: '1px solid #e2e8f0',
+    borderRadius: '6px',
+    outline: 'none',
+    transition: 'border-color 0.2s',
+    backgroundColor: '#ffffff',
+    color: '#0f172a',
+    boxSizing: 'border-box' as const,
+  },
+  eyeButton: {
+    position: 'absolute' as const,
+    right: '10px',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '0',
+    color: '#64748b',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   selectWrapper: {
     position: 'relative' as const,

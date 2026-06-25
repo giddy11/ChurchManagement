@@ -365,8 +365,8 @@ const DenominationsPage: React.FC = () => {
           </div>
         )}
 
-        {/* Request Denomination CTA */}
-        <div className="mt-16 relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 rounded-3xl px-8 py-14 md:px-14 md:py-16 overflow-hidden text-center">
+        {/* Request Denomination CTA — only when results are visible to avoid duplicate button with empty state */}
+        {!loading && filtered.length > 0 && <div className="mt-16 relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 rounded-3xl px-8 py-14 md:px-14 md:py-16 overflow-hidden text-center">
           {/* Decorative circles */}
           <div className="absolute -top-16 -right-16 w-56 h-56 bg-white rounded-full opacity-5" />
           <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-white rounded-full opacity-5" />
@@ -400,7 +400,7 @@ const DenominationsPage: React.FC = () => {
               </Button>
             </div>
           </div>
-        </div>
+        </div>}
       </main>
 
       {/* Footer */}

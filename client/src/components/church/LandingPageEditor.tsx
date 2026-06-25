@@ -43,14 +43,14 @@ const LandingPageEditor: React.FC<Props> = ({ value, onChange }) => {
     setField('social', { ...social, [k]: v });
 
   return (
-    <div className="rounded-md border bg-slate-50/50">
+    <div className="rounded-md border bg-card">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-4 py-3 text-left"
       >
         <div>
-          <p className="text-sm font-medium text-slate-900">Public landing page</p>
+          <p className="text-sm font-medium text-foreground">Public landing page</p>
           <p className="text-xs text-muted-foreground">
             Customise the page visitors see at the root of your custom domain.
           </p>
@@ -193,7 +193,7 @@ const LandingPageEditor: React.FC<Props> = ({ value, onChange }) => {
           </div>
 
           {/* ─── Toggle ──────────────────────────────────────────── */}
-          <div className="flex items-center justify-between rounded-md border bg-white px-3 py-2">
+          <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2">
             <div>
               <Label className="text-sm">Show "Join Us" call-to-action</Label>
               <p className="text-xs text-muted-foreground">

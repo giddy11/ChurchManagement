@@ -119,9 +119,17 @@ export function EditProfileDialog({
   useEffect(() => {
     if (!open || !profile) return;
 
+    // Derive first/last from full_name when they weren't stored separately (email registration path)
+    const nameParts =
+      !profile.first_name && !profile.last_name && profile.full_name
+        ? profile.full_name.trim().split(/\s+/)
+        : [];
+    const derivedFirst = nameParts[0] || '';
+    const derivedLast = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
     setForm({
-      first_name: profile.first_name || '',
-      last_name: profile.last_name || '',
+      first_name: profile.first_name || derivedFirst,
+      last_name: profile.last_name || derivedLast,
       middle_name: profile.middle_name || '',
       nick_name: profile.nick_name || '',
       dob: profile.dob ? String(profile.dob).split('T')[0] : '',
